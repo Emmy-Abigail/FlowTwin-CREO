@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\FlowTwin.SharedKernel\FlowTwin.SharedKernel.csproj" />
+    <ProjectReference Include="..\Modules\FlowTwin.Atenciones\FlowTwin.Atenciones.csproj" />
+    <ProjectReference Include="..\Modules\FlowTwin.Auditoria\FlowTwin.Auditoria.csproj" />
+    <ProjectReference Include="..\Modules\FlowTwin.Dispositivos\FlowTwin.Dispositivos.csproj" />
+    <ProjectReference Include="..\Modules\FlowTwin.Gemelo\FlowTwin.Gemelo.csproj" />
+    <ProjectReference Include="..\Modules\FlowTwin.Identidad\FlowTwin.Identidad.csproj" />
+    <ProjectReference Include="..\Modules\FlowTwin.Monitoreo\FlowTwin.Monitoreo.csproj" />
+    <ProjectReference Include="..\Modules\FlowTwin.Reportes\FlowTwin.Reportes.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>
