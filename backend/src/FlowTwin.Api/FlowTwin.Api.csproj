@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.13" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FlowTwin.Persistence\FlowTwin.Persistence.csproj" />
+    <ProjectReference Include="..\Modules\FlowTwin.Atenciones\FlowTwin.Atenciones.csproj" />
+    <ProjectReference Include="..\Modules\FlowTwin.Auditoria\FlowTwin.Auditoria.csproj" />
+    <ProjectReference Include="..\Modules\FlowTwin.Dispositivos\FlowTwin.Dispositivos.csproj" />
+    <ProjectReference Include="..\Modules\FlowTwin.Gemelo\FlowTwin.Gemelo.csproj" />
+    <ProjectReference Include="..\Modules\FlowTwin.Identidad\FlowTwin.Identidad.csproj" />
+    <ProjectReference Include="..\Modules\FlowTwin.Monitoreo\FlowTwin.Monitoreo.csproj" />
+    <ProjectReference Include="..\Modules\FlowTwin.Reportes\FlowTwin.Reportes.csproj" />
+  </ItemGroup>
+
+</Project>
