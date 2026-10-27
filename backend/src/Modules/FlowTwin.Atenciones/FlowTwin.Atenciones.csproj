@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\FlowTwin.SharedKernel\FlowTwin.SharedKernel.csproj" />
+    <ProjectReference Include="..\FlowTwin.Gemelo\FlowTwin.Gemelo.csproj" />
+    <ProjectReference Include="..\FlowTwin.Dispositivos\FlowTwin.Dispositivos.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>
