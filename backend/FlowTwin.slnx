@@ -1,5 +1,21 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/FlowTwin.Api/FlowTwin.Api.csproj" />
+    <Project Path="src/FlowTwin.Persistence/FlowTwin.Persistence.csproj" />
+    <Project Path="src/FlowTwin.SharedKernel/FlowTwin.SharedKernel.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/">
+    <Project Path="src/Modules/FlowTwin.Atenciones/FlowTwin.Atenciones.csproj" />
+    <Project Path="src/Modules/FlowTwin.Auditoria/FlowTwin.Auditoria.csproj" />
+    <Project Path="src/Modules/FlowTwin.Dispositivos/FlowTwin.Dispositivos.csproj" />
+    <Project Path="src/Modules/FlowTwin.Gemelo/FlowTwin.Gemelo.csproj" />
+    <Project Path="src/Modules/FlowTwin.Identidad/FlowTwin.Identidad.csproj" />
+    <Project Path="src/Modules/FlowTwin.Monitoreo/FlowTwin.Monitoreo.csproj" />
+    <Project Path="src/Modules/FlowTwin.Reportes/FlowTwin.Reportes.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/FlowTwin.ArchitectureTests/FlowTwin.ArchitectureTests.csproj" />
+    <Project Path="tests/FlowTwin.IntegrationTests/FlowTwin.IntegrationTests.csproj" />
+    <Project Path="tests/FlowTwin.UnitTests/FlowTwin.UnitTests.csproj" />
   </Folder>
 </Solution>
