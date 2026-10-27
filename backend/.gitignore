@@ -1,0 +1,12 @@
+# Secretos locales
+.env
+
+# Compilación de .NET
+bin/
+obj/
+*.user
+.vs/
+TestResults/
+
+# Logs de Serilog
+logs/

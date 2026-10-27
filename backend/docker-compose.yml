@@ -1,0 +1,29 @@
+# SQL Server para desarrollo de CREO FlowTwin (edición Developer, ADR-03).
+# Uso:  docker compose up -d     (levantar)
+#       docker compose down      (apagar; los datos quedan en el volumen)
+# La contraseña de "sa" se lee de backend/.env, que git ignora.
+name: flowtwin
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: flowtwin-sqlserver
+    environment: # variables que sql lee al arrancar
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Developer"
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD:?Falta MSSQL_SA_PASSWORD en backend/.env}"
+      TZ: "UTC"   # ADR-14: todo se guarda en UTC; la pantalla convierte a hora de Lima
+    ports:
+      - "1433:1433"
+    volumes:
+      - flowtwin-sqldata:/var/opt/mssql # aqui viven los datos y sobreviven si borro el contenedor
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q \"SELECT 1\" -b -o /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped #se levanta sola
+
+volumes:
+  flowtwin-sqldata:
