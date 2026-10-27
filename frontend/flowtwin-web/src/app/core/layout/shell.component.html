@@ -1,0 +1,86 @@
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <app-logo />
+      <small>Clínica Renal y Oncológica</small>
+    </div>
+
+    <nav class="nav" aria-label="Menú principal">
+      @for (item of menu(); track item.ruta) {
+        <a [routerLink]="item.ruta" routerLinkActive="on">
+          <app-icono [nombre]="item.icono" /><span>{{ item.texto }}</span>
+        </a>
+      }
+    </nav>
+
+    @if (auth.usuario(); as u) {
+      <div class="me">
+        <b>{{ u.nombre }}</b>
+        <span>{{ u.rol }} · {{ u.correo }}</span>
+        <button type="button" (click)="auth.cerrarSesion()"><app-icono nombre="out" [tamano]="16" /> Cerrar sesión</button>
+      </div>
+    }
+  </aside>
+
+  <div class="main">
+    <header class="top">
+      <div class="crumbs">{{ sede }} › Piso 1 › <b>{{ titulo() }}</b></div>
+      <span class="sp"></span>
+
+      @if (auth.soloLectura()) { <span class="ro">Modo: Solo lectura</span> }
+
+      <span class="live" [class.off]="!clinica.simulacionActiva()">
+        <i></i>{{ clinica.simulacionActiva() ? 'En vivo' : 'En pausa' }} · <span class="num">{{ hhmm(clinica.ahora()) }}</span>
+      </span>
+
+      <div class="dd-wrap">
+        <button class="iconbtn" type="button" aria-label="Alertas" (click)="alternarCampana()">
+          <app-icono nombre="bell" />
+          @if (clinica.alertasSinLeer()) { <span class="badge num">{{ clinica.alertasSinLeer() }}</span> }
+        </button>
+        @if (campanaAbierta()) {
+          <div class="dd">
+            <div class="dd-title">Alertas</div>
+            @for (a of clinica.alertas().slice(0, 8); track a.id) {
+              <button class="dd-item" type="button" (click)="irAAlerta(a)">
+                <span class="dot" [class]="'dot ' + a.nivel"></span>
+                <span><b>{{ a.texto }}</b><br><span class="hint">{{ a.detalle }} · {{ hhmm(a.t) }}</span></span>
+              </button>
+            } @empty {
+              <div class="hint" style="padding: 10px">Sin alertas.</div>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="dd-wrap">
+        <button class="usr" type="button" (click)="alternarMenuUsuario()">
+          <span class="av">{{ iniciales() }}</span>
+          <span>{{ primerNombre() }}<small>{{ auth.rol() }}</small></span>
+        </button>
+        @if (menuUsuarioAbierto()) {
+          <div class="dd" style="width: 220px">
+            <a class="dd-item" routerLink="/cambiar-contrasena" (click)="menuUsuarioAbierto.set(false)">
+              <app-icono nombre="lock" [tamano]="16" /> Cambiar contraseña
+            </a>
+            <button class="dd-item" type="button" (click)="auth.cerrarSesion()">
+              <app-icono nombre="out" [tamano]="16" /> Cerrar sesión
+            </button>
+          </div>
+        }
+      </div>
+    </header>
+
+    <main class="content">
+      <router-outlet />
+    </main>
+
+    <footer class="demo-foot">
+      Prototipo con datos simulados · cada 5 s pasa 1 minuto en la clínica.
+      <button appBoton="borde" [chico]="true" type="button" (click)="alternarSimulacion()">
+        @if (clinica.simulacionActiva()) { <app-icono nombre="pause" [tamano]="16" /> Pausar simulación }
+        @else { <app-icono nombre="play" [tamano]="16" /> Reanudar simulación }
+      </button>
+    </footer>
+  </div>
+</div>

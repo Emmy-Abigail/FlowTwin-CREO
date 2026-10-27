@@ -1,0 +1,36 @@
+/* Sin encapsulación (ver el componente): todo lleva el prefijo r3d-. */
+app-render-3d { position: relative; display: block; width: 100%; height: 100%; min-height: 360px; }
+
+.r3d-lienzo { position: absolute; inset: 0; overflow: hidden; border-radius: 10px; background: #FBF9F6; }
+.r3d-lienzo canvas { display: block; touch-action: none; }
+.r3d-capa-etiquetas { position: absolute; inset: 0; pointer-events: none; }
+
+.r3d-controles {
+  position: absolute; top: 12px; right: 12px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  justify-content: flex-end; background: rgba(255, 255, 255, .94); border: 1px solid var(--linea);
+  border-radius: 10px; padding: 6px 8px;
+}
+.r3d-check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--gris); cursor: pointer; }
+.r3d-check input { accent-color: var(--rojo); }
+
+/* Etiqueta de zona: nombre arriba; abajo el ícono de persona en el color del semáforo y "8/20". */
+.r3d-etiqueta {
+  --r3d-c: var(--nd);
+  display: flex; flex-direction: column; align-items: center; gap: 2px; max-width: 92px;
+  background: rgba(255, 255, 255, .94); border: 1px solid var(--linea); border-bottom: 3px solid var(--r3d-c);
+  border-radius: 8px; padding: 3px 6px 4px; pointer-events: none; line-height: 1.1; text-align: center;
+  box-shadow: 0 2px 6px rgba(31, 27, 28, .12); font-family: var(--f-body); transition: scale .15s;
+}
+/* scale (no transform): el transform lo ocupa el CSS2DRenderer para posicionar la etiqueta. */
+.r3d-etiqueta.r3d-activa { scale: 1.1; border-color: var(--r3d-c); z-index: 1; }
+.r3d-etiqueta b { font-size: 10.5px; font-weight: 700; color: var(--tinta); }
+.r3d-cifra { display: flex; align-items: center; gap: 4px; }
+.r3d-icono {
+  width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--r3d-c); color: var(--r3d-c);
+  display: flex; align-items: center; justify-content: center; background: #fff; flex: none;
+}
+.r3d-icono svg { width: 11px; height: 11px; }
+.r3d-cifra small {
+  font-family: var(--f-disp); font-weight: 800; font-size: 11px; color: #fff; background: var(--negro);
+  border-radius: 999px; padding: 0 7px; font-variant-numeric: tabular-nums; white-space: nowrap;
+}

@@ -1,0 +1,24 @@
+.login { display: grid; grid-template-columns: 1fr 1fr; min-height: 100vh; }
+.login-l {
+  background: var(--negro); color: #fff; padding: 48px 56px;
+  display: flex; flex-direction: column; justify-content: space-between; gap: 32px;
+}
+.sub-logo { color: #BDB5B7; margin-top: 4px; }
+.pitch { display: flex; flex-direction: column; gap: 14px; max-width: 460px; }
+.eyebrow { color: var(--amarillo); font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.eyebrow::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--amarillo); }
+.login-l h1 { font-size: 44px; line-height: 1.1; font-weight: 900; color: #fff; }
+.login-l p { color: #BDB5B7; margin: 0; font-size: 16px; }
+.login-l small { color: #8C8486; }
+.login-r { display: flex; align-items: center; justify-content: center; padding: 48px 24px; }
+.login-box { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 16px; }
+.login-box h1 { font-size: 24px; }
+.login-box .sub { color: var(--gris); margin: -8px 0 4px; }
+.login-box .link { align-self: flex-start; }
+.demo-acc { border-top: 1px solid var(--linea); padding-top: 18px; display: flex; flex-direction: column; gap: 8px; }
+
+@media (max-width: 860px) {
+  .login { grid-template-columns: 1fr; }
+  .login-l { padding: 32px 20px; }
+  .login-l h1 { font-size: 32px; }
+}

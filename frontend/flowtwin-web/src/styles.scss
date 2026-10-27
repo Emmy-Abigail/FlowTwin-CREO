@@ -1,0 +1,6 @@
+/* Estilos globales de CREO FlowTwin.
+   Los colores, la tipografía y los componentes atómicos vienen del prototipo aprobado
+   (docs/prototipo/creo-flowtwin.html). Los estilos propios de cada pantalla viven en su .scss. */
+@use 'styles/tokens';
+@use 'styles/base';
+@use 'styles/componentes';

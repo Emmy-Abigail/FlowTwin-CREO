@@ -1,0 +1,10 @@
+:host { display: contents; }
+
+.filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+.filters .field { min-width: 150px; }
+.two { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 18px; }
+.buscar { min-width: 260px; }
+.tabla { padding: 6px 6px 0; }
+.sin-margen { margin: 0; }
+
+@media (max-width: 1100px) { .two { grid-template-columns: 1fr; } }

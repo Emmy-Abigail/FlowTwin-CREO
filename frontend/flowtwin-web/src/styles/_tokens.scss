@@ -1,0 +1,16 @@
+/* Paleta de CREO+ y semáforo. El rojo de la marca nunca significa alerta:
+   las alertas usan el rojo del semáforo (--alta). Tema único claro, elegido a propósito. */
+:root {
+  --negro: #1A1A1A; --negro-2: #262324; --negro-3: #3A3536;
+  --rojo: #A60437; --rojo-osc: #850330; --rojo-suave: #F7E6EB;
+  --amarillo: #FBB62F; --amarillo-suave: #FFF3D6;
+  --blanco: #FFFFFF; --fondo: #F7F4EF; --fondo-2: #EFEAE3;
+  --tinta: #1F1B1C; --gris: #6E6668; --gris-2: #9A9294; --linea: #E6DFD7;
+  --alta: #E53935; --media: #F2A900; --baja: #2E9E6B; --nd: #B0B0B0;
+  --alta-s: #FDECEA; --media-s: #FFF6DC; --baja-s: #E7F5EE; --nd-s: #F0EFEE;
+  --f-disp: "Nunito", ui-rounded, "Segoe UI", system-ui, sans-serif;
+  --f-body: "Nunito Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --r: 12px;
+  --sombra: 0 1px 2px rgba(31, 27, 28, .05), 0 4px 14px rgba(31, 27, 28, .05);
+  color-scheme: light;
+}

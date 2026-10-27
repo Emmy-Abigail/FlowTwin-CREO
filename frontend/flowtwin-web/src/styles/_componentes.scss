@@ -1,0 +1,119 @@
+/* Piezas reutilizables en todas las pantallas: formularios, botones, tarjetas, chips,
+   KPI, tablas, modales y toasts. Son globales porque las usan los componentes de shared/. */
+
+/* ---------- Formularios ---------- */
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-weight: 700; font-size: 13px; }
+.inp, select.inp {
+  border: 1px solid var(--linea); background: #fff; border-radius: 10px;
+  padding: 10px 12px; min-height: 42px; width: 100%;
+}
+.inp:focus { border-color: var(--negro-3); outline: none; box-shadow: 0 0 0 3px rgba(251, 182, 47, .35); }
+.hint { color: var(--gris); font-size: 12px; }
+.err { color: var(--alta); font-size: 13px; font-weight: 600; }
+.lbl-up { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--gris); }
+.link {
+  background: none; border: 0; padding: 0; color: var(--tinta);
+  text-decoration: underline; text-underline-offset: 3px; font-weight: 600;
+}
+.helpbox {
+  background: var(--amarillo-suave); border: 1px dashed #E9C978; border-radius: 10px;
+  padding: 10px 12px; font-size: 12.5px; color: #5F4500; display: flex; flex-direction: column; gap: 6px;
+}
+
+/* ---------- Botones (directiva appBoton) ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border-radius: 10px; border: 1px solid transparent; padding: 9px 14px; font-weight: 700;
+  min-height: 40px; white-space: nowrap; transition: background .15s, border-color .15s; text-decoration: none;
+}
+.btn svg { width: 16px; height: 16px; flex: none; }
+.btn-p { background: var(--rojo); color: #fff; } .btn-p:hover { background: var(--rojo-osc); }
+.btn-n { background: var(--negro); color: #fff; } .btn-n:hover { background: var(--negro-3); }
+.btn-o { background: #fff; border-color: var(--linea); color: var(--tinta); } .btn-o:hover { border-color: var(--gris-2); }
+.btn-g { background: transparent; color: var(--tinta); } .btn-g:hover { background: var(--fondo-2); }
+.btn-sm { min-height: 32px; padding: 5px 10px; font-size: 13px; border-radius: 8px; }
+.btn[disabled] { opacity: .45; cursor: not-allowed; }
+.btn-block { width: 100%; }
+
+/* ---------- Tarjetas y átomos ---------- */
+.card { background: #fff; border: 1px solid var(--linea); border-radius: var(--r); box-shadow: var(--sombra); }
+.pad { padding: 18px; }
+.card-h { display: flex; align-items: center; gap: 10px; justify-content: space-between; padding: 16px 18px 0; flex-wrap: wrap; }
+.card-h p { margin: 2px 0 0; color: var(--gris); font-size: 12.5px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 3px 10px;
+  font-weight: 700; font-size: 12px; background: var(--fondo-2); color: var(--tinta); white-space: nowrap;
+}
+.chip.baja { background: var(--baja-s); color: #1E6E4A; }
+.chip.media { background: var(--media-s); color: #7A5300; }
+.chip.alta { background: var(--alta-s); color: #B3261E; }
+.chip.nd { background: var(--nd-s); color: #6E6668; }
+.chip.dark { background: var(--negro); color: #fff; }
+.chip.red { background: var(--rojo-suave); color: var(--rojo); }
+.dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex: none; }
+.dot.baja { background: var(--baja); } .dot.media { background: var(--media); }
+.dot.alta { background: var(--alta); } .dot.nd { background: var(--nd); }
+.seg { display: inline-flex; background: var(--fondo-2); border-radius: 10px; padding: 3px; gap: 2px; }
+.seg button { border: 0; background: none; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 13px; color: var(--gris); }
+.seg button.on { background: #fff; color: var(--tinta); box-shadow: 0 1px 3px rgba(0, 0, 0, .08); }
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.kpis.tres { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 1100px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.empty { border: 1.5px dashed var(--linea); border-radius: var(--r); padding: 22px; color: var(--gris); text-align: center; }
+.toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.tag-id { font-family: var(--f-disp); font-weight: 900; letter-spacing: .01em; }
+.page-head { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; justify-content: space-between; }
+.page-head p { margin: 4px 0 0; color: var(--gris); }
+.tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.tile { border-radius: 10px; padding: 12px 14px; }
+.tile b { display: block; font-family: var(--f-disp); font-size: 28px; font-weight: 900; line-height: 1.1; }
+.tile span { font-weight: 700; font-size: 12.5px; }
+.tile.t1 { background: var(--baja-s); color: #1E6E4A; } .tile.t2 { background: var(--fondo-2); }
+.tile.t3 { background: var(--media-s); color: #7A5300; } .tile.t4 { background: var(--alta-s); color: #B3261E; }
+.list { display: flex; flex-direction: column; gap: 8px; }
+.li {
+  display: flex; gap: 10px; align-items: center; justify-content: space-between;
+  border: 1px solid var(--linea); border-radius: 10px; padding: 10px 12px; background: #fff;
+}
+.li.warn { background: var(--media-s); border-color: #F3DFA6; }
+.li p { margin: 0; font-size: 12px; color: var(--gris); }
+
+/* Tarjeta de una atención en el feed y en el detalle de zona */
+.fc {
+  display: flex; gap: 12px; align-items: center; border: 1px solid var(--linea); border-left: 4px solid var(--linea);
+  border-radius: 10px; padding: 10px 12px; background: #fff; text-align: left; width: 100%;
+}
+.fc:hover { border-color: var(--gris-2); }
+.fc.w1 { border-left-color: var(--media); } .fc.w2 { border-left-color: var(--alta); } .fc.done { border-left-color: var(--negro-3); }
+.fc .ic { width: 34px; height: 34px; border-radius: 9px; background: var(--fondo-2); display: flex; align-items: center; justify-content: center; flex: none; }
+.fc .ic svg { width: 17px; height: 17px; }
+.fc .mid { flex: 1; min-width: 0; }
+.fc .mid b { font-family: var(--f-disp); font-weight: 900; font-size: 15px; }
+.fc .mid p { margin: 0; color: var(--gris); font-size: 12.5px; }
+.fc .r { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; font-size: 12px; color: var(--gris); }
+.fc.flash { animation: flash 1.2s ease-out; }
+@keyframes flash { 0% { background: var(--amarillo-suave); } 100% { background: #fff; } }
+
+/* ---------- Tablas ---------- */
+.tbl-wrap { overflow-x: auto; }
+table.tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.tbl th { text-align: left; color: var(--gris); font-weight: 700; font-size: 12px; padding: 10px 12px; border-bottom: 1px solid var(--linea); white-space: nowrap; }
+.tbl td { padding: 11px 12px; border-bottom: 1px solid var(--linea); vertical-align: middle; }
+.tbl tr.click { cursor: pointer; }
+.tbl tr.click:hover td { background: var(--fondo); }
+.tbl .mono { font-variant-numeric: tabular-nums; font-weight: 700; }
+.pager { display: flex; gap: 8px; align-items: center; justify-content: flex-end; padding: 12px; }
+
+/* ---------- Modal, panel lateral y toasts ---------- */
+.scrim { position: fixed; inset: 0; background: rgba(26, 26, 26, .45); z-index: 60; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.modal { background: #fff; border-radius: 16px; width: 100%; max-width: 520px; max-height: calc(100vh - 32px); overflow: auto; box-shadow: 0 24px 60px rgba(0, 0, 0, .25); }
+.m-h { display: flex; justify-content: space-between; align-items: center; padding: 18px 20px 8px; gap: 10px; }
+.m-b { padding: 8px 20px 6px; display: flex; flex-direction: column; gap: 14px; }
+.m-f { padding: 14px 20px 18px; display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+.x { width: 34px; height: 34px; border-radius: 8px; border: 0; background: var(--fondo); display: flex; align-items: center; justify-content: center; flex: none; }
+.x svg { width: 16px; height: 16px; }
+.scrim.panel { justify-content: flex-end; align-items: stretch; padding: 0; }
+.drawer { background: #fff; width: 100%; max-width: 400px; height: 100%; overflow: auto; box-shadow: -12px 0 40px rgba(0, 0, 0, .2); animation: slide .2s ease-out; }
+@keyframes slide { from { transform: translateX(30px); opacity: .5; } to { transform: none; opacity: 1; } }
+@keyframes pop { from { transform: scale(.98); opacity: .6; } to { transform: none; opacity: 1; } }

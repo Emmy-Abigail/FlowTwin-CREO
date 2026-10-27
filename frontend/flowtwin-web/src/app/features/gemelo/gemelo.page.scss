@@ -1,0 +1,44 @@
+:host { display: contents; }
+
+.twin-grid { display: grid; grid-template-columns: minmax(0, 1.85fr) minmax(300px, 1fr); gap: 18px; align-items: start; }
+.twin-card { position: relative; overflow: hidden; }
+.twin-stage { position: relative; margin: 10px; height: clamp(420px, calc(100vh - 400px), 620px); }
+.cargando { height: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--gris); }
+.spin {
+  width: 18px; height: 18px; border-radius: 50%; border: 3px solid var(--linea); border-top-color: var(--rojo);
+  animation: girar .8s linear infinite; display: inline-block;
+}
+@keyframes girar { to { transform: rotate(360deg); } }
+
+/* Arriba a la izquierda: abajo está el Módulo 2 y arriba solo el fondo del edificio. */
+.legend {
+  position: absolute; left: 12px; top: 12px; background: rgba(255, 255, 255, .94); border: 1px solid var(--linea);
+  border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 5px; font-size: 12px; pointer-events: none;
+}
+.legend b { font-size: 12px; }
+.legend div { display: flex; gap: 8px; align-items: center; }
+
+.feed-card { display: flex; flex-direction: column; max-height: clamp(520px, calc(100vh - 230px), 720px); min-height: 420px; }
+.feed-filtros { padding: 10px 14px 0; }
+.conteo { opacity: .6; }
+.feed { overflow: auto; padding: 10px 14px 14px; display: flex; flex-direction: column; gap: 8px; }
+
+.tip {
+  position: fixed; z-index: 80; pointer-events: none; background: var(--negro); color: #fff; border-radius: 10px;
+  padding: 10px 12px; font-size: 12.5px; min-width: 200px; box-shadow: 0 10px 24px rgba(0, 0, 0, .25);
+}
+.tip b { font-family: var(--f-disp); font-size: 14px; }
+.tip div { color: #D8D1D2; }
+.tip .tip-accion { color: var(--amarillo); margin-top: 4px; }
+
+.detalle-cifra { display: flex; gap: 10px; align-items: center; }
+.detalle-cifra .tag-id { font-size: 40px; }
+.detalle-cifra small { font-size: 18px; color: var(--gris); }
+.tile small { font-size: 13px; }
+.tile .nodo { font-size: 16px; }
+.umbrales { margin: 0; }
+
+@media (max-width: 1100px) {
+  .twin-grid { grid-template-columns: 1fr; }
+  .feed-card { max-height: none; }
+}

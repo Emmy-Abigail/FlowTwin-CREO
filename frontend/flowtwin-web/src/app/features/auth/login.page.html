@@ -1,0 +1,47 @@
+<div class="login">
+  <section class="login-l">
+    <div>
+      <app-logo />
+      <div class="sub-logo">Clínica Renal y Oncológica</div>
+    </div>
+    <div class="pitch">
+      <span class="eyebrow">CREO FlowTwin</span>
+      <h1>Gemelo digital del flujo de pacientes</h1>
+      <p>Ocupación, esperas y recorridos en tiempo real, con identificadores anónimos.</p>
+    </div>
+    <small>Clínica CREO+ · Sede Principal</small>
+  </section>
+
+  <section class="login-r">
+    <form class="login-box" autocomplete="off" (ngSubmit)="ingresar()">
+      <h1>Iniciar sesión</h1>
+      <p class="sub">Ingresa con tu correo institucional.</p>
+
+      <div class="field">
+        <label for="lg-mail">Correo</label>
+        <input class="inp" id="lg-mail" name="correo" type="email" placeholder="nombre@creo.pe" required
+               [ngModel]="correo()" (ngModelChange)="correo.set($event)">
+      </div>
+      <div class="field">
+        <label for="lg-pass">Contraseña</label>
+        <input class="inp" id="lg-pass" name="clave" type="password" required
+               [ngModel]="clave()" (ngModelChange)="clave.set($event)">
+      </div>
+      @if (error()) { <div class="err" role="alert">{{ error() }}</div> }
+
+      <button appBoton="primario" [bloque]="true" type="submit"><app-icono nombre="inn" [tamano]="16" /> Ingresar</button>
+      <button class="link" type="button" (click)="mostrarAyuda.set(true)">¿Olvidaste tu contraseña?</button>
+      @if (mostrarAyuda()) {
+        <div class="helpbox">Pide al Administrador que restablezca tu contraseña. Él te entregará una contraseña temporal.</div>
+      }
+
+      <div class="demo-acc">
+        <span class="lbl-up">Acceso rápido de demo</span>
+        @for (d of accesosDemo; track d.correo) {
+          <button appBoton="oscuro" [bloque]="true" type="button" (click)="entrar(d.correo)">Entrar como {{ d.rol }}</button>
+        }
+        <span class="hint">También puedes usar cualquier correo de demo con la contraseña «demo123». Prueba nuevo&#64;creo.pe para ver el primer ingreso.</span>
+      </div>
+    </form>
+  </section>
+</div>

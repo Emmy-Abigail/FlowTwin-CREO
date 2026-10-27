@@ -1,0 +1,100 @@
+<div class="page-head">
+  <div>
+    <h1>Historial y reportes</h1>
+    <p>{{ auth.soloLectura() ? 'Solo lectura. ' : '' }}Evolución de la ocupación y detalle de cada atención.</p>
+  </div>
+  <div class="toolbar">
+    <button appBoton="borde" type="button" (click)="exportarCsv()"><app-icono nombre="dl" [tamano]="16" /> Exportar CSV</button>
+    <button appBoton="borde" type="button" (click)="exportarPdf()"><app-icono nombre="dl" [tamano]="16" /> Exportar PDF</button>
+  </div>
+</div>
+
+<!-- Filtros -->
+<div class="card pad filters">
+  <div class="field">
+    <label for="h-r">Fecha</label>
+    <select class="inp" id="h-r" [ngModel]="store.rango()" (ngModelChange)="cambiarRango($event)">
+      <option value="hoy">Hoy</option>
+      <option value="7">Últimos 7 días</option>
+      <option value="custom">Personalizado</option>
+    </select>
+  </div>
+  @if (store.rango() === 'custom') {
+    <div class="field">
+      <label for="h-d">Desde</label>
+      <input class="inp" type="date" id="h-d" [min]="store.haceSeisIso()" [max]="store.hoyIso()"
+             [ngModel]="store.desde()" (ngModelChange)="store.cambiarFiltro(() => store.desde.set($event))">
+    </div>
+    <div class="field">
+      <label for="h-h">Hasta</label>
+      <input class="inp" type="date" id="h-h" [min]="store.haceSeisIso()" [max]="store.hoyIso()"
+             [ngModel]="store.hasta()" (ngModelChange)="store.cambiarFiltro(() => store.hasta.set($event))">
+    </div>
+  }
+  <div class="field">
+    <label for="h-p">Piso</label>
+    <select class="inp" id="h-p" disabled><option>Piso 1</option></select>
+  </div>
+  <div class="field">
+    <label for="h-z">Zona</label>
+    <select class="inp" id="h-z" [ngModel]="store.zonaId()" (ngModelChange)="store.cambiarFiltro(() => store.zonaId.set(+$event))">
+      @for (z of store.zonas(); track z.id) { <option [value]="z.id">{{ z.nombre }}</option> }
+    </select>
+  </div>
+</div>
+
+<!-- KPI del periodo -->
+@let k = store.kpis();
+<div class="kpis tres">
+  <app-kpi etiqueta="Espera promedio del periodo" [valor]="k.espera" sufijo=" min">Desde el escaneo hasta la entrada a consulta</app-kpi>
+  <app-kpi etiqueta="Consulta promedio" [valor]="k.consulta" sufijo=" min">Permanencia en consultorios y tópicos</app-kpi>
+  <app-kpi etiqueta="Atenciones" [valor]="k.total">{{ store.zona()?.nombre }} · {{ store.rango() === 'hoy' ? 'hoy' : 'periodo elegido' }}</app-kpi>
+</div>
+
+<!-- Gráficos -->
+@if (store.zona(); as z) {
+  <div class="two">
+    <section class="card">
+      <div class="card-h">
+        <div><h2>Aforo histórico · {{ z.nombre }}</h2><p>Promedio de pacientes presentes por hora frente al aforo máximo ({{ z.aforo }}).</p></div>
+      </div>
+      <div class="pad"><app-aforo-chart [serie]="store.serie()" [aforo]="z.aforo" [maximo7Dias]="store.maximo7Dias()" /></div>
+    </section>
+    <section class="card">
+      <div class="card-h">
+        <div><h2>Mapa día × hora</h2><p>Ocupación promedio, en % del aforo. Muestra las horas pico que se repiten.</p></div>
+      </div>
+      <div class="pad"><app-mapa-calor [filas]="store.matriz()" [zona]="z" /></div>
+    </section>
+  </div>
+}
+
+<!-- Tabla de atenciones -->
+<section class="card">
+  <div class="card-h">
+    <div><h2>Atenciones</h2><p>Clic en una fila para ver el recorrido completo.</p></div>
+    <div class="buscar">
+      <label for="h-q" class="sr-only">Buscar por ID anónimo</label>
+      <input class="inp" id="h-q" placeholder="Buscar por ID anónimo (ej. A-1290)"
+             [ngModel]="store.busqueda()" (ngModelChange)="store.cambiarFiltro(() => store.busqueda.set($event))">
+    </div>
+  </div>
+  <div class="tabla">
+    <app-tabla [columnas]="columnas" [filas]="store.filas()" [clicable]="true" (filaClic)="abrir($event)"
+               vacio="No hay atenciones con estos filtros." />
+  </div>
+  <div class="pager">
+    <span class="hint num">{{ store.filtradas().length }} atenciones · página {{ store.pagina() + 1 }} de {{ store.paginas() }}</span>
+    <button appBoton="borde" [chico]="true" type="button" [disabled]="store.pagina() === 0" (click)="store.pagina.set(store.pagina() - 1)">Anterior</button>
+    <button appBoton="borde" [chico]="true" type="button" [disabled]="store.pagina() >= store.paginas() - 1" (click)="store.pagina.set(store.pagina() + 1)">Siguiente</button>
+  </div>
+</section>
+
+@if (pdfGenerado(); as p) {
+  <app-modal titulo="Reporte PDF generado" (cerrar)="pdfGenerado.set(null)">
+    <p class="sin-margen">Se generó el reporte con los filtros actuales.</p>
+    <div class="li"><span><app-icono nombre="dl" [tamano]="16" /> <b>{{ p.archivo }}</b></span><span class="hint">{{ p.filas }} registros</span></div>
+    <span class="hint">En el sistema real el PDF lo genera el backend y se descarga. En esta demo solo se registra la acción en la auditoría.</span>
+    <div pie><button appBoton="primario" type="button" (click)="pdfGenerado.set(null)">Entendido</button></div>
+  </app-modal>
+}

@@ -1,0 +1,15 @@
+<div class="r3d-lienzo" #lienzo></div>
+
+<div class="r3d-controles">
+  <div class="seg" role="group" aria-label="Altura de muros">
+    <button type="button" [class.on]="!alturaReal()" (click)="alturaReal.set(false)">Muros bajos</button>
+    <button type="button" [class.on]="alturaReal()" (click)="alturaReal.set(true)">Altura real</button>
+  </div>
+  @if (planoUrl()) {
+    <label class="r3d-check">
+      <input type="checkbox" [checked]="mostrarPlano()" (change)="mostrarPlano.set($any($event.target).checked)">
+      Plano de fondo
+    </label>
+  }
+  <button class="btn btn-o btn-sm" type="button" (click)="vistaInicial()" title="Volver a la vista inicial">Recentrar</button>
+</div>

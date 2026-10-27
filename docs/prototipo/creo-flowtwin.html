@@ -1,0 +1,1513 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head><body><title>CREO FlowTwin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&display=swap">
+<style>
+/* Layout: barra lateral negra fija + área de trabajo cálida; el gemelo es el protagonista. Tema único claro, elegido a propósito. */
+:root{
+  --negro:#1A1A1A; --negro-2:#262324; --negro-3:#3A3536;
+  --rojo:#A60437; --rojo-osc:#850330; --rojo-suave:#F7E6EB;
+  --amarillo:#FBB62F; --amarillo-suave:#FFF3D6;
+  --blanco:#FFFFFF; --fondo:#F7F4EF; --fondo-2:#EFEAE3;
+  --tinta:#1F1B1C; --gris:#6E6668; --gris-2:#9A9294; --linea:#E6DFD7;
+  --alta:#E53935; --media:#F2A900; --baja:#2E9E6B; --nd:#B0B0B0;
+  --alta-s:#FDECEA; --media-s:#FFF6DC; --baja-s:#E7F5EE; --nd-s:#F0EFEE;
+  --f-disp:"Nunito",ui-rounded,"Segoe UI",system-ui,sans-serif;
+  --f-body:"Nunito Sans","Segoe UI",system-ui,-apple-system,sans-serif;
+  --r:12px; --sombra:0 1px 2px rgba(31,27,28,.05),0 4px 14px rgba(31,27,28,.05);
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--fondo);color:var(--tinta);font-family:var(--f-body);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+h1,h2,h3{font-family:var(--f-disp);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:26px;font-weight:800}
+h2{font-size:17px;font-weight:800}
+h3{font-size:14px;font-weight:800}
+.num{font-variant-numeric:tabular-nums}
+:focus-visible{outline:3px solid var(--amarillo);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ---------- Login ---------- */
+.login{display:grid;grid-template-columns:1fr 1fr;min-height:100%}
+.login-l{background:var(--negro);color:#fff;padding:48px 56px;display:flex;flex-direction:column;justify-content:space-between;gap:32px}
+.login-l .pitch{display:flex;flex-direction:column;gap:14px;max-width:460px}
+.login-l .eyebrow{color:var(--amarillo);font-weight:700;display:flex;align-items:center;gap:8px}
+.login-l .eyebrow::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--amarillo)}
+.login-l h1{font-size:44px;line-height:1.1;font-weight:900;color:#fff}
+.login-l p{color:#BDB5B7;margin:0;font-size:16px}
+.login-l small{color:#8C8486}
+.login-r{display:flex;align-items:center;justify-content:center;padding:48px 24px}
+.login-box{width:100%;max-width:400px;display:flex;flex-direction:column;gap:16px}
+.login-box .sub{color:var(--gris);margin:-8px 0 4px}
+.demo-acc{border-top:1px solid var(--linea);padding-top:18px;display:flex;flex-direction:column;gap:8px}
+.lbl-up{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gris)}
+@media (max-width:860px){.login{grid-template-columns:1fr}.login-l{padding:32px 20px}.login-l h1{font-size:32px}}
+
+/* ---------- Form ---------- */
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-weight:700;font-size:13px}
+.inp,select.inp{border:1px solid var(--linea);background:#fff;border-radius:10px;padding:10px 12px;min-height:42px;width:100%}
+.inp:focus{border-color:var(--negro-3);outline:none;box-shadow:0 0 0 3px rgba(251,182,47,.35)}
+.hint{color:var(--gris);font-size:12px}
+.err{color:var(--alta);font-size:13px;font-weight:600}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:10px;border:1px solid transparent;padding:9px 14px;font-weight:700;min-height:40px;white-space:nowrap;transition:background .15s,border-color .15s}
+.btn svg{width:16px;height:16px;flex:none}
+.btn-p{background:var(--rojo);color:#fff}.btn-p:hover{background:var(--rojo-osc)}
+.btn-n{background:var(--negro);color:#fff}.btn-n:hover{background:var(--negro-3)}
+.btn-o{background:#fff;border-color:var(--linea);color:var(--tinta)}.btn-o:hover{border-color:var(--gris-2)}
+.btn-g{background:transparent;color:var(--tinta)}.btn-g:hover{background:var(--fondo-2)}
+.btn-sm{min-height:32px;padding:5px 10px;font-size:13px;border-radius:8px}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn-block{width:100%}
+.link{background:none;border:0;padding:0;color:var(--tinta);text-decoration:underline;text-underline-offset:3px;font-weight:600}
+
+/* ---------- App shell ---------- */
+.app{display:grid;grid-template-columns:236px minmax(0,1fr);min-height:100%}
+.side{background:var(--negro);color:#E9E4E5;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;padding:22px 14px}
+.side .brand{padding:0 8px 22px}
+.side .brand small{display:block;color:#9F9799;font-size:11.5px;margin-top:2px}
+.nav{display:flex;flex-direction:column;gap:4px}
+.nav a{display:flex;align-items:center;gap:12px;color:#CFC8C9;text-decoration:none;padding:10px 12px;border-radius:10px;font-weight:600}
+.nav a svg{width:18px;height:18px;flex:none}
+.nav a:hover{background:var(--negro-2);color:#fff}
+.nav a.on{background:var(--rojo);color:#fff}
+.side .me{margin-top:auto;border-top:1px solid var(--negro-3);padding:14px 8px 0;display:flex;flex-direction:column;gap:8px}
+.side .me b{color:#fff;font-weight:700}
+.side .me span{color:#9F9799;font-size:12px}
+.side .me button{background:none;border:0;color:#CFC8C9;display:flex;gap:8px;align-items:center;padding:6px 0;font-weight:600}
+.side .me button svg{width:16px;height:16px}
+.main{min-width:0;display:flex;flex-direction:column}
+.top{position:sticky;top:0;z-index:20;background:rgba(247,244,239,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--linea);display:flex;align-items:center;gap:14px;padding:12px 28px;min-height:62px}
+.crumbs{color:var(--gris);font-weight:600;display:flex;gap:6px;align-items:center;min-width:0;flex-wrap:wrap}
+.crumbs b{color:var(--tinta)}
+.top .sp{flex:1}
+.live{display:inline-flex;align-items:center;gap:8px;background:var(--negro);color:#fff;border-radius:999px;padding:5px 12px 5px 10px;font-weight:700;font-size:12.5px}
+.live i{width:8px;height:8px;border-radius:50%;background:var(--amarillo);box-shadow:0 0 0 0 rgba(251,182,47,.7);animation:pulse 2s infinite}
+.live.off i{background:#8C8486;animation:none}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(251,182,47,.6)}70%{box-shadow:0 0 0 8px rgba(251,182,47,0)}100%{box-shadow:0 0 0 0 rgba(251,182,47,0)}}
+.ro{background:var(--amarillo-suave);color:#7A5300;border:1px solid #F3D99A;border-radius:999px;padding:4px 10px;font-weight:700;font-size:12px}
+.iconbtn{position:relative;width:40px;height:40px;border-radius:10px;border:1px solid var(--linea);background:#fff;display:inline-flex;align-items:center;justify-content:center}
+.iconbtn svg{width:18px;height:18px}
+.badge{position:absolute;top:-6px;right:-6px;background:var(--alta);color:#fff;border-radius:999px;font-size:11px;font-weight:800;min-width:19px;height:19px;padding:0 5px;display:flex;align-items:center;justify-content:center;border:2px solid var(--fondo)}
+.dd{position:absolute;right:0;top:48px;width:340px;background:#fff;border:1px solid var(--linea);border-radius:var(--r);box-shadow:0 12px 32px rgba(0,0,0,.12);padding:8px;z-index:40}
+.dd-item{display:flex;gap:10px;padding:10px;border-radius:8px;align-items:flex-start;text-align:left;background:none;border:0;width:100%}
+.dd-item:hover{background:var(--fondo)}
+.dd-item .dot{margin-top:5px}
+.usr{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--linea);border-radius:10px;padding:5px 10px 5px 6px;font-weight:700}
+.av{width:30px;height:30px;border-radius:8px;background:var(--negro);color:var(--amarillo);display:flex;align-items:center;justify-content:center;font-family:var(--f-disp);font-weight:900;font-size:13px}
+.usr small{display:block;color:var(--gris);font-weight:600;font-size:11.5px;line-height:1.1}
+.content{padding:24px 28px 12px;display:flex;flex-direction:column;gap:18px;flex:1}
+.page-head{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;justify-content:space-between}
+.page-head p{margin:4px 0 0;color:var(--gris)}
+.demo-foot{margin:6px 28px 20px;color:var(--gris);font-size:12.5px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;border-top:1px dashed var(--linea);padding-top:12px}
+@media (max-width:900px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .main,.side{min-width:0}
+  .side{position:static;height:auto;padding:14px 16px;flex-direction:row;align-items:center;gap:12px;flex-wrap:wrap}
+  .side .brand{padding:0}
+  .nav{flex-direction:row;overflow-x:auto;flex:1 1 100%;order:3}
+  .nav a{white-space:nowrap}
+  .side .me{display:none}
+  .top{padding:10px 16px;flex-wrap:wrap}
+  .content{padding:18px 16px}
+  .demo-foot{margin:6px 16px 16px}
+}
+
+/* ---------- Cards & atoms ---------- */
+.card{background:#fff;border:1px solid var(--linea);border-radius:var(--r);box-shadow:var(--sombra)}
+.pad{padding:18px}
+.card-h{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:16px 18px 0;flex-wrap:wrap}
+.card-h p{margin:2px 0 0;color:var(--gris);font-size:12.5px}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;font-weight:700;font-size:12px;background:var(--fondo-2);color:var(--tinta);white-space:nowrap}
+.chip.baja{background:var(--baja-s);color:#1E6E4A}
+.chip.media{background:var(--media-s);color:#7A5300}
+.chip.alta{background:var(--alta-s);color:#B3261E}
+.chip.nd{background:var(--nd-s);color:#6E6668}
+.chip.dark{background:var(--negro);color:#fff}
+.chip.red{background:var(--rojo-suave);color:var(--rojo)}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none}
+.dot.baja{background:var(--baja)}.dot.media{background:var(--media)}.dot.alta{background:var(--alta)}.dot.nd{background:var(--nd)}
+.seg{display:inline-flex;background:var(--fondo-2);border-radius:10px;padding:3px;gap:2px}
+.seg button{border:0;background:none;padding:6px 12px;border-radius:8px;font-weight:700;font-size:13px;color:var(--gris)}
+.seg button.on{background:#fff;color:var(--tinta);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.kpi{padding:16px 18px;display:flex;flex-direction:column;gap:4px}
+.kpi .k{color:var(--gris);font-weight:700;font-size:12.5px}
+.kpi .v{font-family:var(--f-disp);font-weight:900;font-size:30px;line-height:1.1}
+.kpi .v small{font-size:15px;color:var(--gris);font-weight:700}
+.kpi .c{color:var(--gris-2);font-size:12px}
+@media (max-width:1100px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.empty{border:1.5px dashed var(--linea);border-radius:var(--r);padding:22px;color:var(--gris);text-align:center}
+.tbl-wrap{overflow-x:auto}
+table.tbl{width:100%;border-collapse:collapse;font-size:13.5px}
+.tbl th{text-align:left;color:var(--gris);font-weight:700;font-size:12px;padding:10px 12px;border-bottom:1px solid var(--linea);white-space:nowrap}
+.tbl td{padding:11px 12px;border-bottom:1px solid var(--linea);vertical-align:middle}
+.tbl tr.click{cursor:pointer}
+.tbl tr.click:hover td{background:var(--fondo)}
+.tbl .mono{font-variant-numeric:tabular-nums;font-weight:700}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.tag-id{font-family:var(--f-disp);font-weight:900;letter-spacing:.01em}
+
+/* ---------- Admisión ---------- */
+.adm{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(300px,1fr);gap:18px;align-items:start}
+.adm .col{display:flex;flex-direction:column;gap:14px}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mode{border:1.5px solid var(--linea);background:#fff;border-radius:var(--r);padding:16px 18px;text-align:left;display:flex;flex-direction:column;gap:2px}
+.mode b{font-family:var(--f-disp);font-size:18px;font-weight:800}
+.mode span{color:var(--gris)}
+.mode.on{background:var(--negro);border-color:var(--negro);color:#fff}
+.mode.on span{color:#BDB5B7}
+.scan-row{display:flex;gap:10px}
+.scan-row .inp{font-size:24px;font-family:var(--f-disp);font-weight:800;min-height:58px;letter-spacing:.02em}
+.scan-row .btn{min-height:58px;padding:0 22px;font-size:15px}
+.result{border-radius:var(--r);padding:22px;display:flex;flex-direction:column;gap:8px;animation:pop .25s ease-out}
+@keyframes pop{from{transform:scale(.98);opacity:.6}to{transform:none;opacity:1}}
+.result.ok{background:var(--baja-s);border:1.5px solid #BFE3D0}
+.result.info{background:#fff;border:1.5px solid var(--linea)}
+.result.error{background:var(--alta-s);border:1.5px solid #F5C2BE}
+.result .big{font-family:var(--f-disp);font-weight:900;font-size:56px;line-height:1;letter-spacing:.01em}
+.result .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.tile{border-radius:10px;padding:12px 14px}
+.tile b{display:block;font-family:var(--f-disp);font-size:28px;font-weight:900;line-height:1.1}
+.tile span{font-weight:700;font-size:12.5px}
+.tile.t1{background:var(--baja-s);color:#1E6E4A}.tile.t2{background:var(--fondo-2)}.tile.t3{background:var(--media-s);color:#7A5300}.tile.t4{background:var(--alta-s);color:#B3261E}
+.list{display:flex;flex-direction:column;gap:8px}
+.li{display:flex;gap:10px;align-items:center;justify-content:space-between;border:1px solid var(--linea);border-radius:10px;padding:10px 12px;background:#fff}
+.li.warn{background:var(--media-s);border-color:#F3DFA6}
+.li p{margin:0;font-size:12px;color:var(--gris)}
+.ops{display:flex;flex-direction:column}
+.op{display:grid;grid-template-columns:44px 96px 1fr;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--linea);font-size:13px}
+.helpbox{background:var(--amarillo-suave);border:1px dashed #E9C978;border-radius:10px;padding:10px 12px;font-size:12.5px;color:#5F4500;display:flex;flex-direction:column;gap:6px}
+.helpbox .kbd{display:inline-block;background:#fff;border:1px solid #E9C978;border-radius:6px;padding:1px 6px;margin:2px 2px 0 0;font-weight:800;cursor:pointer}
+@media (max-width:1000px){.adm{grid-template-columns:1fr}}
+
+/* ---------- Gemelo ---------- */
+.twin-grid{display:grid;grid-template-columns:minmax(0,1.85fr) minmax(300px,1fr);gap:18px;align-items:start}
+.twin-card{position:relative;overflow:hidden}
+.twin-stage{position:relative;padding:6px 10px 10px;min-height:440px}
+.twin-stage svg{width:100%;height:auto;display:block;max-height:560px}
+.legend{position:absolute;left:16px;bottom:14px;background:rgba(255,255,255,.94);border:1px solid var(--linea);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:5px;font-size:12px}
+.legend b{font-size:12px}
+.legend div{display:flex;gap:8px;align-items:center}
+.zone-g{cursor:pointer}
+.zone-g:hover .zfloor{filter:brightness(.97)}
+.tip{position:fixed;z-index:80;pointer-events:none;background:var(--negro);color:#fff;border-radius:10px;padding:10px 12px;font-size:12.5px;min-width:200px;box-shadow:0 10px 24px rgba(0,0,0,.25)}
+.tip b{font-family:var(--f-disp);font-size:14px}
+.tip div{color:#D8D1D2}
+.feed-card{display:flex;flex-direction:column;max-height:calc(100vh - 230px);min-height:420px}
+.feed{overflow:auto;padding:10px 14px 14px;display:flex;flex-direction:column;gap:8px}
+.fc{display:flex;gap:12px;align-items:center;border:1px solid var(--linea);border-left:4px solid var(--linea);border-radius:10px;padding:10px 12px;background:#fff;text-align:left;width:100%}
+.fc:hover{border-color:var(--gris-2)}
+.fc.w1{border-left-color:var(--media)}.fc.w2{border-left-color:var(--alta)}.fc.done{border-left-color:var(--negro-3)}
+.fc .ic{width:34px;height:34px;border-radius:9px;background:var(--fondo-2);display:flex;align-items:center;justify-content:center;flex:none}
+.fc .ic svg{width:17px;height:17px}
+.fc .mid{flex:1;min-width:0}
+.fc .mid b{font-family:var(--f-disp);font-weight:900;font-size:15px}
+.fc .mid p{margin:0;color:var(--gris);font-size:12.5px}
+.fc .r{display:flex;flex-direction:column;align-items:flex-end;gap:4px;font-size:12px;color:var(--gris)}
+.fc.flash{animation:flash 1.2s ease-out}
+@keyframes flash{0%{background:var(--amarillo-suave)}100%{background:#fff}}
+@media (max-width:1100px){.twin-grid{grid-template-columns:1fr}.feed-card{max-height:none}}
+
+/* ---------- Historial ---------- */
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.filters .field{min-width:150px}
+.chart svg{width:100%;height:auto;display:block}
+.chart text{font-family:var(--f-body);font-size:11px;fill:var(--gris)}
+.hm{display:grid;gap:3px;font-size:11px}
+.hm .c{border-radius:4px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;font-variant-numeric:tabular-nums}
+.hm .lab{color:var(--gris);display:flex;align-items:center;font-weight:600}
+.two{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:18px}
+@media (max-width:1100px){.two{grid-template-columns:1fr}}
+.pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;padding:12px}
+
+/* ---------- Detalle ---------- */
+.tl{display:flex;height:54px;border-radius:10px;overflow:hidden;border:1px solid var(--linea)}
+.tl div{display:flex;flex-direction:column;justify-content:center;padding:0 10px;min-width:0;font-size:12px;font-weight:700;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.tl div small{font-weight:600;opacity:.8}
+.steps{display:flex;flex-direction:column}
+.step{display:grid;grid-template-columns:70px 18px 1fr auto;gap:12px;align-items:start;padding:10px 0}
+.step .line{display:flex;flex-direction:column;align-items:center;height:100%}
+.step .line i{width:12px;height:12px;border-radius:50%;background:var(--negro);margin-top:4px}
+.step .line s{flex:1;width:2px;background:var(--linea);margin-top:4px}
+
+/* ---------- Seguimiento ---------- */
+.zl{display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid var(--linea)}
+.zl:last-child{border-bottom:0}
+.zl .grow{flex:1;min-width:0}
+.zl p{margin:2px 0 0;color:var(--gris);font-size:12.5px}
+.sw{position:relative;width:46px;height:26px;border-radius:999px;background:var(--nd);border:0;flex:none;transition:background .15s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .15s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.sw.on{background:var(--rojo)}.sw.on::after{left:23px}
+.sw[disabled]{opacity:.5;cursor:not-allowed}
+.nodes{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.node{padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.node .hd{display:flex;justify-content:space-between;align-items:center}
+
+/* ---------- Editor ---------- */
+.ed{display:grid;grid-template-columns:240px minmax(0,1fr) 300px;gap:16px;align-items:start}
+.tree{padding:14px;display:flex;flex-direction:column;gap:6px;font-size:13px}
+.tree .t-sede{font-weight:800;font-family:var(--f-disp);display:flex;align-items:center;gap:8px;padding:6px 4px}
+.tree .t-piso{display:flex;justify-content:space-between;align-items:center;gap:6px;padding:7px 8px;border-radius:8px;background:none;border:0;width:100%;text-align:left;font-weight:700}
+.tree .t-piso.on{background:var(--fondo-2)}
+.tree .t-sub{padding:2px 0 6px 14px;display:flex;flex-direction:column;gap:2px}
+.tree .t-z{background:none;border:0;text-align:left;padding:5px 8px;border-radius:6px;color:var(--gris);font-weight:600;display:flex;gap:8px;align-items:center}
+.tree .t-z.on{color:var(--rojo);background:var(--rojo-suave)}
+.tools{display:flex;gap:6px;flex-wrap:wrap;padding:12px 14px;border-bottom:1px solid var(--linea);align-items:center}
+.tool{display:inline-flex;gap:6px;align-items:center;border:1px solid transparent;background:none;border-radius:8px;padding:6px 10px;font-weight:700;font-size:13px;color:var(--gris)}
+.tool svg{width:15px;height:15px}
+.t-sede svg{width:16px;height:16px;flex:none}
+.tool.on{background:var(--rojo-suave);color:var(--rojo);border-color:#EFC7D3}
+.tool[disabled]{opacity:.4;cursor:not-allowed}
+.canvas{padding:14px;background:var(--fondo);user-select:none}
+.canvas svg{width:100%;height:auto;display:block;background:#fff;border-radius:8px;border:1px solid var(--linea);touch-action:none}
+.props{padding:16px;display:flex;flex-direction:column;gap:14px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chipbtn{border:1px solid var(--linea);background:var(--fondo);border-radius:8px;padding:6px 10px;font-weight:700;font-size:12.5px;color:var(--gris)}
+.chipbtn.on{border-color:var(--rojo);color:var(--rojo);background:var(--rojo-suave)}
+.thr{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;font-size:13px}
+.thr .inp{min-height:34px;padding:5px 8px;width:72px;text-align:right}
+@media (max-width:1250px){.ed{grid-template-columns:220px minmax(0,1fr)}.ed .props-col{grid-column:1/-1}}
+@media (max-width:800px){.ed{grid-template-columns:1fr}}
+
+/* ---------- Modal / drawer / toast ---------- */
+.scrim{position:fixed;inset:0;background:rgba(26,26,26,.45);z-index:60;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal{background:#fff;border-radius:16px;width:100%;max-width:520px;max-height:calc(100vh - 32px);overflow:auto;box-shadow:0 24px 60px rgba(0,0,0,.25)}
+.modal.wide{max-width:640px}
+.m-h{display:flex;justify-content:space-between;align-items:center;padding:18px 20px 8px;gap:10px}
+.m-b{padding:8px 20px 6px;display:flex;flex-direction:column;gap:14px}
+.m-f{padding:14px 20px 18px;display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.x{width:34px;height:34px;border-radius:8px;border:0;background:var(--fondo);display:flex;align-items:center;justify-content:center}
+.x svg{width:16px;height:16px}
+.drawer-scrim{justify-content:flex-end;align-items:stretch;padding:0}
+.drawer{background:#fff;width:100%;max-width:400px;height:100%;overflow:auto;box-shadow:-12px 0 40px rgba(0,0,0,.2);animation:slide .2s ease-out}
+@keyframes slide{from{transform:translateX(30px);opacity:.5}to{transform:none;opacity:1}}
+.progress{display:flex;gap:6px}
+.progress i{flex:1;height:5px;border-radius:9px;background:var(--fondo-2)}
+.progress i.on{background:var(--rojo)}
+.pwd{display:flex;gap:8px;align-items:center;background:var(--fondo);border:1px dashed var(--gris-2);border-radius:10px;padding:12px 14px;font-family:var(--f-disp);font-size:20px;font-weight:900;letter-spacing:.04em;justify-content:space-between}
+.checks{display:flex;flex-direction:column;gap:4px;font-size:12.5px}
+.checks span{display:flex;gap:6px;align-items:center;color:var(--gris)}
+.checks span.ok{color:#1E6E4A}
+.toasts{position:fixed;right:20px;bottom:20px;z-index:90;display:flex;flex-direction:column;gap:8px;max-width:calc(100vw - 40px)}
+.toast{background:var(--negro);color:#fff;border-radius:10px;padding:12px 16px;font-weight:600;box-shadow:0 10px 24px rgba(0,0,0,.25);display:flex;gap:10px;align-items:center;animation:pop .2s ease-out;max-width:420px}
+.toast i{width:8px;height:8px;border-radius:50%;background:var(--baja);flex:none}
+.toast.warn i{background:var(--media)}.toast.bad i{background:var(--alta)}
+.spin{width:18px;height:18px;border-radius:50%;border:3px solid var(--linea);border-top-color:var(--rojo);animation:sp 0.8s linear infinite;display:inline-block}
+@keyframes sp{to{transform:rotate(360deg)}}
+.denied{max-width:480px;margin:60px auto;text-align:center;display:flex;flex-direction:column;gap:12px;align-items:center}
+</style>
+
+<div id="root"></div>
+<div id="modal"></div>
+<div id="tip" class="tip" hidden></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+/* =========================================================
+   CREO FlowTwin · prototipo con datos simulados
+   ========================================================= */
+const MIN = 60000, DAY = 86400000;
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clone = o => JSON.parse(JSON.stringify(o));
+let seed = 20261012;
+const rnd = () => (seed = (seed * 16807) % 2147483647, (seed - 1) / 2147483646);
+const rint = (a, b) => Math.floor(a + rnd() * (b - a + 1));
+const gauss = (m, s) => { let u = 0, v = 0; while (!u) u = rnd(); while (!v) v = rnd(); return m + s * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const pad2 = n => String(n).padStart(2, '0');
+const hhmm = t => { const d = new Date(t); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); };
+const DIAS = ['dom','lun','mar','mié','jue','vie','sáb'], MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const fecha = t => { const d = new Date(t); return `${DIAS[d.getDay()]} ${d.getDate()} ${MESES[d.getMonth()]}`; };
+const isoDate = t => { const d = new Date(t); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; };
+const mins = ms => Math.max(0, Math.round(ms / MIN));
+const dur = m => m == null ? '—' : (m >= 60 ? `${Math.floor(m/60)} h ${m%60} min` : `${m} min`);
+
+/* ---------------- Íconos ---------------- */
+const P = {
+  scan:'<path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/>',
+  cube:'<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7 12 12l8.7-5M12 22V12"/>',
+  chart:'<path d="M3 3v18h18"/><path d="m7 15 4-5 4 3 5-7"/>',
+  pulse:'<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+  ruler:'<path d="M3 21 21 3"/><path d="M3 15l6 6M15 3l6 6M7 11l2 2M11 7l2 2M15 11l-4 4"/>',
+  cpu:'<rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/>',
+  users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+  list:'<path d="M9 6h12M9 12h12M9 18h12"/><path d="M4 6h.01M4 12h.01M4 18h.01"/>',
+  bell:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+  out:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/>',
+  inn:'<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="m10 17 5-5-5-5M15 12H3"/>',
+  x:'<path d="M18 6 6 18M6 6l12 12"/>',
+  check:'<path d="M20 6 9 17l-5-5"/>',
+  alert:'<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
+  person:'<circle cx="12" cy="7" r="4"/><path d="M5 21v-2a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v2"/>',
+  door:'<path d="M13 4h3a2 2 0 0 1 2 2v14M2 20h3M13 20h9M10 12v.01"/><path d="M13 4.56v16.24a.5.5 0 0 1-.68.47L5 18.6V6.4a1 1 0 0 1 .68-.95l6.64-2.21a.5.5 0 0 1 .68.47z"/>',
+  sofa:'<path d="M20 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v3"/><path d="M2 11v5a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v2H6v-2a2 2 0 0 0-4 0z"/><path d="M4 18v2M20 18v2"/>',
+  steth:'<path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6 6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"/><path d="M8 15v1a6 6 0 0 0 6 6 6 6 0 0 0 6-6v-4"/><circle cx="20" cy="10" r="2"/>',
+  walk:'<circle cx="13" cy="4" r="2"/><path d="m9 20 3-6 2 2v6M7 12l3-4 4 1 3 3M10 8l-1 5"/>',
+  search:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  dl:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5M12 15V3"/>',
+  rot:'<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>',
+  back:'<path d="m15 18-6-6 6-6"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  cursor:'<path d="m4 4 7 17 2.5-7.5L21 11z"/>',
+  square:'<rect x="4" y="4" width="16" height="16" rx="1"/>',
+  poly:'<path d="m12 2 9 7-3.5 11h-11L3 9z"/>',
+  radio:'<path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5M19.1 4.9C23 8.8 23 15.1 19.1 19"/><circle cx="12" cy="12" r="2"/>',
+  scale:'<path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.4 2.4 0 0 1 0-3.4l2.6-2.6a2.4 2.4 0 0 1 3.4 0z"/><path d="m14.5 12.5 2-2M11.5 9.5l2-2M8.5 6.5l2-2M17.5 15.5l2-2"/>',
+  copy:'<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  lock:'<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  trash:'<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  card:'<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>',
+  pause:'<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>',
+  play:'<path d="m6 3 14 9-14 9z"/>',
+  layers:'<path d="m12 2 10 5-10 5L2 7z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/>',
+  upload:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5M12 3v12"/>'
+};
+const ic = (n, cls='') => `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n]||''}</svg>`;
+const logo = (dark=true) => `<svg viewBox="0 0 150 46" width="138" height="42" role="img" aria-label="Creo+"><text x="0" y="36" font-family="Nunito, sans-serif" font-weight="900" font-size="40" fill="#A60437" letter-spacing="-1">Creo</text><g transform="translate(108 8)"><rect x="10" y="0" width="11" height="31" rx="5.5" fill="#FBB62F"/><rect x="0" y="10" width="31" height="11" rx="5.5" fill="#FBB62F"/><rect x="12.5" y="5" width="6" height="21" rx="3" fill="#A60437"/><rect x="5" y="12.5" width="21" height="6" rx="3" fill="#A60437"/></g></svg>`;
+
+/* ---------------- Estado ---------------- */
+const hoy0 = new Date(); hoy0.setHours(0,0,0,0);
+const T0 = hoy0.getTime();
+const at = (h, m, dayOff=0) => T0 + dayOff*DAY + (h*60+m)*MIN;
+
+const S = {
+  now: at(10, 30),
+  simOn: true,
+  user: null,
+  route: 'login',
+  sedes: [{ id:'s1', nombre:'Sede Principal', direccion:'Av. principal, Lima' }],
+  pisos: [],
+  nodos: [],
+  tarjetas: [],
+  atenciones: [],   // hoy
+  hist: [],         // días anteriores
+  occ: {},          // ocupación por zona/día/hora
+  usuarios: [],
+  auditoria: [],
+  alertas: [],
+  ops: [],
+  nextId: 139,
+  loginFails: {},
+  undo: null,
+  ui: { piso:'p1', modo3d:true, rot:0, feed:'activos', admModo:'auto', admRes:null, from:'gemelo', atSel:null,
+        hRango:'7', hPiso:'p1', hZona:'z-sala', hQ:'', hPage:0, hDesde:'', hHasta:'',
+        audU:'', audT:'', disTab:'nodos', usrQ:'', usrRol:'', bell:false, menu:false, modal:null, loginErr:'' },
+  ed: { pisoId:'p1', sel:null, tool:'sel', nodo:null, drag:null }
+};
+
+function seedData(){
+  S.pisos = [
+    { id:'p1', sedeId:'s1', nombre:'Piso 1', nivel:1, ancho:24, fondo:13, publicado:true, dirty:false, plano:null,
+      ambientes:[{ nombre:'Baños', x:17, y:6, w:7, h:4 }],
+      zonas:[
+        { id:'z-adm',  nombre:'Admisión',           tipo:'Ingreso',  aforo:4,  umb:[50,80],   x:0,  y:0,  w:7,  h:10, pausa:null },
+        { id:'z-sala', nombre:'Sala de espera',     tipo:'Espera',   aforo:20, umb:[50,80],   x:7,  y:0,  w:10, h:10, pausa:null },
+        { id:'z-cons', nombre:'Consultorio piloto', tipo:'Servicio', aforo:1,  umb:[100,100], x:17, y:0,  w:7,  h:6,  pausa:null },
+        { id:'z-pas',  nombre:'Pasillo',            tipo:'Tránsito', aforo:0,  umb:[50,80],   x:0,  y:10, w:24, h:3,  pausa:null }
+      ]},
+    { id:'p2', sedeId:'s1', nombre:'Piso 2', nivel:2, ancho:24, fondo:13, publicado:true, dirty:false, plano:null,
+      ambientes:[{ nombre:'Depósito', x:10, y:6, w:7, h:3 }],
+      zonas:[
+        { id:'z2-sala', nombre:'Sala de espera 2', tipo:'Espera',   aforo:16, umb:[50,80],   x:0,  y:0, w:10, h:9, pausa:null },
+        { id:'z2-cons', nombre:'Consultorio 2',    tipo:'Servicio', aforo:1,  umb:[100,100], x:10, y:0, w:7,  h:6, pausa:null },
+        { id:'z2-lab',  nombre:'Laboratorio',      tipo:'Servicio', aforo:3,  umb:[50,80],   x:17, y:0, w:7,  h:9, pausa:null },
+        { id:'z2-pas',  nombre:'Pasillo',          tipo:'Tránsito', aforo:0,  umb:[50,80],   x:0,  y:9, w:24, h:4, pausa:null }
+      ]}
+  ];
+  S.nodos = [
+    { id:'N-01', mac:'24:6F:28:AA:01:01', pisoId:'p1', zonaId:'z-adm',  x:3.5, y:2,  estado:'En línea', latido:Date.now() },
+    { id:'N-02', mac:'24:6F:28:AA:01:02', pisoId:'p1', zonaId:'z-sala', x:12,  y:2,  estado:'En línea', latido:Date.now() },
+    { id:'N-03', mac:'24:6F:28:AA:01:03', pisoId:'p1', zonaId:'z-cons', x:20.5,y:1.5,estado:'En línea', latido:Date.now() }
+  ];
+  const est = { 'T-02':'Disponible','T-05':'Disponible','T-09':'Disponible','T-12':'Disponible','T-11':'Por desinfectar','T-14':'Sin devolver' };
+  S.tarjetas = Array.from({length:15}, (_, i) => { const id = 'T-' + pad2(i+1); return { id, estado: est[id] || 'En uso', atencionId:null, ble:'0x' + (0xC0A100 + i*37).toString(16).toUpperCase(), ultima:null, desde:null }; });
+
+  // ---- Historial de 6 días (A-0001 … A-0117)
+  const porDia = [19,20,18,21,19,20]; let n = 1;
+  const pesos = [[7,1],[8,3],[9,5],[10,5],[11,3],[12,1],[13,1],[14,3],[15,4],[16,3],[17,1]];
+  const tot = pesos.reduce((s,p)=>s+p[1],0);
+  porDia.forEach((cnt, k) => {
+    const off = k - 6;
+    for (let i = 0; i < cnt; i++){
+      let r = rnd()*tot, h = 7; for (const [hh,w] of pesos){ if ((r -= w) <= 0){ h = hh; break; } }
+      const ini = at(h, rint(0,59), off);
+      S.hist.push(fakeAtencion('A-' + String(n++).padStart(4,'0'), ini, 'T-' + pad2(rint(1,15))));
+    }
+  });
+  S.hist.sort((a,b)=>a.inicio-b.inicio);
+
+  // ---- Hoy: atendidas A-0118…A-0129
+  const llegadas = [[7,34],[7,49],[8,3],[8,12],[8,26],[8,31],[8,47],[9,2],[9,10],[8,20],[9,21],[9,30]];
+  llegadas.forEach(([h,m], i) => {
+    const id = 'A-0' + (118 + i);
+    if (id === 'A-0127'){
+      const ini = at(8,20);
+      S.atenciones.push({ id, tarjetaId:'T-14', inicio:ini, fin:at(8,40), estado:'cerrada', motivo:'Sin lecturas', destino:'otro', pisoId:'p1',
+        eventos:[{zonaId:'z-adm',entrada:ini,salida:ini+2*MIN},{zonaId:'z-sala',entrada:ini+2*MIN,salida:at(8,40)}] });
+    } else {
+      const a = fakeAtencion(id, at(h,m), 'T-' + pad2(rint(1,15)), at(10,25));
+      S.atenciones.push(a);
+    }
+  });
+  const T14 = S.tarjetas.find(t=>t.id==='T-14'); T14.atencionId = 'A-0127'; T14.desde = at(8,40);
+  S.tarjetas.find(t=>t.id==='T-11').desde = at(10,18);
+
+  // ---- Hoy: activas A-0130…A-0138
+  const act = [
+    ['A-0130','T-01','piloto', at(9,45), [['z-adm',0],['z-sala',2],['z-cons',37]] ],
+    ['A-0131','T-03','otro',   at(9,50), [['z-adm',0],['z-sala',2]] ],
+    ['A-0132','T-04','piloto', at(9,58), [['z-adm',0],['z-sala',2]] ],
+    ['A-0133','T-06','otro',   at(10,3), [['z-adm',0],['z-sala',2]] ],
+    ['A-0134','T-07','piloto', at(10,10),[['z-adm',0],['z-sala',2]] ],
+    ['A-0135','T-08','otro',   at(10,18),[['z-adm',0],['z-sala',2]] ],
+    ['A-0136','T-10','piloto', at(10,22),[['z-adm',0],['z-sala',2]] ],
+    ['A-0137','T-13','otro',   at(10,27),[['z-adm',0]] ],
+    ['A-0138','T-15','piloto', at(10,29),[['z-adm',0]] ]
+  ];
+  act.forEach(([id,tid,dest,ini,evs]) => {
+    const eventos = evs.map(([z,o],i)=>({ zonaId:z, entrada:ini+o*MIN, salida: i<evs.length-1 ? ini+evs[i+1][1]*MIN : null }));
+    S.atenciones.push({ id, tarjetaId:tid, inicio:ini, fin:null, estado:'activa', motivo:null, destino:dest, pisoId:'p1', eventos,
+      wObj: rint(14,40), dCons: rint(10,17) });
+    const t = S.tarjetas.find(x=>x.id===tid); t.atencionId = id; t.desde = ini;
+  });
+
+  // ---- Ocupación histórica (pacientes presentes, promedio por hora)
+  const base = { 'z-sala':[2,5,9,12,10,6,3,6,10,9,5,3], 'z-adm':[.6,1.4,2.2,2.8,2.2,1.2,.7,1.4,2.4,2,1.2,.6], 'z-cons':[.2,.7,.9,.95,.9,.6,.2,.6,.9,.85,.6,.2] };
+  for (const z in base){
+    S.occ[z] = [];
+    for (let d = 0; d < 7; d++){
+      const f = .85 + rnd()*.3;
+      S.occ[z].push(base[z].map((v,h)=>{ let x = v*f + gauss(0, v*.12); if (z==='z-cons') x = clamp(x,0,1); return Math.max(0, Math.round(x*10)/10); }));
+    }
+  }
+  S.occ['z-sala'][3][3] = 21; S.occ['z-sala'][3][2] = 15; // un día con aforo superado a las 10:00
+
+  // ---- Usuarios
+  S.usuarios = [
+    { id:'u1', nombre:'Ana Torres',   correo:'admin@creo.pe',    rol:'Administrador', pisos:['p1','p2'], estado:'Activo',          pass:'demo123', ultimo:at(8,2) },
+    { id:'u2', nombre:'Luis Rojas',   correo:'operador@creo.pe', rol:'Operador',      pisos:['p1'],      estado:'Activo',          pass:'demo123', ultimo:at(7,30) },
+    { id:'u3', nombre:'Juan Morales', correo:'gerencia@creo.pe', rol:'Gerencia',      pisos:['p1','p2'], estado:'Activo',          pass:'demo123', ultimo:at(9,15,-1) },
+    { id:'u4', nombre:'Carla Díaz',   correo:'nuevo@creo.pe',    rol:'Operador',      pisos:['p1'],      estado:'Primer ingreso',  pass:'demo123', ultimo:null },
+    { id:'u5', nombre:'Pedro Salas',  correo:'psalas@creo.pe',   rol:'Operador',      pisos:['p1'],      estado:'Desactivado',     pass:'demo123', ultimo:at(18,2,-5) }
+  ];
+
+  // ---- Auditoría inicial
+  const A = (t, u, rol, tipo, acc, el, det) => S.auditoria.push({ t, u, rol, tipo, acc, el, det });
+  A(at(9,40,-6),'Ana Torres','Administrador','Gemelo','Publicó cambios','Piso 1','4 zonas · 3 nodos');
+  A(at(9,52,-6),'Ana Torres','Administrador','Dispositivos','Registró nodo','N-03','Consultorio piloto');
+  A(at(10,5,-6),'Ana Torres','Administrador','Usuarios','Creó usuario','Luis Rojas','Rol Operador · Piso 1');
+  A(at(10,9,-6),'Ana Torres','Administrador','Usuarios','Creó usuario','Juan Morales','Rol Gerencia');
+  A(at(11,0,-5),'Ana Torres','Administrador','Gemelo','Publicó cambios','Piso 2','4 zonas · sin nodos');
+  A(at(18,1,-5),'Ana Torres','Administrador','Usuarios','Desactivó usuario','Pedro Salas','Activo → Desactivado');
+  A(at(8,30,-2),'Ana Torres','Administrador','Gemelo','Cambió aforo','Sala de espera','18 → 20');
+  A(at(12,10,-2),'Luis Rojas','Operador','Seguimiento','Pausó zona','Consultorio piloto','Motivo: Limpieza');
+  A(at(12,40,-2),'Luis Rojas','Operador','Seguimiento','Reactivó zona','Consultorio piloto','Pausado → Activo');
+  A(at(9,15,-1),'Juan Morales','Gerencia','Sesión','Inició sesión','—','Navegador web');
+  A(at(16,22,-1),'Juan Morales','Gerencia','Reportes','Exportó reporte','Historial · 7 días','CSV');
+  A(at(7,30),'Luis Rojas','Operador','Sesión','Inició sesión','—','Navegador web');
+  A(at(8,2),'Ana Torres','Administrador','Sesión','Inició sesión','—','Navegador web');
+  A(at(8,5),'Ana Torres','Administrador','Usuarios','Creó usuario','Carla Díaz','Rol Operador · Piso 1');
+  S.atenciones.filter(a=>a.estado==='activa').slice(0,6).forEach(a=>A(a.inicio,'Luis Rojas','Operador','Admisión','Entregó tarjeta',a.tarjetaId,a.id));
+  A(at(8,40),'Sistema','—','Admisión','Cerró atención por inactividad','A-0127','T-14 · sin lecturas');
+  A(at(10,18),'Luis Rojas','Operador','Admisión','Recibió tarjeta','T-11','A-0129 · total 41 min');
+  S.auditoria.sort((a,b)=>b.t-a.t);
+
+  S.alertas = [{ id:1, tipo:'alta', txt:'Tarjeta T-14 sin devolver', det:'A-0127 · sin lecturas desde las 08:40', t:at(8,40), ir:'admision', leida:false }];
+  S.ops = S.atenciones.filter(a=>a.estado==='activa').slice(-5).reverse().map(a=>({ t:a.inicio, tipo:'Entregada', tarjeta:a.tarjetaId, at:a.id }));
+  S.ops.splice(2,0,{ t:at(10,18), tipo:'Recibida', tarjeta:'T-11', at:'A-0129', total:41 });
+}
+function fakeAtencion(id, ini, tid, limite){
+  const piloto = rnd() < .45;
+  const e1 = ini + rint(1,3)*MIN;
+  let esp = Math.round(clamp(gauss(23,8), 5, 55));
+  let e2 = e1 + esp*MIN;
+  const d2 = Math.round(piloto ? clamp(gauss(14,4),7,26) : clamp(gauss(15,5),6,30));
+  let e3 = e2 + d2*MIN, e4 = e3 + rint(2,4)*MIN;
+  if (limite && e4 > limite){ const s = (limite - ini) / (e4 - ini); esp = Math.max(5, Math.round(esp*s)); e2 = e1 + esp*MIN; e3 = e2 + Math.max(6, Math.round(d2*s))*MIN; e4 = Math.min(limite, e3 + 2*MIN); }
+  return { id, tarjetaId:tid, inicio:ini, fin:e4, estado:'cerrada', motivo:'Devuelta', destino:piloto?'piloto':'otro', pisoId:'p1',
+    eventos:[{zonaId:'z-adm',entrada:ini,salida:e1},{zonaId:'z-sala',entrada:e1,salida:e2},{zonaId:piloto?'z-cons':'externo',entrada:e2,salida:e3},{zonaId:'z-pas',entrada:e3,salida:e4}] };
+}
+
+/* ---------------- Consultas ---------------- */
+const pisoById = id => S.pisos.find(p=>p.id===id);
+const allZonas = () => S.pisos.flatMap(p => p.zonas.map(z => Object.assign(z, { pisoId:p.id })));
+const zonaById = id => id==='externo' ? { id:'externo', nombre:'Otro consultorio', tipo:'Externo' } : allZonas().find(z=>z.id===id) || (S.pisos.flatMap(p=>p.borrador||[]).find(z=>z.id===id));
+const nodoDeZona = z => S.nodos.find(n=>n.zonaId===z.id && n.estado!=='Baja');
+const zonaActual = a => { const e = a.eventos[a.eventos.length-1]; return e && !e.salida ? e.zonaId : null; };
+const activas = () => S.atenciones.filter(a=>a.estado==='activa');
+const enZona = z => activas().filter(a=>zonaActual(a)===z.id);
+const tipoZ = id => zonaById(id)?.tipo;
+function espera(a){ const e = a.eventos.find(e => e.zonaId==='externo' || tipoZ(e.zonaId)==='Servicio'); return e ? mins(e.entrada - a.inicio) : null; }
+function esperaCorriendo(a){ const v = espera(a); return v != null ? v : mins((a.fin||S.now) - a.inicio); }
+function consulta(a){ let t = 0, any = false; a.eventos.forEach(e=>{ if (tipoZ(e.zonaId)==='Servicio'){ any = true; t += (e.salida||a.fin||S.now) - e.entrada; } }); return any ? mins(t) : null; }
+const total = a => mins((a.fin||S.now) - a.inicio);
+const avg = arr => { const v = arr.filter(x=>x!=null); return v.length ? Math.round(v.reduce((s,x)=>s+x,0)/v.length) : null; };
+function nivel(z){
+  if (z.tipo==='Tránsito' || z.tipo==='Salida') return 'neutral';
+  if (z.pausa) return 'pausa';
+  const n = nodoDeZona(z);
+  if (!n || n.estado!=='En línea') return 'nd';
+  const pct = enZona(z).length / Math.max(1, z.aforo) * 100;
+  return pct > z.umb[1] ? 'alta' : pct > z.umb[0] ? 'media' : 'baja';
+}
+const NIV = { alta:'Alta', media:'Media', baja:'Baja', nd:'Sin datos', pausa:'Seguimiento pausado', neutral:'Tránsito' };
+const COL = { alta:'#E53935', media:'#F2A900', baja:'#2E9E6B', nd:'#B0B0B0', pausa:'#B0B0B0', neutral:'#D9D3CC' };
+const SOFT = { alta:'#F9C9C6', media:'#FBE3A4', baja:'#BFE6D2', nd:'#E4E2E0', pausa:'#E4E2E0', neutral:'#EEE9E3' };
+function estadoAt(a){
+  if (a.estado==='cerrada') return { txt:'Atendido', cls:'dark' };
+  const z = zonaActual(a); const t = tipoZ(z);
+  if (z==='externo') return { txt:'Fuera del piloto', cls:'nd' };
+  if (t==='Ingreso') return { txt:'En admisión', cls:'' };
+  if (t==='Espera') return { txt:'En espera', cls:'media' };
+  if (t==='Servicio') return { txt:'En consulta', cls:'baja' };
+  return { txt:'Hacia la salida', cls:'' };
+}
+const visiblePisos = () => S.pisos.filter(p => p.publicado && (S.user?.rol!=='Operador' || S.user.pisos.includes(p.id)));
+const can = r => ({ admision:['Operador'], seguimiento:['Operador'], construccion:['Administrador'], dispositivos:['Administrador'], usuarios:['Administrador'], auditoria:['Administrador'] }[r] || ['Operador','Gerencia','Administrador']).includes(S.user?.rol);
+
+/* ---------------- Utilidades UI ---------------- */
+function toast(msg, kind=''){ const el = document.createElement('div'); el.className = 'toast ' + kind; el.innerHTML = `<i></i><span>${esc(msg)}</span>`; $('#toasts').appendChild(el); setTimeout(()=>el.remove(), 3800); }
+function audit(tipo, acc, el, det, who){ const u = who || S.user; S.auditoria.unshift({ t:S.now, u:u?.nombre||'Sistema', rol:u?.rol||'—', tipo, acc, el, det }); }
+function alerta(tipo, txt, det, ir){ if (S.alertas.some(a=>a.txt===txt && !a.leida)) return; S.alertas.unshift({ id:Date.now()+Math.random(), tipo, txt, det, t:S.now, ir, leida:false }); }
+const go = r => { location.hash = r; };
+function openModal(m){ S.ui.modal = m; renderModal(); }
+function closeModal(){ S.ui.modal = null; renderModal(); }
+
+/* ---------------- Simulación en vivo ---------------- */
+function moveTo(a, zonaId){ const e = a.eventos[a.eventos.length-1]; if (e && !e.salida) e.salida = S.now; a.eventos.push({ zonaId, entrada:S.now, salida:null }); a.flash = true; }
+function cerrar(a, motivo){ const e = a.eventos[a.eventos.length-1]; if (e && !e.salida) e.salida = S.now; a.fin = S.now; a.estado = 'cerrada'; a.motivo = motivo; }
+const SIM_USER = { nombre:'Recepción (simulación)', rol:'Operador' };
+function tick(){
+  if (!S.simOn) return;
+  S.now += 3*MIN;
+  const cons = pisoById('p1').zonas.find(z=>z.id==='z-cons');
+  activas().forEach(a => { a.flash = false; });
+  activas().forEach(a => {
+    const z = zonaActual(a), e = a.eventos[a.eventos.length-1], en = mins(S.now - e.entrada);
+    if (z==='z-adm' && en >= 3 && rnd() < .75) moveTo(a,'z-sala');
+    else if (z==='z-sala' && a.destino==='otro' && en >= a.wObj) moveTo(a,'externo');
+    else if (z==='z-cons' && en >= a.dCons) moveTo(a,'z-pas');
+    else if (z==='externo' && en >= 15 && rnd() < .4) moveTo(a,'z-pas');
+  });
+  if (enZona(cons).length===0 && !cons.pausa){
+    const cola = enZona(pisoById('p1').zonas[1]).filter(a=>a.destino==='piloto').sort((x,y)=>x.inicio-y.inicio);
+    if (cola[0]) moveTo(cola[0], 'z-cons');
+  }
+  activas().filter(a=>zonaActual(a)==='z-pas' && mins(S.now - a.eventos[a.eventos.length-1].entrada) >= 3 && rnd() < .5).forEach(a=>{
+    const t = S.tarjetas.find(x=>x.id===a.tarjetaId);
+    cerrar(a,'Devuelta'); t.estado='Por desinfectar'; t.atencionId=null; t.desde=S.now;
+    S.ops.unshift({ t:S.now, tipo:'Recibida', tarjeta:t.id, at:a.id, total:total(a) });
+    audit('Admisión','Recibió tarjeta',t.id,`${a.id} · total ${total(a)} min`, SIM_USER);
+  });
+  const disp = S.tarjetas.filter(t=>t.estado==='Disponible');
+  if (disp.length < 2){ const pd = S.tarjetas.find(t=>t.estado==='Por desinfectar' && S.now - t.desde > 9*MIN); if (pd){ pd.estado='Disponible'; pd.desde=S.now; S.ops.unshift({ t:S.now, tipo:'Desinfectada', tarjeta:pd.id }); audit('Admisión','Marcó desinfectada',pd.id,'Por desinfectar → Disponible',SIM_USER); } }
+  const d2 = S.tarjetas.filter(t=>t.estado==='Disponible');
+  if (d2.length && rnd() < .33) entregar(d2[rint(0,d2.length-1)], SIM_USER);
+  activas().forEach(a=>{ if (['z-adm','z-sala'].includes(zonaActual(a)) && esperaCorriendo(a) > 45) alerta('media', `Espera de ${a.id} supera 45 min`, 'Sala de espera · Piso 1', 'gemelo'); });
+  const sala = pisoById('p1').zonas[1]; if (enZona(sala).length > sala.aforo) alerta('alta','Aforo superado en Sala de espera',`${enZona(sala).length}/${sala.aforo}`,'gemelo');
+  S.nodos.forEach(n=>{ if (n.estado==='En línea') n.latido = Date.now(); });
+  S.ops = S.ops.slice(0,12);
+  render(true);
+}
+function entregar(t, who){
+  const id = 'A-0' + (S.nextId++);
+  const a = { id, tarjetaId:t.id, inicio:S.now, fin:null, estado:'activa', motivo:null, destino: rnd()<.45?'piloto':'otro', pisoId:'p1',
+              eventos:[{ zonaId:'z-adm', entrada:S.now, salida:null }], wObj:rint(14,40), dCons:rint(10,17), flash:true };
+  S.atenciones.push(a); t.estado='En uso'; t.atencionId=id; t.desde=S.now;
+  S.ops.unshift({ t:S.now, tipo:'Entregada', tarjeta:t.id, at:id });
+  audit('Admisión','Entregó tarjeta',t.id,id, who);
+  return a;
+}
+
+/* =========================================================
+   Gemelo: render isométrico (SVG) y 2D
+   ========================================================= */
+const C30 = Math.cos(Math.PI/6), WALL = 1.5;
+function rotP(x, y, r, W, D){ return r===0?[x,y]: r===1?[D-y,x]: r===2?[W-x,D-y]: [y,W-x]; }
+function rects(p, zonas){ return zonas.map(z=>({x:z.x,y:z.y,w:z.w,h:z.h})).concat((p.ambientes||[]).map(a=>({x:a.x,y:a.y,w:a.w,h:a.h}))); }
+function wallSegs(p, zonas){
+  const segs = new Map();
+  const add = (x1,y1,x2,y2) => { const k = [x1,y1,x2,y2].map(v=>v.toFixed(2)).join(); const k2 = [x2,y2,x1,y1].map(v=>v.toFixed(2)).join(); if (!segs.has(k) && !segs.has(k2)) segs.set(k,[x1,y1,x2,y2]); };
+  rects(p, zonas).forEach(r=>{ add(r.x,r.y,r.x+r.w,r.y); add(r.x+r.w,r.y,r.x+r.w,r.y+r.h); add(r.x+r.w,r.y+r.h,r.x,r.y+r.h); add(r.x,r.y+r.h,r.x,r.y); });
+  return [...segs.values()];
+}
+function isoSVG(pisos, opts={}){
+  const s = opts.s || 22, rot = opts.rot || 0, mini = !!opts.mini, gap = opts.gap || 6.5;
+  const layers = pisos.map((p,i)=>({ p, zonas: opts.zonas || p.zonas, zOff: i*gap }));
+  const pts = []; let out = '';
+  const pr = (p, x, y, z) => { const [a,b] = rotP(x,y,rot,p.ancho,p.fondo); const X = (a-b)*C30*s, Y = ((a+b)*.5 - z)*s; pts.push([X,Y]); return [X,Y]; };
+  const poly = (arr) => arr.map(q=>q[0].toFixed(1)+','+q[1].toFixed(1)).join(' ');
+  layers.forEach(({p, zonas, zOff}) => {
+    const W = p.ancho, D = p.fondo, z0 = zOff;
+    const dimA = rot%2 ? D : W, dimB = rot%2 ? W : D;
+    const prR = (a,b,z) => { const X=(a-b)*C30*s, Y=((a+b)*.5 - z)*s; pts.push([X,Y]); return [X,Y]; };
+    const multi = layers.length > 1;
+    out += `<g ${multi && opts.clickPiso ? `data-a="pisoStack" data-piso="${p.id}" style="cursor:pointer"` : ''}>`;
+    // losa
+    out += `<polygon points="${poly([prR(dimA,0,z0),prR(dimA,dimB,z0),prR(dimA,dimB,z0-.45),prR(dimA,0,z0-.45)])}" fill="#D9D1C8"/>`;
+    out += `<polygon points="${poly([prR(0,dimB,z0),prR(dimA,dimB,z0),prR(dimA,dimB,z0-.45),prR(0,dimB,z0-.45)])}" fill="#CBC2B8"/>`;
+    out += `<polygon points="${poly([prR(0,0,z0),prR(dimA,0,z0),prR(dimA,dimB,z0),prR(0,dimB,z0)])}" fill="#F3EFEA" stroke="#E2DAD1"/>`;
+    // pisos de zona
+    zonas.forEach(z=>{
+      const lv = mini && !opts.live ? 'neutral' : nivel(z);
+      const fill = mini && !opts.live ? ({Ingreso:'#E5EAF2',Espera:'#E3F1E9',Servicio:'#F8E6E2',Tránsito:'#EEE9E3',Salida:'#ECE6F3'}[z.tipo]||'#EEE9E3') : SOFT[lv];
+      const c = [[z.x,z.y],[z.x+z.w,z.y],[z.x+z.w,z.y+z.h],[z.x,z.y+z.h]].map(([x,y])=>pr(p,x,y,z0+.02));
+      out += `<g class="${mini?'':'zone-g'}" ${mini?'':`data-zona="${z.id}" data-a="zona"`}><polygon class="zfloor" points="${poly(c)}" fill="${fill}" stroke="${mini?'#D6CEC4':'rgba(31,27,28,.12)'}"/></g>`;
+    });
+    // muros (orden por profundidad)
+    const segs = wallSegs(p, zonas).map(([x1,y1,x2,y2])=>{ const [a1,b1]=rotP(x1,y1,rot,W,D), [a2,b2]=rotP(x2,y2,rot,W,D); return { x1,y1,x2,y2, d:(a1+b1+a2+b2)/2, along:Math.abs(b1-b2)<1e-6 }; }).sort((u,v)=>u.d-v.d);
+    const h = mini ? WALL*.8 : WALL;
+    segs.forEach(g=>{
+      const q = [pr(p,g.x1,g.y1,z0),pr(p,g.x2,g.y2,z0),pr(p,g.x2,g.y2,z0+h),pr(p,g.x1,g.y1,z0+h)];
+      out += `<polygon points="${poly(q)}" fill="${g.along?'#FFFFFF':'#F1ECE6'}" stroke="#D8CFC5" stroke-width="1" stroke-linejoin="round" pointer-events="none"/>`;
+    });
+    // nodos
+    if (!mini) S.nodos.filter(n=>n.pisoId===p.id && n.estado!=='Baja' && zonas.some(z=>z.id===n.zonaId)).forEach(n=>{
+      const [X,Y] = pr(p,n.x,n.y,z0+h+.15);
+      out += `<g pointer-events="none"><circle cx="${X}" cy="${Y}" r="5.5" fill="#fff" stroke="${n.estado==='En línea'?'#2E9E6B':'#9A9294'}" stroke-width="2.5"/><text x="${X+9}" y="${Y+4}" font-size="10" font-weight="700" fill="#6E6668" font-family="Nunito Sans, sans-serif">${n.id}</text></g>`;
+    });
+    // íconos por zona
+    if (!mini || opts.live) zonas.forEach(z=>{
+      const lv = nivel(z); if (lv==='neutral') return;
+      const [X,Y] = pr(p, z.x+z.w/2, z.y+z.h/2, z0 + (mini?1.6:h+1.6));
+      const [FX,FY] = pr(p, z.x+z.w/2, z.y+z.h/2, z0);
+      const col = COL[lv], n = enZona(z).length;
+      const txt = lv==='nd' ? 'Sin datos' : lv==='pausa' ? 'Pausado' : `${n}/${z.aforo}`;
+      const sc = mini ? .7 : 1;
+      out += `<g class="${mini?'':'zone-g'}" ${mini?'':`data-zona="${z.id}" data-a="zona"`} transform="translate(${X.toFixed(1)} ${Y.toFixed(1)}) scale(${sc})">
+        <line x1="0" y1="16" x2="0" y2="${(FY-Y)/sc - 2}" stroke="${col}" stroke-width="1.5" stroke-dasharray="2 3" opacity=".7"/>
+        <circle r="16" fill="#fff" stroke="${col}" stroke-width="3.5"/>
+        <g transform="translate(-9 -10) scale(.75)" fill="none" stroke="${col}" stroke-width="2.6" stroke-linecap="round"><circle cx="12" cy="7" r="4" fill="${col}"/><path d="M5 22v-2a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v2" fill="${col}"/></g>
+        <g transform="translate(0 30)"><rect x="${-(txt.length*3.6+10)}" y="-11" width="${txt.length*7.2+20}" height="21" rx="10.5" fill="${lv==='nd'||lv==='pausa'?'#6E6668':'#1A1A1A'}"/><text y="4" text-anchor="middle" font-size="12" font-weight="800" fill="#fff" font-family="Nunito, sans-serif">${txt}</text></g>
+        ${mini?'':`<text y="-24" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1F1B1C" font-family="Nunito Sans, sans-serif" paint-order="stroke" stroke="#F7F4EF" stroke-width="4">${esc(z.nombre)}</text>`}
+      </g>`;
+    });
+    if (multi){ const [X,Y] = prR(0,dimB,z0); out += `<text x="${X-8}" y="${Y+4}" text-anchor="end" font-size="13" font-weight="800" fill="#1F1B1C" font-family="Nunito, sans-serif">${esc(p.nombre)}</text>`; }
+    out += `</g>`;
+  });
+  const xs = pts.map(q=>q[0]), ys = pts.map(q=>q[1]);
+  const pad = mini ? 10 : 30, x0 = Math.min(...xs)-pad-(layers.length>1?60:0), y0 = Math.min(...ys)-pad-(mini?0:30), w = Math.max(...xs)-x0+pad, hh = Math.max(...ys)-y0+pad;
+  return `<svg viewBox="${x0.toFixed(0)} ${y0.toFixed(0)} ${w.toFixed(0)} ${hh.toFixed(0)}" role="img" aria-label="Gemelo digital en 3D">${out}</svg>`;
+}
+function planSVG(p){
+  const K = 30, W = p.ancho*K, D = p.fondo*K; let out = `<rect width="${W}" height="${D}" fill="#F3EFEA"/>`;
+  p.zonas.forEach(z=>{ const lv = nivel(z); out += `<g class="zone-g" data-zona="${z.id}" data-a="zona"><rect class="zfloor" x="${z.x*K}" y="${z.y*K}" width="${z.w*K}" height="${z.h*K}" fill="${SOFT[lv]}"/></g>`; });
+  (p.ambientes||[]).forEach(a=>{ out += `<rect x="${a.x*K}" y="${a.y*K}" width="${a.w*K}" height="${a.h*K}" fill="#ECE7E1"/><text x="${(a.x+a.w/2)*K}" y="${(a.y+a.h/2)*K+4}" text-anchor="middle" font-size="12" fill="#9A9294" font-family="Nunito Sans, sans-serif">${esc(a.nombre)}</text>`; });
+  wallSegs(p, p.zonas).forEach(([x1,y1,x2,y2])=>{ out += `<line x1="${x1*K}" y1="${y1*K}" x2="${x2*K}" y2="${y2*K}" stroke="#3A3536" stroke-width="4" stroke-linecap="square" pointer-events="none"/>`; });
+  S.nodos.filter(n=>n.pisoId===p.id && n.estado!=='Baja').forEach(n=>{ out += `<g pointer-events="none"><circle cx="${n.x*K}" cy="${n.y*K}" r="6" fill="#fff" stroke="${n.estado==='En línea'?'#2E9E6B':'#9A9294'}" stroke-width="3"/><text x="${n.x*K+10}" y="${n.y*K+4}" font-size="11" font-weight="700" fill="#6E6668" font-family="Nunito Sans, sans-serif">${n.id}</text></g>`; });
+  p.zonas.forEach(z=>{
+    const lv = nivel(z), cx = (z.x+z.w/2)*K, cy = (z.y+z.h/2)*K;
+    out += `<text x="${z.x*K+10}" y="${z.y*K+20}" font-size="13" font-weight="800" fill="#1F1B1C" font-family="Nunito, sans-serif" pointer-events="none">${esc(z.nombre)}</text>`;
+    if (lv==='neutral') return;
+    const col = COL[lv], txt = lv==='nd'?'Sin datos':lv==='pausa'?'Pausado':`${enZona(z).length}/${z.aforo}`;
+    out += `<g class="zone-g" data-zona="${z.id}" data-a="zona" transform="translate(${cx} ${cy-8})"><circle r="17" fill="#fff" stroke="${col}" stroke-width="3.5"/><g transform="translate(-9 -10) scale(.75)" fill="${col}" stroke="${col}" stroke-width="2.6"><circle cx="12" cy="7" r="4"/><path d="M5 22v-2a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v2"/></g><g transform="translate(0 32)"><rect x="${-(txt.length*3.6+10)}" y="-11" width="${txt.length*7.2+20}" height="21" rx="10.5" fill="${lv==='nd'||lv==='pausa'?'#6E6668':'#1A1A1A'}"/><text y="4" text-anchor="middle" font-size="12" font-weight="800" fill="#fff" font-family="Nunito, sans-serif">${txt}</text></g></g>`;
+  });
+  return `<svg viewBox="-10 -10 ${W+20} ${D+20}" role="img" aria-label="Plano 2D">${out}</svg>`;
+}
+
+/* =========================================================
+   Vistas
+   ========================================================= */
+function viewLogin(){
+  const e = S.ui.loginErr;
+  return `<div class="login">
+    <section class="login-l">
+      <div>${logo()}<div style="color:#BDB5B7;margin-top:4px">Clínica Renal y Oncológica</div></div>
+      <div class="pitch"><span class="eyebrow">CREO FlowTwin</span><h1>Gemelo digital del flujo de pacientes</h1><p>Ocupación, esperas y recorridos en tiempo real, con identificadores anónimos.</p></div>
+      <small>Clínica CREO+ · Sede Principal</small>
+    </section>
+    <section class="login-r">
+      <form class="login-box" data-f="login" autocomplete="off">
+        <h1 style="font-size:24px">Iniciar sesión</h1>
+        <p class="sub">Ingresa con tu correo institucional.</p>
+        <div class="field"><label for="lg-mail">Correo</label><input class="inp" id="lg-mail" name="mail" type="email" placeholder="nombre@creo.pe" required></div>
+        <div class="field"><label for="lg-pass">Contraseña</label><input class="inp" id="lg-pass" name="pass" type="password" required></div>
+        ${e?`<div class="err" role="alert">${esc(e)}</div>`:''}
+        <button class="btn btn-p btn-block" type="submit">${ic('inn')} Ingresar</button>
+        <button class="link" type="button" data-a="olvido" style="align-self:flex-start">¿Olvidaste tu contraseña?</button>
+        ${S.ui.olvido?`<div class="helpbox">Pide al Administrador que restablezca tu contraseña. Él te entregará una contraseña temporal.</div>`:''}
+        <div class="demo-acc">
+          <span class="lbl-up">Acceso rápido de demo</span>
+          <button class="btn btn-n btn-block" type="button" data-a="demo" data-mail="operador@creo.pe">Entrar como Operador</button>
+          <button class="btn btn-n btn-block" type="button" data-a="demo" data-mail="gerencia@creo.pe">Entrar como Gerencia</button>
+          <button class="btn btn-n btn-block" type="button" data-a="demo" data-mail="admin@creo.pe">Entrar como Administrador</button>
+          <span class="hint">También puedes usar cualquier correo de demo con la contraseña «demo123». Prueba nuevo@creo.pe para ver el primer ingreso.</span>
+        </div>
+      </form>
+    </section>
+  </div>`;
+}
+function viewCambiar(){
+  const forced = S.user.estado==='Primer ingreso';
+  return `<div class="page-head"><div><h1>Cambiar contraseña</h1><p>${forced?'Es tu primer ingreso. Crea una contraseña propia para continuar.':'Actualiza tu contraseña de acceso.'}</p></div></div>
+  <form class="card pad" data-f="cambiar" style="max-width:460px;display:flex;flex-direction:column;gap:14px">
+    <div class="field"><label for="cp-a">${forced?'Contraseña temporal':'Contraseña actual'}</label><input class="inp" id="cp-a" name="a" type="password" required></div>
+    <div class="field"><label for="cp-n">Nueva contraseña</label><input class="inp" id="cp-n" name="n" type="password" data-i="pwcheck" required></div>
+    <div class="field"><label for="cp-c">Confirmar nueva contraseña</label><input class="inp" id="cp-c" name="c" type="password" required></div>
+    <div class="checks" id="pwchecks">${pwChecks('')}</div>
+    ${S.ui.cpErr?`<div class="err">${esc(S.ui.cpErr)}</div>`:''}
+    <div class="toolbar"><button class="btn btn-p" type="submit">Guardar contraseña</button>${forced?'':'<button class="btn btn-o" type="button" data-a="home">Cancelar</button>'}</div>
+  </form>`;
+}
+function pwChecks(v){ const r = [[v.length>=8,'Al menos 8 caracteres'],[/[A-Z]/.test(v),'Una letra mayúscula'],[/\d/.test(v),'Un número']]; return r.map(([ok,t])=>`<span class="${ok?'ok':''}">${ok?ic('check'):'·'} ${t}</span>`).join('').replace(/<svg /g,'<svg width="14" height="14" '); }
+
+/* ---- Admisión ---- */
+function viewAdmision(){
+  const T = S.tarjetas, c = k => T.filter(t=>t.estado===k);
+  const r = S.ui.admRes, modo = S.ui.admModo;
+  const pend = T.filter(t=>t.estado==='Sin devolver');
+  const desinf = c('Por desinfectar');
+  return `<div class="page-head"><div><h1>Admisión</h1><p>Escanee el QR de la tarjeta. El sistema reconoce si es una entrega o una devolución.</p></div></div>
+  <div class="adm">
+    <div class="col">
+      <div class="modes">
+        <button class="mode ${modo!=='recibir'?'on':''}" data-a="admModo" data-m="entregar"><b>Entregar tarjeta</b><span>El paciente inicia su recorrido</span></button>
+        <button class="mode ${modo==='recibir'?'on':''}" data-a="admModo" data-m="recibir"><b>Recibir tarjeta</b><span>El paciente termina su recorrido</span></button>
+      </div>
+      <form class="card pad" data-f="escanear" style="display:flex;flex-direction:column;gap:10px">
+        <label for="scan" style="font-weight:700">QR de la tarjeta</label>
+        <div class="scan-row"><input class="inp" id="scan" name="code" placeholder="T-07" autocomplete="off" inputmode="text" autofocus><button class="btn btn-n" type="submit">${modo==='recibir'?'Recibir':'Registrar'}</button></div>
+        <span class="hint">Use el lector QR o escriba el número de la tarjeta (por ejemplo, 7) y presione Enter. ${modo==='auto'?'Modo automático: el sistema decide si es entrega o devolución.':`Modo forzado: ${modo}. <button class="link" type="button" data-a="admModo" data-m="auto">Volver a automático</button>`}</span>
+      </form>
+      ${r ? `<div class="result ${r.kind}" role="status">${r.html}${S.undo && Date.now()-S.undo.t < 30000 ? `<div class="row" style="margin-top:6px"><button class="btn btn-o btn-sm" data-a="deshacer">Deshacer</button><span class="hint">Disponible durante 30 s</span></div>`:''}</div>`
+          : `<div class="empty">Aquí aparecerá la confirmación, con el código del paciente en letra grande para leerlo en voz alta.</div>`}
+      <div class="helpbox"><b>Ayuda de demo</b>
+        <div>Disponibles (entregar): ${c('Disponible').map(t=>`<span class="kbd" data-a="fill" data-v="${t.id}">${t.id}</span>`).join('')||'—'}</div>
+        <div>En uso (recibir): ${c('En uso').slice(0,9).map(t=>`<span class="kbd" data-a="fill" data-v="${t.id}">${t.id}</span>`).join('')}</div>
+        <div>Por desinfectar (error): ${desinf.map(t=>`<span class="kbd" data-a="fill" data-v="${t.id}">${t.id}</span>`).join('')||'—'} · No registrada: <span class="kbd" data-a="fill" data-v="T-40">T-40</span></div>
+      </div>
+    </div>
+    <aside class="col">
+      <div class="card pad" style="display:flex;flex-direction:column;gap:14px">
+        <h2>Tarjetas del piso</h2>
+        <div class="tiles">
+          <div class="tile t1"><b class="num">${c('Disponible').length}</b><span>Disponibles</span></div>
+          <div class="tile t2"><b class="num">${c('En uso').length}</b><span>En uso</span></div>
+          <div class="tile t3"><b class="num">${desinf.length}</b><span>Por desinfectar</span></div>
+          <div class="tile t4"><b class="num">${pend.length}</b><span>Sin devolver</span></div>
+        </div>
+        ${desinf.length?`<div class="list"><h3>Por desinfectar</h3>${desinf.map(t=>`<div class="li"><div><b>${t.id}</b><p>Devuelta a las ${hhmm(t.desde)} · limpiar con alcohol al 70%</p></div><button class="btn btn-o btn-sm" data-a="desinfectar" data-t="${t.id}">${ic('check')} Marcar desinfectada</button></div>`).join('')}</div>`:''}
+        ${pend.length?`<div class="list"><h3>Pendientes de devolución</h3>${pend.map(t=>`<div class="li warn"><div><b>${t.id} · ${t.atencionId||''}</b><p>Sin lecturas hace ${dur(mins(S.now-t.desde))} · atención cerrada por inactividad</p></div><button class="btn btn-o btn-sm" data-a="extraviar" data-t="${t.id}">Marcar extraviada</button></div>`).join('')}</div>`:''}
+      </div>
+      <div class="card pad"><h2 style="margin-bottom:6px">Últimas operaciones</h2><div class="ops">
+        ${S.ops.slice(0,7).map(o=>`<div class="op"><b class="num">${hhmm(o.t)}</b><span class="chip ${o.tipo==='Entregada'?'baja':o.tipo==='Recibida'?'':'media'}">${o.tipo}</span><span>${o.tarjeta}${o.at?` · ${o.at}`:''}${o.total?` · ${o.total} min en total`:''}</span></div>`).join('')}
+      </div></div>
+    </aside>
+  </div>`;
+}
+
+/* ---- Gemelo ---- */
+function kpis(){
+  const ayer = S.hist.filter(a=>a.inicio >= T0-DAY && a.inicio < T0);
+  const hoyAt = S.atenciones;
+  const espH = avg(hoyAt.map(espera)), espA = avg(ayer.map(espera));
+  const conH = avg(hoyAt.map(consulta)), conA = avg(ayer.map(consulta));
+  const sala = pisoById('p1').zonas.find(z=>z.tipo==='Espera');
+  const cmp = (h,a) => h==null||a==null ? '' : h===a ? 'igual que ayer' : `${h<a?'▼':'▲'} ${Math.abs(h-a)} min vs. ayer (${a} min)`;
+  return `<div class="kpis">
+    <div class="card kpi"><span class="k">En la clínica</span><span class="v num">${activas().length}</span><span class="c">${S.atenciones.filter(a=>a.estado==='cerrada').length} atendidos hoy</span></div>
+    <div class="card kpi"><span class="k">En sala de espera</span><span class="v num">${enZona(sala).length}<small>/${sala.aforo}</small></span><span class="c"><span class="dot ${nivel(sala)==='pausa'?'nd':nivel(sala)}"></span> Concentración ${NIV[nivel(sala)].toLowerCase()}</span></div>
+    <div class="card kpi"><span class="k">Espera promedio hoy</span><span class="v num">${espH??'—'}<small> min</small></span><span class="c">${cmp(espH,espA)}</span></div>
+    <div class="card kpi"><span class="k">Consulta promedio hoy</span><span class="v num">${conH??'—'}<small> min</small></span><span class="c">${cmp(conH,conA)}</span></div>
+  </div>`;
+}
+function viewGemelo(){
+  const vp = visiblePisos(); if (!vp.find(p=>p.id===S.ui.piso) && S.ui.piso!=='todos') S.ui.piso = vp[0]?.id;
+  const todos = S.ui.piso==='todos';
+  const p = todos ? null : pisoById(S.ui.piso);
+  const sinNodos = p && !S.nodos.some(n=>n.pisoId===p.id && n.estado!=='Baja');
+  const lst = feedList();
+  return `<div class="page-head"><div><h1>Gemelo en vivo</h1><p>${todos?'Todos los pisos de la sede. Haga clic en un piso para verlo de cerca.':'Pase el cursor o haga clic sobre una zona para ver su detalle.'}</p></div></div>
+  ${kpis()}
+  <div class="twin-grid">
+    <section class="card twin-card">
+      <div class="card-h">
+        <div><h2>${todos?'Sede Principal · todos los pisos':`${esc(p.nombre)} · ${esc(S.sedes[0].nombre)}`}</h2><p>${sinNodos?'Nodos no instalados: este piso aún no envía datos.':'Concentración de pacientes por zona, actualizada en vivo.'}</p></div>
+        <div class="toolbar">
+          ${vp.length>1?`<label class="sr" for="selpiso" style="position:absolute;left:-9999px">Piso</label><select class="inp" id="selpiso" data-i="piso" style="width:auto;min-height:36px;padding:6px 10px">${vp.map(x=>`<option value="${x.id}" ${x.id===S.ui.piso?'selected':''}>${esc(x.nombre)}</option>`).join('')}<option value="todos" ${todos?'selected':''}>Todos los pisos</option></select>`:''}
+          <div class="seg" role="group" aria-label="Vista"><button class="${S.ui.modo3d?'on':''}" data-a="modo" data-v="3d">3D</button><button class="${!S.ui.modo3d?'on':''}" data-a="modo" data-v="2d">2D</button></div>
+          ${S.ui.modo3d?`<button class="btn btn-o btn-sm" data-a="girar" title="Girar vista">${ic('rot')} Girar</button>`:''}
+        </div>
+      </div>
+      <div class="twin-stage" id="stage">
+        ${todos ? isoSVG(vp, { rot:S.ui.rot, s:15, clickPiso:true }) : S.ui.modo3d ? isoSVG([p], { rot:S.ui.rot }) : planSVG(p)}
+        <div class="legend"><b>Concentración de pacientes</b>
+          <div><span class="dot alta"></span>Alta · más del 80 % del aforo</div>
+          <div><span class="dot media"></span>Media · 51 a 80 %</div>
+          <div><span class="dot baja"></span>Baja · hasta 50 %</div>
+          <div><span class="dot nd"></span>Sin datos o pausado</div>
+        </div>
+      </div>
+    </section>
+    <section class="card feed-card">
+      <div class="card-h"><div><h2>Actividad en vivo</h2><p>Clic en una tarjeta para ver su recorrido.</p></div></div>
+      <div style="padding:10px 14px 0"><div class="seg" role="group" aria-label="Filtro">${[['activos','Activos'],['atendidos','Atendidos'],['todos','Todos']].map(([k,t])=>`<button class="${S.ui.feed===k?'on':''}" data-a="feed" data-v="${k}">${t} <span class="num" style="opacity:.6">${feedList(k).length}</span></button>`).join('')}</div></div>
+      <div class="feed">${lst.length?lst.map(feedCard).join(''):'<div class="empty">Aún no hay atenciones con este filtro.</div>'}</div>
+    </section>
+  </div>`;
+}
+function feedList(k=S.ui.feed){
+  const all = S.atenciones.slice().sort((a,b)=>(b.fin||b.eventos[b.eventos.length-1].entrada)-(a.fin||a.eventos[a.eventos.length-1].entrada));
+  return k==='activos' ? all.filter(a=>a.estado==='activa') : k==='atendidos' ? all.filter(a=>a.estado==='cerrada') : all;
+}
+function feedCard(a){
+  const st = estadoAt(a), z = zonaActual(a), zn = zonaById(z);
+  const e = a.eventos[a.eventos.length-1];
+  const w = a.estado==='activa' && ['Ingreso','Espera'].includes(tipoZ(z)) ? esperaCorriendo(a) : 0;
+  const cls = a.estado==='cerrada' ? 'done' : w > 45 ? 'w2' : w > 30 ? 'w1' : '';
+  const icn = a.estado==='cerrada' ? 'check' : z==='externo' ? 'door' : ({Ingreso:'scan',Espera:'sofa',Servicio:'steth'}[tipoZ(z)]||'walk');
+  return `<button class="fc ${cls} ${a.flash?'flash':''}" data-a="verAt" data-id="${a.id}" data-from="gemelo">
+    <span class="ic">${ic(icn)}</span>
+    <span class="mid"><b>${a.id}</b><p>${a.estado==='cerrada' ? `Devolvió ${a.tarjetaId} a las ${hhmm(a.fin)}${a.motivo!=='Devuelta'?` · ${a.motivo}`:''}` : `en ${esc(zn?.nombre)} hace ${mins(S.now-e.entrada)} min`}</p></span>
+    <span class="r"><span class="chip ${st.cls}">${st.txt}</span>${a.estado==='cerrada'?`<span>Total ${total(a)} min</span>`: w?`<span class="num">Espera ${w} min</span>`:''}</span>
+  </button>`;
+}
+
+/* ---- Historial ---- */
+function rangoDias(){
+  if (S.ui.hRango==='hoy') return [T0, T0+DAY];
+  if (S.ui.hRango==='custom' && S.ui.hDesde && S.ui.hHasta){ const a = new Date(S.ui.hDesde+'T00:00').getTime(), b = new Date(S.ui.hHasta+'T00:00').getTime()+DAY; return [Math.min(a,b), Math.max(a,b)]; }
+  return [T0-6*DAY, T0+DAY];
+}
+function histRows(){
+  const [a,b] = rangoDias();
+  if (S.ui.hPiso!=='p1') return [];
+  let rows = S.hist.concat(S.atenciones).filter(x=>x.inicio>=a && x.inicio<b);
+  if (S.ui.hZona) rows = rows.filter(x=>x.eventos.some(e=>e.zonaId===S.ui.hZona));
+  if (S.ui.hQ) rows = rows.filter(x=>x.id.toLowerCase().includes(S.ui.hQ.toLowerCase().trim()));
+  return rows.sort((x,y)=>y.inicio-x.inicio);
+}
+function viewHistorial(){
+  const ro = S.user.rol==='Gerencia';
+  const vp = visiblePisos(); if (!vp.find(p=>p.id===S.ui.hPiso)) S.ui.hPiso = vp[0].id;
+  const p = pisoById(S.ui.hPiso);
+  const zs = p.zonas.filter(z=>z.tipo!=='Tránsito');
+  if (!zs.find(z=>z.id===S.ui.hZona)) S.ui.hZona = zs.find(z=>z.tipo==='Espera')?.id || '';
+  const rows = histRows(), z = zonaById(S.ui.hZona);
+  const per = 10, pages = Math.max(1, Math.ceil(rows.length/per)); S.ui.hPage = Math.min(S.ui.hPage, pages-1);
+  const sinDatos = !S.occ[S.ui.hZona];
+  return `<div class="page-head"><div><h1>Historial y reportes</h1><p>${ro?'Solo lectura. ':''}Evolución de la ocupación y detalle de cada atención.</p></div>
+    <div class="toolbar"><button class="btn btn-o" data-a="exportar" data-v="CSV">${ic('dl')} Exportar CSV</button><button class="btn btn-o" data-a="exportar" data-v="PDF">${ic('dl')} Exportar PDF</button></div></div>
+  <div class="card pad filters">
+    <div class="field"><label for="h-r">Fecha</label><select class="inp" id="h-r" data-i="hRango"><option value="hoy" ${S.ui.hRango==='hoy'?'selected':''}>Hoy</option><option value="7" ${S.ui.hRango==='7'?'selected':''}>Últimos 7 días</option><option value="custom" ${S.ui.hRango==='custom'?'selected':''}>Personalizado</option></select></div>
+    ${S.ui.hRango==='custom'?`<div class="field"><label for="h-d">Desde</label><input class="inp" type="date" id="h-d" data-i="hDesde" value="${S.ui.hDesde||isoDate(T0-6*DAY)}"></div><div class="field"><label for="h-h">Hasta</label><input class="inp" type="date" id="h-h" data-i="hHasta" value="${S.ui.hHasta||isoDate(T0)}"></div>`:''}
+    <div class="field"><label for="h-p">Piso</label><select class="inp" id="h-p" data-i="hPiso">${vp.map(x=>`<option value="${x.id}" ${x.id===S.ui.hPiso?'selected':''}>${esc(x.nombre)}</option>`).join('')}</select></div>
+    <div class="field"><label for="h-z">Zona</label><select class="inp" id="h-z" data-i="hZona">${zs.map(x=>`<option value="${x.id}" ${x.id===S.ui.hZona?'selected':''}>${esc(x.nombre)}</option>`).join('')}</select></div>
+  </div>
+  ${sinDatos ? `<div class="empty">Sin datos: ${esc(p.nombre)} aún no tiene nodos instalados, así que no hay historial para esta zona.</div>` : `
+  <div class="kpis" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+    <div class="card kpi"><span class="k">Espera promedio del periodo</span><span class="v num">${avg(rows.map(espera))??'—'}<small> min</small></span><span class="c">Desde el escaneo hasta la entrada a consulta</span></div>
+    <div class="card kpi"><span class="k">Consulta promedio (piloto)</span><span class="v num">${avg(rows.map(consulta))??'—'}<small> min</small></span><span class="c">Permanencia en el consultorio piloto</span></div>
+    <div class="card kpi"><span class="k">Atenciones</span><span class="v num">${rows.length}</span><span class="c">${esc(z?.nombre||'')} · ${S.ui.hRango==='hoy'?'hoy':'periodo elegido'}</span></div>
+  </div>
+  <div class="two">
+    <section class="card chart"><div class="card-h"><div><h2>Aforo histórico · ${esc(z.nombre)}</h2><p>Promedio de pacientes presentes por hora frente al aforo máximo (${z.aforo}).</p></div></div><div class="pad">${aforoChart(z)}</div></section>
+    <section class="card"><div class="card-h"><div><h2>Mapa día × hora</h2><p>Ocupación promedio, en % del aforo. Muestra las horas pico que se repiten.</p></div></div><div class="pad">${heatmap(z)}</div></section>
+  </div>`}
+  <section class="card">
+    <div class="card-h"><div><h2>Atenciones</h2><p>Clic en una fila para ver el recorrido completo.</p></div>
+      <div class="field" style="min-width:240px"><label for="h-q" style="position:absolute;left:-9999px">Buscar</label><input class="inp" id="h-q" data-i="hQ" placeholder="Buscar por ID anónimo (ej. A-0131)" value="${esc(S.ui.hQ)}"></div></div>
+    <div class="tbl-wrap" style="padding:6px 6px 0"><table class="tbl"><thead><tr><th>ID</th><th>Fecha</th><th>Ingreso</th><th>Destino</th><th>Espera</th><th>Consulta</th><th>Total</th><th>Cierre</th></tr></thead><tbody>
+      ${rows.slice(S.ui.hPage*per, S.ui.hPage*per+per).map(a=>`<tr class="click" data-a="verAt" data-id="${a.id}" data-from="historial"><td class="mono">${a.id}</td><td>${fecha(a.inicio)}</td><td class="num">${hhmm(a.inicio)}</td><td>${a.destino==='piloto'?'Consultorio piloto':'Otro consultorio'}</td><td class="num">${dur(espera(a))}</td><td class="num">${dur(consulta(a))}</td><td class="num">${a.estado==='activa'?'<span class="chip media">En curso</span>':dur(total(a))}</td><td>${a.estado==='activa'?'—':esc(a.motivo)}</td></tr>`).join('') || `<tr><td colspan="8"><div class="empty">No hay atenciones con estos filtros.</div></td></tr>`}
+    </tbody></table></div>
+    <div class="pager"><span class="hint num">${rows.length} atenciones · página ${S.ui.hPage+1} de ${pages}</span><button class="btn btn-o btn-sm" data-a="hPage" data-v="-1" ${S.ui.hPage===0?'disabled':''}>Anterior</button><button class="btn btn-o btn-sm" data-a="hPage" data-v="1" ${S.ui.hPage>=pages-1?'disabled':''}>Siguiente</button></div>
+  </section>`;
+}
+function occSeries(zid){
+  const [a,b] = rangoDias(); const series = S.occ[zid]; if (!series) return null;
+  const days = []; for (let d=0; d<7; d++){ const t = T0 - (6-d)*DAY; if (t>=a && t<b) days.push(series[d]); }
+  if (!days.length) return Array(12).fill(0);
+  return Array.from({length:12},(_,h)=>Math.round(days.reduce((s,r)=>s+r[h],0)/days.length*10)/10).map((v,h)=>{ if (b>T0 && a>=T0 && h+7 > new Date(S.now).getHours()) return null; return v; });
+}
+function aforoChart(z){
+  const v = occSeries(z.id); const maxv = Math.max(...S.occ[z.id].flat());
+  const W = 620, H = 230, L = 34, R = 10, Tp = 12, B = 28, top = Math.max(z.aforo, Math.ceil(Math.max(...v.filter(x=>x!=null), 1)))*1.15;
+  const x = i => L + i*(W-L-R)/11, y = val => Tp + (H-Tp-B)*(1 - val/top);
+  const pts = v.map((val,i)=>val==null?null:[x(i),y(val)]).filter(Boolean);
+  const ticks = [0, Math.round(top/3), Math.round(2*top/3)];
+  const grid = ticks.map(t=>`<line x1="${L}" x2="${W-R}" y1="${y(t)}" y2="${y(t)}" stroke="#EFEAE3"/><text x="${L-6}" y="${y(t)+4}" text-anchor="end">${t}</text>`).join('');
+  const area = pts.length ? `<path d="M${pts[0][0]},${y(0)} ${pts.map(p=>`L${p[0]},${p[1]}`).join(' ')} L${pts[pts.length-1][0]},${y(0)} Z" fill="rgba(166,4,55,.08)"/><path d="${pts.map((p,i)=>`${i?'L':'M'}${p[0]},${p[1]}`).join(' ')}" fill="none" stroke="#1A1A1A" stroke-width="2.2" stroke-linejoin="round"/>` : '';
+  const dots = v.map((val,i)=>val==null?'':`<circle cx="${x(i)}" cy="${y(val)}" r="${val>z.aforo?5:3.2}" fill="${val>z.aforo?'#E53935':'#1A1A1A'}"><title>${pad2(i+7)}:00 · ${val} pacientes</title></circle>`).join('');
+  const xl = v.map((_,i)=>i%2===0?`<text x="${x(i)}" y="${H-8}" text-anchor="middle">${pad2(i+7)}:00</text>`:'').join('');
+  const lim = `<line x1="${L}" x2="${W-R}" y1="${y(z.aforo)}" y2="${y(z.aforo)}" stroke="#E53935" stroke-dasharray="5 4" stroke-width="1.5"/><text x="${W-R}" y="${y(z.aforo)-6}" text-anchor="end" style="fill:#B3261E;font-weight:700">Aforo ${z.aforo}</text>`;
+  const peakI = v.reduce((m,val,i)=>val!=null&&(m<0||val>v[m])?i:m,-1);
+  const peak = peakI>=0?`<text x="${x(peakI)}" y="${y(v[peakI])-10}" text-anchor="middle" style="fill:#1F1B1C;font-weight:800">${v[peakI]}</text>`:'';
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Aforo histórico">${grid}${area}${lim}${dots}${peak}${xl}</svg>
+  <p class="hint" style="margin:6px 0 0">Hora pico: <b>${peakI>=0?pad2(peakI+7)+':00':'—'}</b>. Máximo registrado en 7 días: <b>${maxv}</b> pacientes${maxv>z.aforo?' (superó el aforo)':''}.</p>`;
+}
+function heatmap(z){
+  const s = S.occ[z.id]; const cols = 12;
+  let h = `<div class="hm" style="grid-template-columns:54px repeat(${cols},minmax(0,1fr))"><span></span>${Array.from({length:cols},(_,i)=>`<span class="lab" style="justify-content:center">${i%2===0?pad2(i+7):''}</span>`).join('')}`;
+  s.forEach((row,d)=>{
+    const t = T0-(6-d)*DAY;
+    h += `<span class="lab">${DIAS[new Date(t).getDay()]} ${new Date(t).getDate()}</span>`;
+    row.forEach((v,i)=>{
+      const fut = d===6 && i+7 > new Date(S.now).getHours();
+      const pct = Math.round(v/z.aforo*100), lv = pct>z.umb[1]?'alta':pct>z.umb[0]?'media':'baja';
+      const op = .18 + Math.min(1, pct/110)*.82;
+      h += fut ? `<span class="c" style="background:#F4F1ED"></span>` : `<span class="c" title="${DIAS[new Date(t).getDay()]} ${pad2(i+7)}:00 · ${v} pacientes (${pct} %)" style="background:${COL[lv]};opacity:${op.toFixed(2)};color:${op>.6?'#fff':'#1F1B1C'}">${pct}</span>`;
+    });
+  });
+  return h + `</div>`;
+}
+
+/* ---- Detalle de atención ---- */
+function viewAtencion(){
+  const a = S.atenciones.concat(S.hist).find(x=>x.id===S.ui.atSel);
+  if (!a) return `<div class="empty">No se encontró la atención.</div>`;
+  const st = estadoAt(a), fin = a.fin || S.now, span = Math.max(1, fin - a.inicio);
+  const segC = id => id==='externo' ? ['#E4E2E0','#4A4446'] : ({Ingreso:['#E5EAF2','#2A3B57'],Espera:['#FBE3A4','#5F4500'],Servicio:['#BFE6D2','#1E6E4A'],Tránsito:['#EEE9E3','#4A4446']}[tipoZ(id)]||['#EEE','#333']);
+  const back = S.ui.from==='historial' ? ['historial','Volver al historial'] : ['gemelo','Volver al gemelo'];
+  return `<div class="page-head"><div class="toolbar"><button class="btn btn-o btn-sm" data-a="nav" data-r="${back[0]}">${ic('back')} ${back[1]}</button></div></div>
+  <section class="card pad" style="display:flex;flex-direction:column;gap:18px">
+    <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-end">
+      <div><span class="lbl-up">Atención anónima</span><div class="tag-id" style="font-size:44px;line-height:1.05">${a.id}</div><p style="margin:4px 0 0;color:var(--gris)">${fecha(a.inicio)} · Tarjeta ${a.tarjetaId} · ${esc(pisoById(a.pisoId).nombre)} · ${a.destino==='piloto'?'Consultorio piloto':'Otro consultorio (fuera del piloto)'}</p></div>
+      <span class="chip ${st.cls}" style="font-size:13px;padding:5px 12px">${st.txt}</span>
+    </div>
+    <div class="kpis" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+      <div class="card kpi"><span class="k">Espera</span><span class="v num">${dur(espera(a) ?? (a.estado==='activa'?esperaCorriendo(a):null))}</span><span class="c">Escaneo → entrada a consulta</span></div>
+      <div class="card kpi"><span class="k">Consulta</span><span class="v num">${dur(consulta(a))}</span><span class="c">${a.destino==='piloto'?'En el consultorio piloto':'No se mide fuera del piloto'}</span></div>
+      <div class="card kpi"><span class="k">Total</span><span class="v num">${dur(total(a))}</span><span class="c">${a.estado==='activa'?'En curso':'Hasta la devolución'}</span></div>
+    </div>
+    <div><h3 style="margin-bottom:8px">Recorrido</h3>
+      <div class="tl">${a.eventos.map(e=>{ const z = zonaById(e.zonaId), [bg,fg] = segC(e.zonaId), w = Math.max(6, ((e.salida||fin)-e.entrada)/span*100); return `<div style="flex:${w.toFixed(1)} 1 0;background:${bg};color:${fg}" title="${esc(z?.nombre)} · ${mins((e.salida||fin)-e.entrada)} min">${esc(z?.nombre)}<small>${mins((e.salida||fin)-e.entrada)} min</small></div>`; }).join('')}</div>
+    </div>
+    <div class="steps">
+      ${[{t:a.inicio, txt:`Admisión: se entregó la tarjeta ${a.tarjetaId}`, d:'Empieza a contar la espera'}].concat(a.eventos.map(e=>({ t:e.entrada, txt:`Entró a ${zonaById(e.zonaId)?.nombre}`, d: e.salida ? `${hhmm(e.entrada)}–${hhmm(e.salida)} · ${mins(e.salida-e.entrada)} min` : `Desde las ${hhmm(e.entrada)} · ${mins(S.now-e.entrada)} min hasta ahora` }))).concat(a.estado==='cerrada'?[{t:a.fin, txt: a.motivo==='Devuelta'?`Devolución: tarjeta ${a.tarjetaId} recibida`:`Cierre automático: ${a.motivo.toLowerCase()}`, d:`Total ${dur(total(a))}`}]:[]).map((s,i,arr)=>`<div class="step"><b class="num">${hhmm(s.t)}</b><span class="line"><i></i>${i<arr.length-1?'<s></s>':''}</span><div><b>${esc(s.txt)}</b><div class="hint">${esc(s.d)}</div></div><span></span></div>`).join('')}
+    </div>
+  </section>`;
+}
+
+/* ---- Seguimiento ---- */
+function viewSeguimiento(){
+  const ps = visiblePisos();
+  return `<div class="page-head"><div><h1>Seguimiento</h1><p>Active o pause el monitoreo de sus zonas. Una zona pausada se ve en gris y sus minutos no cuentan en las métricas.</p></div></div>
+  ${ps.map(p=>`<section class="card"><div class="card-h" style="padding-bottom:6px"><div><h2>Mis zonas · ${esc(p.nombre)}</h2></div></div>
+    ${p.zonas.filter(z=>z.tipo!=='Tránsito').map(z=>{ const n = nodoDeZona(z), lv = nivel(z); return `<div class="zl"><span class="dot ${lv==='pausa'?'nd':lv}"></span><div class="grow"><b>${esc(z.nombre)}</b><p>${z.pausa?`Pausado por ${esc(z.pausa.por)} a las ${hhmm(z.pausa.t)} · ${esc(z.pausa.motivo)}`:`${z.tipo} · ${enZona(z).length}/${z.aforo} pacientes · nodo ${n?n.id+' '+n.estado.toLowerCase():'no instalado'}`}</p></div><span class="chip ${z.pausa?'nd':'baja'}">${z.pausa?'Pausado':'Activo'}</span><button class="sw ${z.pausa?'':'on'}" role="switch" aria-checked="${!z.pausa}" aria-label="Seguimiento de ${esc(z.nombre)}" data-a="pausar" data-z="${z.id}"></button></div>`; }).join('')}
+  </section>`).join('')}
+  <section class="card pad" style="display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div><h2>Estado de nodos</h2><p class="hint" style="margin:2px 0 0">Cada nodo ESP32 envía un latido cada pocos segundos.</p></div>
+      <button class="btn btn-o btn-sm" data-a="caida">${S.nodos.find(n=>n.id==='N-03')?.estado==='Sin señal'?'Restaurar N-03 (demo)':'Simular caída de N-03 (demo)'}</button></div>
+    <div class="nodes">${S.nodos.filter(n=>ps.some(p=>p.id===n.pisoId) && n.estado!=='Baja').map(n=>`<div class="card node"><div class="hd"><b class="tag-id" style="font-size:18px">${n.id}</b><span class="chip ${n.estado==='En línea'?'baja':'nd'}"><span class="dot ${n.estado==='En línea'?'baja':'nd'}"></span>${n.estado}</span></div><span>${esc(zonaById(n.zonaId)?.nombre||'Sin zona')} · ${esc(pisoById(n.pisoId).nombre)}</span><span class="hint">Último latido: ${n.estado==='En línea'?'hace '+rint(1,5)+' s':'hace '+dur(Math.max(1,mins(Date.now()-n.latido)))}</span></div>`).join('')}</div>
+  </section>`;
+}
+
+/* ---- Construcción del gemelo ---- */
+const TIPOS = ['Ingreso','Espera','Servicio','Tránsito','Salida'];
+const TCOL = { Ingreso:'#E5EAF2', Espera:'#E3F1E9', Servicio:'#F8E6E2', Tránsito:'#EEE9E3', Salida:'#ECE6F3' };
+const borr = p => (p.borrador ||= clone(p.zonas));
+function viewConstruccion(){
+  let p = pisoById(S.ed.pisoId) || S.pisos[0]; S.ed.pisoId = p.id;
+  const zs = borr(p), z = zs.find(x=>x.id===S.ed.sel);
+  const estado = !p.publicado ? ['Borrador','media'] : p.dirty ? ['Cambios sin publicar','media'] : ['Publicado','baja'];
+  const nodosPiso = S.nodos.filter(n=>n.pisoId===p.id && n.estado!=='Baja');
+  return `<div class="page-head"><div><h1>Construcción del gemelo</h1><p>Registre sedes y pisos, cargue el plano y dibuje las zonas. Los cambios se ven en vivo al publicar.</p></div>
+    <div class="toolbar"><span class="chip ${estado[1]}">${estado[0]}</span><button class="btn btn-o" data-a="guardarB">Guardar borrador</button><button class="btn btn-p" data-a="publicar" ${(!p.dirty && p.publicado)?'disabled':''}>Publicar cambios</button></div></div>
+  <div class="ed">
+    <aside class="card tree">
+      ${S.sedes.map(s=>`<div class="t-sede">${ic('layers')}<span>${esc(s.nombre)}</span></div>
+        ${S.pisos.filter(x=>x.sedeId===s.id).sort((a,b)=>a.nivel-b.nivel).map(x=>`<button class="t-piso ${x.id===p.id?'on':''}" data-a="edPiso" data-p="${x.id}"><span>${esc(x.nombre)}</span><span class="chip ${!x.publicado?'media':x.dirty?'media':'baja'}" style="font-size:10.5px;padding:1px 7px">${!x.publicado?'Borrador':x.dirty?'Cambios':'Publicado'}</span></button>
+          ${x.id===p.id?`<div class="t-sub">${borr(x).map(zz=>`<button class="t-z ${zz.id===S.ed.sel?'on':''}" data-a="edSel" data-z="${zz.id}"><span class="dot" style="background:${TCOL[zz.tipo]};border:1px solid #CFC6BC"></span>${esc(zz.nombre)}</button>`).join('')||'<span class="hint" style="padding:4px 8px">Sin zonas todavía</span>'}
+            ${nodosPiso.map(n=>`<span class="t-z" style="cursor:default">${ic('radio','')}${n.id}</span>`).join('').replace(/<svg /g,'<svg width="13" height="13" ')}</div>`:''}`).join('')}
+        <button class="btn btn-g btn-sm" data-a="nuevoPiso" data-s="${s.id}" style="justify-content:flex-start">${ic('plus')} Nuevo piso</button>`).join('')}
+      <button class="btn btn-o btn-sm" data-a="nuevaSede" style="margin-top:6px">${ic('plus')} Nueva sede</button>
+    </aside>
+    <section class="card" style="overflow:hidden">
+      <div class="tools">
+        ${[['sel','cursor','Seleccionar'],['rect','square','Rectángulo'],['nodo','radio','Colocar nodo'],['escala','scale','Fijar escala']].map(([k,i,t])=>`<button class="tool ${S.ed.tool===k?'on':''}" data-a="edTool" data-t="${k}">${ic(i)} ${t}</button>`).join('')}
+        <button class="tool" disabled title="En el prototipo solo se dibujan rectángulos">${ic('poly')} Polígono</button>
+        ${S.ed.tool==='nodo'?`<select class="inp" id="ed-nodo" data-i="edNodo" style="width:auto;min-height:32px;padding:4px 8px">${S.nodos.filter(n=>n.estado!=='Baja').map(n=>`<option value="${n.id}" ${S.ed.nodo===n.id?'selected':''}>${n.id}${n.pisoId===p.id?'':' (otro piso)'}</option>`).join('')}</select><span class="hint">Haga clic en el plano para ubicarlo.</span>`:''}
+        ${S.ed.tool==='rect'?'<span class="hint">Arrastre sobre el plano para dibujar una zona.</span>':''}
+      </div>
+      <div class="canvas" id="edwrap">${edSVG(p)}</div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;padding:0 14px 14px;align-items:start">
+        <div style="display:flex;flex-direction:column;gap:6px"><b>${p.planoNombre?esc(p.planoNombre):p.plano?'plano_cargado.png':`plano_${p.nombre.toLowerCase().replace(/\s+/g,'_')}.png`}</b><span class="hint">Plano cargado · ${p.ancho} × ${p.fondo} m</span><div class="chips"><span class="chip">${zs.length} zonas</span><span class="chip">${nodosPiso.length} nodos</span></div><span class="hint">Arrastre una zona para moverla y sus esquinas para cambiar el tamaño.</span></div>
+        <div><b style="font-size:12.5px">Vista previa 3D</b><div id="edprev" style="background:var(--fondo);border-radius:10px;border:1px solid var(--linea);margin-top:6px">${isoSVG([p],{ mini:true, zonas:zs, s:9 })}</div></div>
+      </div>
+    </section>
+    <aside class="card props props-col">
+      ${z ? `<div style="display:flex;justify-content:space-between;align-items:center"><h2>Propiedades de zona</h2><button class="x" data-a="edDel" title="Eliminar zona" aria-label="Eliminar zona">${ic('trash')}</button></div>
+        <div class="field"><label for="zp-n">Nombre</label><input class="inp" id="zp-n" data-i="zprop" data-k="nombre" value="${esc(z.nombre)}"></div>
+        <div class="field"><label>Tipo</label><div class="chips">${TIPOS.map(t=>`<button class="chipbtn ${z.tipo===t?'on':''}" data-a="ztipo" data-v="${t}">${t}</button>`).join('')}</div></div>
+        ${z.tipo==='Tránsito'||z.tipo==='Salida'?'<p class="hint" style="margin:0">Las zonas de tránsito y salida no tienen aforo ni color de concentración.</p>':`
+        <div class="field"><label for="zp-a">Aforo máximo</label><input class="inp" id="zp-a" type="number" min="1" data-i="zprop" data-k="aforo" value="${z.aforo}"></div>
+        <div class="field"><label>Umbrales de color</label><span class="hint">Porcentaje del aforo de la zona</span>
+          <div class="thr"><span class="dot baja"></span><span>Baja hasta</span><span><input class="inp num" id="zp-u0" type="number" data-i="zprop" data-k="u0" value="${z.umb[0]}"> %</span>
+          <span class="dot media"></span><span>Media hasta</span><span><input class="inp num" id="zp-u1" type="number" data-i="zprop" data-k="u1" value="${z.umb[1]}"> %</span>
+          <span class="dot alta"></span><span>Alta</span><span class="num">más de ${z.umb[1]} %</span></div>
+          ${z.tipo==='Servicio'&&z.aforo===1?'<span class="hint">En un consultorio de aforo 1, estar ocupado es lo normal: por eso Baja llega al 100 %.</span>':''}</div>`}
+        <div class="field"><label>Nodo asignado</label>${(()=>{ const n = S.nodos.find(n=>n.zonaId===z.id && n.estado!=='Baja'); return n ? `<div class="li"><span>${ic('radio','')} <b>${n.id}</b> · ${n.estado}</span></div>`.replace('<svg ','<svg width="14" height="14" ') : `<span class="hint">Sin nodo. Use «Colocar nodo» o registre uno en Dispositivos.</span>`; })()}</div>
+        <p class="hint" style="margin:0">Posición: ${z.x} m, ${z.y} m · Tamaño: ${z.w} × ${z.h} m</p>`
+      : `<h2>Propiedades</h2><div class="empty">Seleccione una zona en el plano o en el árbol para editar su nombre, tipo, aforo y umbrales. Con «Rectángulo» puede dibujar una nueva.</div>
+         <div class="helpbox"><b>Cómo se construye un piso</b><span>1. Nuevo piso: nombre, plano y escala.</span><span>2. Dibuje cada zona y elija su tipo.</span><span>3. Defina aforo y umbrales.</span><span>4. Coloque los nodos registrados.</span><span>5. Publique: aparece en el Gemelo en vivo.</span></div>`}
+    </aside>
+  </div>`;
+}
+function edSVG(p){
+  const K = 30, W = p.ancho*K, D = p.fondo*K, zs = borr(p);
+  let out = `<defs><pattern id="grid" width="${K}" height="${K}" patternUnits="userSpaceOnUse"><path d="M${K} 0H0V${K}" fill="none" stroke="#F0EBE5"/></pattern></defs><rect width="${W}" height="${D}" fill="url(#grid)" data-bg="1"/>`;
+  if (p.plano) out += `<image href="${p.plano}" x="0" y="0" width="${W}" height="${D}" preserveAspectRatio="none" opacity=".55" pointer-events="none"/>`;
+  else { (p.ambientes||[]).forEach(a=>{ out += `<rect x="${a.x*K}" y="${a.y*K}" width="${a.w*K}" height="${a.h*K}" fill="none" stroke="#C9C0B6" stroke-width="2" pointer-events="none"/><text x="${(a.x+a.w/2)*K}" y="${(a.y+a.h/2)*K}" text-anchor="middle" font-size="12" fill="#9A9294" pointer-events="none">${esc(a.nombre)}</text>`; });
+    p.zonas.forEach(z=>{ out += `<rect x="${z.x*K}" y="${z.y*K}" width="${z.w*K}" height="${z.h*K}" fill="none" stroke="#C9C0B6" stroke-width="2" pointer-events="none"/>`; }); }
+  zs.forEach(z=>{
+    const sel = z.id===S.ed.sel;
+    out += `<g data-ez="${z.id}" style="cursor:${S.ed.tool==='sel'?'move':'crosshair'}"><rect x="${z.x*K}" y="${z.y*K}" width="${z.w*K}" height="${z.h*K}" fill="${TCOL[z.tipo]}" fill-opacity=".78" stroke="${sel?'#A60437':'#8C8486'}" stroke-width="${sel?2.5:1.2}" ${sel?'stroke-dasharray="7 5"':''}/>
+      <text x="${(z.x+z.w/2)*K}" y="${(z.y+z.h/2)*K}" text-anchor="middle" font-size="14" font-weight="800" fill="${sel?'#A60437':'#3A3536'}" font-family="Nunito, sans-serif" pointer-events="none">${esc(z.nombre)}</text>
+      ${z.tipo!=='Tránsito'&&z.tipo!=='Salida'?`<text x="${(z.x+z.w/2)*K}" y="${(z.y+z.h/2)*K+18}" text-anchor="middle" font-size="11.5" fill="#6E6668" pointer-events="none">Aforo ${z.aforo}</text>`:''}</g>`;
+    if (sel) [['nw',z.x,z.y],['ne',z.x+z.w,z.y],['sw',z.x,z.y+z.h],['se',z.x+z.w,z.y+z.h]].forEach(([k,x,y])=>{ out += `<rect data-h="${k}" x="${x*K-6}" y="${y*K-6}" width="12" height="12" fill="#fff" stroke="#A60437" stroke-width="2" style="cursor:${k==='nw'||k==='se'?'nwse':'nesw'}-resize"/>`; });
+  });
+  S.nodos.filter(n=>n.pisoId===p.id && n.estado!=='Baja').forEach(n=>{ out += `<g pointer-events="none"><rect x="${n.x*K-24}" y="${n.y*K-11}" width="48" height="22" rx="11" fill="#fff" stroke="#D6CEC4"/><circle cx="${n.x*K-13}" cy="${n.y*K}" r="4" fill="${n.estado==='En línea'?'#2E9E6B':'#B0B0B0'}"/><text x="${n.x*K+3}" y="${n.y*K+4}" text-anchor="middle" font-size="11" font-weight="700" fill="#3A3536">${n.id}</text></g>`; });
+  out += `<g pointer-events="none"><line x1="10" y1="${D-12}" x2="${10+5*K}" y2="${D-12}" stroke="#3A3536" stroke-width="3"/><text x="${10+5*K+6}" y="${D-8}" font-size="11" fill="#3A3536">5 m</text></g>`;
+  return `<svg id="edsvg" viewBox="0 0 ${W} ${D}" role="img" aria-label="Editor del plano">${out}</svg>`;
+}
+
+/* ---- Dispositivos ---- */
+function viewDispositivos(){
+  const tab = S.ui.disTab;
+  return `<div class="page-head"><div><h1>Dispositivos</h1><p>Registre los nodos ESP32 y las tarjetas BLE, y revise su estado.</p></div>
+    <div class="toolbar">${tab==='nodos'?`<button class="btn btn-p" data-a="nodoNuevo">${ic('plus')} Registrar nodo</button>`:`<button class="btn btn-p" data-a="tarjetaNueva">${ic('plus')} Registrar tarjeta</button>`}</div></div>
+  <div class="seg" role="tablist"><button class="${tab==='nodos'?'on':''}" data-a="disTab" data-v="nodos">Nodos ESP32</button><button class="${tab==='tarjetas'?'on':''}" data-a="disTab" data-v="tarjetas">Tarjetas BLE</button></div>
+  ${tab==='nodos'?`<section class="card"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Nombre</th><th>MAC</th><th>Piso</th><th>Zona</th><th>Estado</th><th>Último latido</th><th></th></tr></thead><tbody>
+    ${S.nodos.map(n=>`<tr><td class="mono">${n.id}</td><td class="num">${n.mac}</td><td>${esc(pisoById(n.pisoId)?.nombre)}</td><td>${esc(zonaById(n.zonaId)?.nombre||'—')}</td><td><span class="chip ${n.estado==='En línea'?'baja':n.estado==='Baja'?'dark':n.estado==='Sin señal'?'nd':'media'}">${n.estado==='Esperando primera señal'?'<span class="spin" style="width:12px;height:12px;border-width:2px"></span>':''}${n.estado}</span></td><td>${n.estado==='En línea'?'hace '+rint(1,5)+' s':n.estado==='Baja'?'—':n.estado==='Sin señal'?'hace '+dur(Math.max(1,mins(Date.now()-n.latido))):'esperando…'}</td><td style="text-align:right;white-space:nowrap">${n.estado!=='Baja'?`<button class="btn btn-g btn-sm" data-a="nodoEditar" data-n="${n.id}">Cambiar zona</button><button class="btn btn-g btn-sm" data-a="nodoBaja" data-n="${n.id}">Dar de baja</button>`:''}</td></tr>`).join('')}
+  </tbody></table></div><p class="hint" style="padding:0 18px 16px;margin:10px 0 0">${ic('lock','').replace('<svg ','<svg width="13" height="13" style="vertical-align:-2px" ')} La calibración de señal (umbral RSSI) la realiza el equipo técnico durante la instalación. Aquí solo se registran los nodos y se revisa su estado.</p></section>`
+  : `<section class="card"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Código</th><th>Identificador BLE</th><th>Estado</th><th>Atención actual</th><th>Desde</th><th></th></tr></thead><tbody>
+    ${S.tarjetas.map(t=>`<tr><td class="mono">${t.id}</td><td class="num">${t.ble}</td><td><span class="chip ${({'Disponible':'baja','En uso':'','Por desinfectar':'media','Sin devolver':'alta','Extraviada':'alta','Baja':'dark'})[t.estado]}">${t.estado}</span></td><td class="num">${t.estado==='En uso'?t.atencionId:'—'}</td><td class="num">${t.desde?hhmm(t.desde):'—'}</td><td style="text-align:right">${t.estado!=='Baja'&&t.estado!=='En uso'?`<button class="btn btn-g btn-sm" data-a="tarjetaBaja" data-t="${t.id}">Dar de baja</button>`:''}</td></tr>`).join('')}
+  </tbody></table></div></section>`}`;
+}
+
+/* ---- Usuarios ---- */
+function viewUsuarios(){
+  const q = S.ui.usrQ.toLowerCase(), r = S.ui.usrRol;
+  const rows = S.usuarios.filter(u=>(!q || (u.nombre+u.correo).toLowerCase().includes(q)) && (!r || u.rol===r));
+  return `<div class="page-head"><div><h1>Usuarios</h1><p>Cree cuentas, asigne pisos a los operadores y gestione el acceso.</p></div><button class="btn btn-p" data-a="usrNuevo">${ic('plus')} Nuevo usuario</button></div>
+  <section class="card">
+    <div class="card-h" style="padding-bottom:10px"><div class="toolbar"><input class="inp" id="u-q" data-i="usrQ" placeholder="Buscar por nombre o correo" value="${esc(S.ui.usrQ)}" style="width:260px"><select class="inp" id="u-r" data-i="usrRol" style="width:auto"><option value="">Todos los roles</option>${['Administrador','Operador','Gerencia'].map(x=>`<option ${r===x?'selected':''}>${x}</option>`).join('')}</select></div></div>
+    <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Pisos asignados</th><th>Estado</th><th>Último ingreso</th><th></th></tr></thead><tbody>
+    ${rows.map(u=>`<tr><td><b>${esc(u.nombre)}</b></td><td>${esc(u.correo)}</td><td><span class="chip ${u.rol==='Administrador'?'red':u.rol==='Gerencia'?'media':''}">${u.rol}</span></td><td>${u.rol==='Operador'?u.pisos.map(id=>esc(pisoById(id)?.nombre)).join(', ')||'—':'Todos'}</td><td><span class="chip ${u.estado==='Activo'?'baja':u.estado==='Desactivado'?'nd':'media'}">${u.estado}</span></td><td class="num">${u.ultimo?fecha(u.ultimo)+' '+hhmm(u.ultimo):'—'}</td>
+      <td style="text-align:right;white-space:nowrap"><button class="btn btn-g btn-sm" data-a="usrEditar" data-u="${u.id}">Editar</button><button class="btn btn-g btn-sm" data-a="usrReset" data-u="${u.id}">Restablecer contraseña</button><button class="btn btn-g btn-sm" data-a="usrToggle" data-u="${u.id}" title="Los usuarios no se eliminan: se desactivan para conservar la auditoría">${u.estado==='Desactivado'?'Reactivar':'Desactivar'}</button></td></tr>`).join('') || '<tr><td colspan="7"><div class="empty">No hay usuarios con estos filtros.</div></td></tr>'}
+    </tbody></table></div>
+  </section>`;
+}
+
+/* ---- Auditoría ---- */
+function viewAuditoria(){
+  const rows = S.auditoria.filter(a=>(!S.ui.audU || a.u===S.ui.audU) && (!S.ui.audT || a.tipo===S.ui.audT));
+  const us = [...new Set(S.auditoria.map(a=>a.u))];
+  const tipoCls = { 'Sesión':'', 'Admisión':'baja', 'Seguimiento':'media', 'Gemelo':'red', 'Dispositivos':'dark', 'Usuarios':'media', 'Reportes':'' };
+  return `<div class="page-head"><div><h1>Auditoría</h1><p>Registro de solo lectura de todas las acciones. Nadie puede editarlo ni borrarlo.</p></div><button class="btn btn-o" data-a="exportar" data-v="CSV">${ic('dl')} Exportar CSV</button></div>
+  <section class="card">
+    <div class="card-h" style="padding-bottom:10px"><div class="toolbar">
+      <select class="inp" id="a-u" data-i="audU" style="width:auto"><option value="">Todos los usuarios</option>${us.map(x=>`<option ${S.ui.audU===x?'selected':''}>${esc(x)}</option>`).join('')}</select>
+      <select class="inp" id="a-t" data-i="audT" style="width:auto"><option value="">Todas las acciones</option>${['Sesión','Admisión','Seguimiento','Gemelo','Dispositivos','Usuarios','Reportes'].map(x=>`<option ${S.ui.audT===x?'selected':''}>${x}</option>`).join('')}</select>
+      <span class="hint num">${rows.length} registros</span></div></div>
+    <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Fecha y hora</th><th>Usuario</th><th>Rol</th><th>Acción</th><th>Elemento</th><th>Detalle</th></tr></thead><tbody>
+      ${rows.slice(0,80).map(a=>`<tr><td class="num">${fecha(a.t)} · ${hhmm(a.t)}</td><td><b>${esc(a.u)}</b></td><td>${esc(a.rol)}</td><td><span class="chip ${tipoCls[a.tipo]||''}">${esc(a.tipo)}</span> ${esc(a.acc)}</td><td>${esc(a.el)}</td><td class="hint">${esc(a.det)}</td></tr>`).join('')}
+    </tbody></table></div>
+  </section>`;
+}
+
+/* =========================================================
+   Shell, modales y render
+   ========================================================= */
+const MENU = {
+  Operador:[['admision','scan','Admisión'],['gemelo','cube','Gemelo en vivo'],['historial','chart','Historial y reportes'],['seguimiento','pulse','Seguimiento']],
+  Gerencia:[['gemelo','cube','Gemelo en vivo'],['historial','chart','Historial y reportes']],
+  Administrador:[['gemelo','cube','Gemelo en vivo'],['historial','chart','Historial y reportes'],['construccion','ruler','Construcción del gemelo'],['dispositivos','cpu','Dispositivos'],['usuarios','users','Usuarios'],['auditoria','list','Auditoría']]
+};
+const TITLES = { admision:'Admisión', gemelo:'Gemelo en vivo', historial:'Historial y reportes', atencion:'Detalle de atención', seguimiento:'Seguimiento', construccion:'Construcción del gemelo', dispositivos:'Dispositivos', usuarios:'Usuarios', auditoria:'Auditoría', cambiar:'Cambiar contraseña' };
+const home = () => S.user.rol==='Operador' ? 'admision' : 'gemelo';
+function shell(inner){
+  const u = S.user, nAl = S.alertas.filter(a=>!a.leida).length;
+  const pisoTxt = S.route==='gemelo' ? (S.ui.piso==='todos'?'Todos los pisos':pisoById(S.ui.piso)?.nombre) : S.route==='construccion' ? pisoById(S.ed.pisoId)?.nombre : 'Piso 1';
+  return `<div class="app">
+    <aside class="side">
+      <div class="brand">${logo()}<small>Clínica Renal y Oncológica</small></div>
+      <nav class="nav" aria-label="Menú principal">${MENU[u.rol].map(([r,i,t])=>`<a href="#${r}" class="${S.route===r||(S.route==='atencion'&&r===(S.ui.from==='historial'?'historial':'gemelo'))?'on':''}">${ic(i)}<span>${t}</span></a>`).join('')}</nav>
+      <div class="me"><b>${esc(u.nombre)}</b><span>${u.rol} · ${esc(u.correo)}</span><button data-a="logout">${ic('out')} Cerrar sesión</button></div>
+    </aside>
+    <div class="main">
+      <header class="top">
+        <div class="crumbs">${esc(S.sedes[0].nombre)} › ${esc(pisoTxt||'')} › <b>${TITLES[S.route]||''}</b></div>
+        <span class="sp"></span>
+        ${u.rol==='Gerencia'?'<span class="ro">Modo: Solo lectura</span>':''}
+        <span class="live ${S.simOn?'':'off'}"><i></i>${S.simOn?'En vivo':'En pausa'} · <span class="num">${hhmm(S.now)}</span></span>
+        <div style="position:relative"><button class="iconbtn" data-a="bell" aria-label="Alertas">${ic('bell')}${nAl?`<span class="badge num">${nAl}</span>`:''}</button>
+          ${S.ui.bell?`<div class="dd"><div style="padding:6px 10px 8px;font-weight:800;font-family:var(--f-disp)">Alertas</div>${S.alertas.slice(0,8).map(a=>`<button class="dd-item" data-a="alertaIr" data-r="${a.ir}"><span class="dot ${a.tipo}"></span><span><b>${esc(a.txt)}</b><br><span class="hint">${esc(a.det)} · ${hhmm(a.t)}</span></span></button>`).join('')||'<div class="hint" style="padding:10px">Sin alertas.</div>'}</div>`:''}</div>
+        <div style="position:relative"><button class="usr" data-a="umenu"><span class="av">${u.nombre.split(' ').map(x=>x[0]).join('').slice(0,2)}</span><span>${esc(u.nombre.split(' ')[0])}<small>${u.rol}</small></span></button>
+          ${S.ui.menu?`<div class="dd" style="width:220px"><button class="dd-item" data-a="nav" data-r="cambiar">${ic('lock').replace('<svg ','<svg width="16" height="16" ')} Cambiar contraseña</button><button class="dd-item" data-a="logout">${ic('out').replace('<svg ','<svg width="16" height="16" ')} Cerrar sesión</button></div>`:''}</div>
+      </header>
+      <main class="content" id="view">${inner}</main>
+      <footer class="demo-foot">Prototipo con datos simulados · cada 8 s pasan 3 minutos en la clínica. <button class="btn btn-o btn-sm" data-a="sim">${S.simOn?ic('pause')+' Pausar simulación':ic('play')+' Reanudar simulación'}</button></footer>
+    </div>
+  </div>`;
+}
+function viewFor(r){
+  if (!can(r)) return `<div class="denied card pad">${ic('lock').replace('<svg ','<svg width="34" height="34" ')}<h2>No tienes permiso para ver esta sección</h2><p class="hint">Tu rol (${S.user.rol}) no incluye esta pantalla.</p><button class="btn btn-n" data-a="home">Ir a mi inicio</button></div>`;
+  return ({ admision:viewAdmision, gemelo:viewGemelo, historial:viewHistorial, atencion:viewAtencion, seguimiento:viewSeguimiento, construccion:viewConstruccion, dispositivos:viewDispositivos, usuarios:viewUsuarios, auditoria:viewAuditoria, cambiar:viewCambiar }[r] || viewGemelo)();
+}
+function render(fromTick){
+  if (fromTick && (S.ed.drag || S.ui.modal && S.ui.modal.noTick)) return;
+  const act = document.activeElement, aid = act && act.id, sel = act && 'selectionStart' in act ? [act.selectionStart, act.selectionEnd] : null;
+  const vals = {}; document.querySelectorAll('#root input[id], #root select[id]').forEach(el=>{ if (el.type!=='password' && el.type!=='file') vals[el.id] = el.value; });
+  const sx = window.scrollX, sy = window.scrollY;
+  if (!S.user) $('#root').innerHTML = viewLogin();
+  else if (S.user.estado==='Primer ingreso') { S.route = 'cambiar'; $('#root').innerHTML = shell(viewCambiar()); }
+  else $('#root').innerHTML = shell(viewFor(S.route));
+  if (fromTick) for (const id in vals){ const el = document.getElementById(id); if (el && (el.tagName==='INPUT' || el.tagName==='SELECT')) el.value = vals[id]; }
+  if (aid){ const el = document.getElementById(aid); if (el){ el.focus({preventScroll:true}); if (sel && el.setSelectionRange) try{ el.setSelectionRange(sel[0], sel[1]); }catch(e){} } }
+  else if (S.route==='admision' && !S.ui.modal && !fromTick) $('#scan')?.focus({preventScroll:true});
+  window.scrollTo(sx, sy);
+  if (!fromTick) renderModal();
+}
+
+/* ---- Modales ---- */
+function renderModal(){
+  const m = S.ui.modal, root = $('#modal');
+  if (!m){ root.innerHTML = ''; return; }
+  const act = document.activeElement, aid = act && act.id;
+  const vals = {}; root.querySelectorAll('input[id],select[id]').forEach(el=>{ if (el.type!=='file') vals[el.id] = el.value; });
+  const M = (title, body, foot, wide) => `<div class="scrim" data-a="scrim"><div class="modal ${wide?'wide':''}" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="m-h"><h2>${esc(title)}</h2><button class="x" data-a="close" aria-label="Cerrar">${ic('x')}</button></div><div class="m-b">${body}</div><div class="m-f">${foot}</div></div></div>`;
+  let h = '';
+  if (m.type==='zona'){
+    const z = zonaById(m.z), lv = nivel(z), n = nodoDeZona(z), at = enZona(z);
+    const espZ = avg(S.atenciones.map(a=>{ const e = a.eventos.find(e=>e.zonaId===z.id); return e ? mins((e.salida||S.now)-e.entrada) : null; }));
+    h = `<div class="scrim drawer-scrim" data-a="scrim"><aside class="drawer" role="dialog" aria-label="Detalle de zona"><div class="m-h"><div><span class="lbl-up">${z.tipo}</span><h2 style="font-size:22px">${esc(z.nombre)}</h2></div><button class="x" data-a="close" aria-label="Cerrar">${ic('x')}</button></div>
+      <div class="m-b">
+        <div style="display:flex;gap:10px;align-items:center"><span class="tag-id num" style="font-size:40px">${lv==='nd'?'—':at.length}<small style="font-size:18px;color:var(--gris)">/${z.aforo}</small></span><span class="chip ${lv==='pausa'?'nd':lv}">${NIV[lv]}</span></div>
+        <div class="tiles"><div class="tile t2"><b class="num">${espZ??'—'}<small style="font-size:13px"> min</small></b><span>Permanencia promedio hoy</span></div><div class="tile t2"><b style="font-size:16px">${n?n.id:'—'}</b><span>${n?n.estado:'Nodo no instalado'}</span></div></div>
+        ${z.pausa?`<div class="helpbox">Seguimiento pausado por ${esc(z.pausa.por)} a las ${hhmm(z.pausa.t)} · ${esc(z.pausa.motivo)}</div>`:''}
+        <h3>Atenciones en la zona</h3>
+        <div class="list">${at.length?at.map(a=>`<button class="fc" data-a="verAt" data-id="${a.id}" data-from="gemelo"><span class="mid"><b>${a.id}</b><p>en la zona hace ${mins(S.now-a.eventos[a.eventos.length-1].entrada)} min</p></span><span class="chip">${a.tarjetaId}</span></button>`).join(''):'<div class="empty">No hay pacientes en esta zona.</div>'}</div>
+      </div></aside></div>`;
+  }
+  if (m.type==='pausar'){
+    const z = zonaById(m.z);
+    h = M(`Pausar ${z.nombre}`, `<p style="margin:0">Mientras esté pausada, la zona se verá en gris en el gemelo y sus minutos no contarán en las métricas.</p>
+      <div class="field"><label>Motivo</label><div class="chips">${['Limpieza','Mantenimiento','Sin atención','Otro'].map(x=>`<button class="chipbtn ${m.motivo===x?'on':''}" data-a="motivo" data-v="${x}">${x}</button>`).join('')}</div></div>`,
+      `<button class="btn btn-o" data-a="close">Cancelar</button><button class="btn btn-p" data-a="confPausa" ${m.motivo?'':'disabled'}>Pausar seguimiento</button>`);
+  }
+  if (m.type==='confirm'){
+    h = M(m.title, `<p style="margin:0">${m.body}</p>`, `<button class="btn btn-o" data-a="close">Cancelar</button><button class="btn ${m.danger?'btn-n':'btn-p'}" data-a="confirmOk">${esc(m.ok)}</button>`);
+  }
+  if (m.type==='sede'){
+    h = M('Nueva sede', `<form id="f-sede" data-f="sede" style="display:flex;flex-direction:column;gap:12px"><div class="field"><label for="sd-n">Nombre</label><input class="inp" id="sd-n" name="n" required placeholder="Clínica CREO+ – Sede Norte"></div><div class="field"><label for="sd-d">Dirección</label><input class="inp" id="sd-d" name="d" placeholder="Av. …, Lima"></div></form>`,
+      `<button class="btn btn-o" data-a="close">Cancelar</button><button class="btn btn-p" type="submit" form="f-sede">Crear sede</button>`);
+  }
+  if (m.type==='piso'){
+    const st = m.step;
+    const prog = `<div class="progress">${[1,2,3,4].map(i=>`<i class="${i<=st?'on':''}"></i>`).join('')}</div><span class="hint">Paso ${st} de 4 · ${['Datos del piso','Plano','Escala','Listo'][st-1]}</span>`;
+    let body = '', foot = '';
+    if (st===1){ body = `${prog}<div class="field"><label for="np-n">Nombre del piso</label><input class="inp" id="np-n" data-i="mf" data-k="nombre" value="${esc(m.nombre||'')}" placeholder="Piso 3"></div><div class="field"><label for="np-l">Nivel</label><input class="inp" id="np-l" type="number" data-i="mf" data-k="nivel" value="${esc(m.nivel||'')}"></div><div class="field"><label>Sede</label><input class="inp" disabled value="${esc(S.sedes.find(s=>s.id===m.sede)?.nombre)}"></div>`; foot = `<button class="btn btn-o" data-a="close">Cancelar</button><button class="btn btn-p" data-a="wiz" data-v="2" ${m.nombre?'':'disabled'}>Siguiente</button>`; }
+    if (st===2){ body = `${prog}<label class="empty" for="np-file" style="cursor:pointer;display:flex;flex-direction:column;gap:8px;align-items:center">${ic('upload').replace('<svg ','<svg width="28" height="28" ')}<b>${m.planoNombre?esc(m.planoNombre):'Arrastre o elija la imagen del plano'}</b><span class="hint">PNG o JPG. Si el plano está en PDF o AutoCAD, expórtelo como imagen.</span><input id="np-file" type="file" accept="image/*" data-i="planoFile" style="display:none"></label>${m.plano?`<img src="${m.plano}" alt="Vista previa del plano" style="max-height:160px;object-fit:contain;border:1px solid var(--linea);border-radius:8px">`:''}<button class="btn btn-o" data-a="planoEj">Usar plano de ejemplo</button>`; foot = `<button class="btn btn-o" data-a="wiz" data-v="1">Atrás</button><button class="btn btn-p" data-a="wiz" data-v="3" ${m.plano?'':'disabled'}>Siguiente</button>`; }
+    if (st===3){ body = `${prog}<p style="margin:0">Indique una medida real para convertir el plano a metros. En un plano real se marcan dos puntos (por ejemplo, el ancho de una puerta); aquí basta con el ancho total.</p><div class="field"><label for="np-w">Ancho real del plano (m)</label><input class="inp" id="np-w" type="number" step="0.5" data-i="mf" data-k="ancho" value="${m.ancho}"></div><span class="hint">Fondo calculado según la proporción del plano: <b>${m.fondo} m</b></span>`; foot = `<button class="btn btn-o" data-a="wiz" data-v="2">Atrás</button><button class="btn btn-p" data-a="wiz" data-v="4">Siguiente</button>`; }
+    if (st===4){ body = `${prog}<div class="helpbox" style="font-size:13.5px"><b>${esc(m.nombre)} listo para dibujar</b><span>Plano de ${m.ancho} × ${m.fondo} m cargado. Se abrirá en el editor como borrador: dibuje las zonas, coloque los nodos y publique.</span></div>`; foot = `<button class="btn btn-o" data-a="wiz" data-v="3">Atrás</button><button class="btn btn-p" data-a="crearPiso">Abrir en el editor</button>`; }
+    h = M('Nuevo piso', body, foot);
+  }
+  if (m.type==='escala'){
+    const p = pisoById(S.ed.pisoId);
+    h = M('Fijar escala', `<div class="field"><label for="es-w">Ancho real (m)</label><input class="inp" id="es-w" type="number" step="0.5" data-i="mf" data-k="ancho" value="${m.ancho}"></div><div class="field"><label for="es-d">Fondo real (m)</label><input class="inp" id="es-d" type="number" step="0.5" data-i="mf" data-k="fondo" value="${m.fondo}"></div><span class="hint">Actual: ${p.ancho} × ${p.fondo} m.</span>`,
+      `<button class="btn btn-o" data-a="close">Cancelar</button><button class="btn btn-p" data-a="escalaOk">Aplicar</button>`);
+  }
+  if (m.type==='nodo'){
+    const ps = S.pisos.filter(p=>p.publicado); const pz = pisoById(m.piso||ps[0].id).zonas.filter(z=>z.tipo!=='Tránsito');
+    h = M(m.edit?`Cambiar zona de ${m.edit}`:'Registrar nodo ESP32', `<form id="f-nodo" data-f="nodo" style="display:flex;flex-direction:column;gap:12px">
+      ${m.edit?'':`<div class="field"><label for="nd-n">Nombre</label><input class="inp" id="nd-n" name="n" required value="${esc(m.nombre)}"></div><div class="field"><label for="nd-m">Dirección MAC</label><input class="inp" id="nd-m" name="m" required placeholder="24:6F:28:AA:01:04" value="${esc(m.mac||'')}"><span class="hint">Viene impresa en la etiqueta del nodo.</span></div>`}
+      <div class="field"><label for="nd-p">Piso</label><select class="inp" id="nd-p" data-i="mf" data-k="piso">${ps.map(p=>`<option value="${p.id}" ${p.id===m.piso?'selected':''}>${esc(p.nombre)}</option>`).join('')}</select></div>
+      <div class="field"><label for="nd-z">Zona que cubre</label><select class="inp" id="nd-z" name="z">${pz.map(z=>`<option value="${z.id}" ${z.id===m.zona?'selected':''}>${esc(z.nombre)}${nodoDeZona(z)&&nodoDeZona(z).id!==m.edit?' (ya tiene nodo)':''}</option>`).join('')}</select></div>
+      ${m.err?`<div class="err">${esc(m.err)}</div>`:''}
+      <span class="hint">El umbral de señal viene configurado de fábrica y lo ajusta el equipo técnico en la instalación.</span></form>`,
+      `<button class="btn btn-o" data-a="close">Cancelar</button><button class="btn btn-p" type="submit" form="f-nodo">${m.edit?'Guardar':'Registrar nodo'}</button>`);
+  }
+  if (m.type==='tarjeta'){
+    h = M('Registrar tarjeta BLE', `<form id="f-tar" data-f="tarjeta" style="display:flex;flex-direction:column;gap:12px">
+      <div class="progress"><i class="on"></i><i class="${m.ble?'on':''}"></i></div>
+      <div class="field"><label for="tj-c">1. Escanee el QR impreso en la tarjeta</label><input class="inp" id="tj-c" name="c" required value="${esc(m.code||'')}" placeholder="T-16"></div>
+      <div class="field"><label>2. Acerque la tarjeta al lector</label>${m.ble?`<div class="li"><span>${ic('check').replace('<svg ','<svg width="15" height="15" style="color:#2E9E6B" ')} Identificador BLE detectado: <b>${m.ble}</b></span></div>`:m.leyendo?`<div class="li"><span class="spin"></span><span>Buscando la señal de la tarjeta…</span></div>`:`<button class="btn btn-o" type="button" data-a="leerBle">${ic('radio')} Detectar tarjeta</button>`}</div>
+      ${m.err?`<div class="err">${esc(m.err)}</div>`:''}</form>`,
+      `<button class="btn btn-o" data-a="close">Cancelar</button><button class="btn btn-p" type="submit" form="f-tar" ${m.ble?'':'disabled'}>Registrar tarjeta</button>`);
+  }
+  if (m.type==='usuario'){
+    const u = m.edit ? S.usuarios.find(x=>x.id===m.edit) : null;
+    if (m.pass){
+      h = M(m.reset?'Contraseña restablecida':'Usuario creado', `<p style="margin:0">${m.reset?'Nueva contraseña temporal para':'Contraseña temporal de'} <b>${esc(m.nombre)}</b>:</p><div class="pwd"><span id="pwtxt">${m.pass}</span><button class="btn btn-o btn-sm" data-a="copiar" data-v="${m.pass}">${ic('copy')} Copiar</button></div><div class="helpbox">Entréguela al usuario. Deberá cambiarla en su primer ingreso.</div>`, `<button class="btn btn-p" data-a="close">Listo</button>`);
+    } else {
+      const rol = m.rol || u?.rol || 'Operador';
+      h = M(u?`Editar ${u.nombre}`:'Nuevo usuario', `<form id="f-usr" data-f="usuario" style="display:flex;flex-direction:column;gap:12px">
+        <div class="field"><label for="us-n">Nombre completo</label><input class="inp" id="us-n" name="n" required value="${esc(u?.nombre||'')}"></div>
+        <div class="field"><label for="us-c">Correo</label><input class="inp" id="us-c" name="c" type="email" required value="${esc(u?.correo||'')}" placeholder="nombre@creo.pe"></div>
+        <div class="field"><label>Rol</label><div class="chips">${['Administrador','Operador','Gerencia'].map(r=>`<button type="button" class="chipbtn ${rol===r?'on':''}" data-a="mrol" data-v="${r}">${r}</button>`).join('')}</div>
+          <span class="hint">${{Administrador:'Configura el gemelo, dispositivos y usuarios.',Operador:'Opera Admisión, el gemelo y el seguimiento de sus pisos.',Gerencia:'Ve el gemelo y los reportes en solo lectura.'}[rol]}</span></div>
+        ${rol==='Operador'?`<div class="field"><label>Asignar pisos</label>${S.pisos.filter(p=>p.publicado).map(p=>`<label style="display:flex;gap:8px;align-items:center;font-weight:600"><input type="checkbox" name="p" value="${p.id}" ${(m.pisos||u?.pisos||['p1']).includes(p.id)?'checked':''}> ${esc(p.nombre)} <span class="hint">${p.zonas.filter(z=>z.tipo!=='Tránsito').map(z=>z.nombre).join(', ')}</span></label>`).join('')}</div>`:''}
+        ${m.err?`<div class="err">${esc(m.err)}</div>`:''}</form>`,
+        `<button class="btn btn-o" data-a="close">Cancelar</button><button class="btn btn-p" type="submit" form="f-usr">${u?'Guardar cambios':'Crear usuario'}</button>`);
+    }
+  }
+  if (m.type==='export'){
+    h = M(`Reporte ${m.v} generado`, `<p style="margin:0">Se generó el reporte con los filtros actuales.</p><div class="li"><span>${ic('dl').replace('<svg ','<svg width="16" height="16" ')} <b>${m.file}</b></span><span class="hint">${m.n} registros</span></div><span class="hint">En el sistema real el archivo se descarga. En este prototipo solo se registra la acción en la auditoría.</span>`, `<button class="btn btn-p" data-a="close">Entendido</button>`);
+  }
+  root.innerHTML = h;
+  if (aid){ const el = document.getElementById(aid); if (el){ if (vals[aid]!=null && el.value!==vals[aid] && el.tagName==='INPUT') el.value = vals[aid]; el.focus(); } }
+  else { const f = root.querySelector('input:not([disabled]):not([type=file]):not([type=checkbox]),select'); f?.focus(); }
+}
+
+/* =========================================================
+   Acciones
+   ========================================================= */
+function doLogin(mail, pass){
+  mail = (mail||'').trim().toLowerCase();
+  const f = S.loginFails[mail] || { n:0, until:0 };
+  if (f.until > Date.now()){ S.ui.loginErr = 'Cuenta bloqueada 5 min por demasiados intentos. Pide ayuda al Administrador.'; return render(); }
+  const u = S.usuarios.find(x=>x.correo===mail);
+  if (!u || u.pass!==pass){ f.n++; if (f.n>=5){ f.until = Date.now()+5*MIN; f.n = 0; } S.loginFails[mail] = f; S.ui.loginErr = f.until>Date.now() ? 'Cuenta bloqueada 5 min por demasiados intentos.' : `Correo o contraseña incorrectos. Intento ${f.n} de 5.`; return render(); }
+  if (u.estado==='Desactivado'){ S.ui.loginErr = 'Esta cuenta está desactivada. Pide ayuda al Administrador.'; return render(); }
+  S.loginFails[mail] = { n:0, until:0 }; S.ui.loginErr = ''; S.ui.olvido = false;
+  S.user = u; u.ultimo = S.now; audit('Sesión','Inició sesión','—','Navegador web');
+  S.ui.piso = visiblePisos()[0]?.id || 'p1'; S.ui.hPiso = S.ui.piso;
+  const r = u.estado==='Primer ingreso' ? 'cambiar' : home();
+  if (location.hash.slice(1)===r) { S.route = r; render(); } else go(r);
+}
+function scanCode(raw){
+  const m = String(raw||'').trim().toUpperCase().match(/^T?-?\s*(\d{1,3})$/);
+  const code = m ? 'T-' + pad2(+m[1]) : String(raw||'').trim().toUpperCase();
+  const t = S.tarjetas.find(x=>x.id===code), modo = S.ui.admModo;
+  const before = { tarjetas:clone(S.tarjetas), atenciones:clone(S.atenciones), ops:clone(S.ops), nextId:S.nextId, aud:S.auditoria.length };
+  let res;
+  if (!code) return;
+  if (!t) res = { kind:'error', html:`<b style="font-size:18px">Tarjeta ${esc(code)} no registrada</b><span>Pide al Administrador que la registre en Dispositivos.</span>` };
+  else if (t.estado==='Baja') res = { kind:'error', html:`<b style="font-size:18px">La tarjeta ${t.id} está dada de baja</b><span>Use otra tarjeta disponible.</span>` };
+  else if (t.estado==='Por desinfectar') res = { kind:'error', html:`<b style="font-size:18px">Esta tarjeta aún no está desinfectada</b><span>${t.id} se devolvió a las ${hhmm(t.desde)}. Desinféctela con alcohol al 70% antes de entregarla.</span><div class="row"><button class="btn btn-n btn-sm" data-a="desinfectar" data-t="${t.id}">${ic('check')} Marcar desinfectada</button></div>` };
+  else if (t.estado==='Sin devolver' || t.estado==='Extraviada'){ t.estado='Por desinfectar'; t.desde=S.now; t.atencionId=null; S.ops.unshift({t:S.now,tipo:'Recuperada',tarjeta:t.id}); audit('Admisión','Recuperó tarjeta',t.id,'→ Por desinfectar'); S.alertas.forEach(a=>{ if (a.txt.includes(t.id)) a.leida = true; }); res = { kind:'info', html:`<b style="font-size:18px">Tarjeta ${t.id} recuperada</b><span>Pasa a «Por desinfectar». Desinféctela antes de volver a entregarla.</span>` }; }
+  else if (t.estado==='Disponible'){
+    if (modo==='recibir') res = { kind:'error', html:`<b style="font-size:18px">${t.id} no está en uso</b><span>Esta tarjeta está disponible: no hay nada que recibir. Para entregarla, vuelva al modo automático.</span>` };
+    else { const a = entregar(t); res = { kind:'ok', html:`<span class="lbl-up" style="color:#1E6E4A">Tarjeta ${t.id} entregada · ${hhmm(S.now)}</span><span class="big">${a.id}</span><span>Lea el código en voz alta al paciente. El recorrido y el tiempo de espera ya empezaron.</span>` }; }
+  }
+  else if (t.estado==='En uso'){
+    if (modo==='entregar') res = { kind:'error', html:`<b style="font-size:18px">${t.id} ya está en uso (${t.atencionId})</b><span>Para entregarla primero hay que recibirla. Vuelva al modo automático.</span>` };
+    else {
+      const a = S.atenciones.find(x=>x.id===t.atencionId); cerrar(a,'Devuelta');
+      t.estado='Por desinfectar'; t.atencionId=null; t.desde=S.now;
+      S.ops.unshift({ t:S.now, tipo:'Recibida', tarjeta:t.id, at:a.id, total:total(a) });
+      audit('Admisión','Recibió tarjeta',t.id,`${a.id} · total ${total(a)} min`);
+      res = { kind:'ok', html:`<span class="lbl-up" style="color:#1E6E4A">Tarjeta ${t.id} recibida · recorrido terminado</span><span class="big">${a.id}</span><div class="row" style="font-size:15px"><span>Espera <b>${dur(espera(a))}</b></span><span>·</span><span>Consulta <b>${dur(consulta(a))}</b></span><span>·</span><span>Total <b>${dur(total(a))}</b></span></div><span>La tarjeta pasó a «Por desinfectar».</span>` };
+    }
+  }
+  S.ui.admRes = res;
+  if (res.kind==='ok' || res.kind==='info'){ S.undo = { t:Date.now(), before }; setTimeout(()=>{ if (S.undo && Date.now()-S.undo.t>=30000){ S.undo=null; if (S.route==='admision') render(true); } }, 30100); }
+  render();
+  const s = $('#scan'); if (s){ s.value=''; s.focus(); }
+}
+const A = {
+  demo: el => doLogin(el.dataset.mail, 'demo123'),
+  olvido: () => { S.ui.olvido = true; render(); },
+  logout: () => { audit('Sesión','Cerró sesión','—',''); S.user = null; S.ui.menu = false; S.ui.bell = false; S.ui.modal = null; go('login'); render(); },
+  home: () => go(home()),
+  nav: el => { S.ui.menu = false; go(el.dataset.r); },
+  bell: () => { S.ui.bell = !S.ui.bell; S.ui.menu = false; if (!S.ui.bell) S.alertas.forEach(a=>a.leida = true); render(); },
+  umenu: () => { S.ui.menu = !S.ui.menu; S.ui.bell = false; render(); },
+  alertaIr: el => { S.ui.bell = false; S.alertas.forEach(a=>a.leida = true); const r = el.dataset.r; go(can(r)?r:'gemelo'); render(); },
+  sim: () => { S.simOn = !S.simOn; toast(S.simOn?'Simulación reanudada':'Simulación en pausa'); render(); },
+  // Admisión
+  admModo: el => { S.ui.admModo = S.ui.admModo===el.dataset.m ? 'auto' : el.dataset.m; render(); $('#scan')?.focus(); },
+  fill: el => { const s = $('#scan'); if (s){ s.value = el.dataset.v; s.focus(); } },
+  desinfectar: el => { const t = S.tarjetas.find(x=>x.id===el.dataset.t); t.estado='Disponible'; t.desde=S.now; S.ops.unshift({t:S.now,tipo:'Desinfectada',tarjeta:t.id}); audit('Admisión','Marcó desinfectada',t.id,'Por desinfectar → Disponible'); S.ui.admRes = { kind:'ok', html:`<b style="font-size:18px">${t.id} desinfectada</b><span>Ya está disponible para entregar.</span>` }; toast(`${t.id} disponible`); render(); },
+  extraviar: el => openModal({ type:'confirm', title:`Marcar ${el.dataset.t} como extraviada`, body:`La tarjeta saldrá de «Pendientes de devolución». Si aparece, escanéela en Admisión y pasará a «Por desinfectar».`, ok:'Marcar extraviada', danger:true, fn:()=>{ const t = S.tarjetas.find(x=>x.id===el.dataset.t); t.estado='Extraviada'; t.desde=S.now; audit('Admisión','Marcó extraviada',t.id,'Sin devolver → Extraviada'); S.alertas.forEach(a=>{ if (a.txt.includes(t.id)) a.leida = true; }); toast(`${t.id} marcada como extraviada`,'warn'); } }),
+  deshacer: () => { if (!S.undo) return; const b = S.undo.before; S.tarjetas = b.tarjetas; S.atenciones = b.atenciones; S.ops = b.ops; S.nextId = b.nextId; audit('Admisión','Deshizo la última operación','—',''); S.undo = null; S.ui.admRes = { kind:'info', html:'<b style="font-size:18px">Operación deshecha</b><span>Todo volvió al estado anterior.</span>' }; render(); },
+  // Gemelo
+  modo: el => { S.ui.modo3d = el.dataset.v==='3d'; render(); },
+  girar: () => { S.ui.rot = (S.ui.rot+1)%4; render(); },
+  feed: el => { S.ui.feed = el.dataset.v; render(); },
+  zona: el => { $('#tip').hidden = true; openModal({ type:'zona', z:el.dataset.zona }); },
+  pisoStack: el => { S.ui.piso = el.dataset.piso; render(); },
+  verAt: el => { S.ui.atSel = el.dataset.id; S.ui.from = el.dataset.from; S.ui.modal = null; renderModal(); go('atencion'); render(); window.scrollTo(0,0); },
+  // Historial
+  hPage: el => { S.ui.hPage += +el.dataset.v; render(); },
+  exportar: el => { const n = S.route==='auditoria' ? S.auditoria.length : histRows().length; const file = S.route==='auditoria' ? `auditoria_${isoDate(T0)}.csv` : `reporte_${pisoById(S.ui.hPiso)?.nombre.replace(' ','')}_${zonaById(S.ui.hZona)?.nombre.replace(/\s+/g,'')}_${isoDate(T0)}.${el.dataset.v.toLowerCase()}`; audit('Reportes',`Exportó ${S.route==='auditoria'?'auditoría':'reporte'}`, file, el.dataset.v); openModal({ type:'export', v:el.dataset.v, file, n }); },
+  // Seguimiento
+  pausar: el => { const z = zonaById(el.dataset.z); if (z.pausa){ z.pausa = null; audit('Seguimiento','Reactivó zona',z.nombre,'Pausado → Activo'); toast(`${z.nombre}: seguimiento activo`); render(); } else openModal({ type:'pausar', z:z.id, motivo:null }); },
+  motivo: el => { S.ui.modal.motivo = el.dataset.v; renderModal(); },
+  confPausa: () => { const z = zonaById(S.ui.modal.z); z.pausa = { motivo:S.ui.modal.motivo, por:S.user.nombre, t:S.now }; audit('Seguimiento','Pausó zona',z.nombre,'Motivo: '+z.pausa.motivo); closeModal(); toast(`${z.nombre}: seguimiento pausado`,'warn'); render(); },
+  caida: () => { const n = S.nodos.find(x=>x.id==='N-03'); if (n.estado==='En línea'){ n.estado='Sin señal'; n.latido = Date.now(); alerta('alta','Nodo N-03 sin señal','Consultorio piloto · Piso 1','seguimiento'); toast('N-03 dejó de enviar señal','bad'); } else { n.estado='En línea'; S.alertas.forEach(a=>{ if (a.txt.includes('N-03')) a.leida = true; }); toast('N-03 volvió a estar en línea'); } render(); },
+  // Editor
+  edPiso: el => { S.ed.pisoId = el.dataset.p; S.ed.sel = null; render(); },
+  edSel: el => { S.ed.sel = el.dataset.z; S.ed.tool = 'sel'; render(); },
+  edTool: el => { const t = el.dataset.t; if (t==='escala'){ const p = pisoById(S.ed.pisoId); openModal({ type:'escala', ancho:p.ancho, fondo:p.fondo }); return; } S.ed.tool = t; if (t==='nodo' && !S.ed.nodo) S.ed.nodo = S.nodos.find(n=>n.estado!=='Baja')?.id; render(); },
+  edDel: () => { const p = pisoById(S.ed.pisoId); p.borrador = borr(p).filter(z=>z.id!==S.ed.sel); S.ed.sel = null; p.dirty = true; render(); },
+  ztipo: el => { const z = borr(pisoById(S.ed.pisoId)).find(x=>x.id===S.ed.sel); z.tipo = el.dataset.v; if (z.tipo==='Servicio' && z.aforo===1) z.umb = [100,100]; pisoById(S.ed.pisoId).dirty = true; render(); },
+  guardarB: () => { const p = pisoById(S.ed.pisoId); audit('Gemelo','Guardó borrador',p.nombre,`${borr(p).length} zonas`); toast('Borrador guardado. Aún no se ve en el Gemelo en vivo.'); },
+  publicar: () => { const p = pisoById(S.ed.pisoId); openModal({ type:'confirm', title:`Publicar ${p.nombre}`, body:`Los cambios aparecerán en el Gemelo en vivo, en los selectores de piso y en los reportes. Quedará registrado en la auditoría.`, ok:'Publicar cambios', fn:()=>{ p.zonas = clone(borr(p)); p.publicado = true; p.dirty = false; audit('Gemelo','Publicó cambios',p.nombre,`${p.zonas.length} zonas`); toast(`${p.nombre} publicado. Ya se ve en el Gemelo en vivo.`); } }); },
+  nuevaSede: () => openModal({ type:'sede' }),
+  nuevoPiso: el => { const s = el.dataset.s; const n = Math.max(0,...S.pisos.filter(p=>p.sedeId===s).map(p=>p.nivel))+1; openModal({ type:'piso', step:1, sede:s, nombre:`Piso ${n}`, nivel:n, ancho:24, fondo:13, noTick:true }); },
+  wiz: el => { S.ui.modal.step = +el.dataset.v; renderModal(); },
+  planoEj: () => { const m = S.ui.modal; m.plano = planoEjemplo(); m.planoNombre = 'plano_ejemplo.svg'; m.ratio = 13/24; m.fondo = Math.round(m.ancho*m.ratio*2)/2; renderModal(); },
+  crearPiso: () => { const m = S.ui.modal; const id = 'p' + (S.pisos.length+1) + '-' + Date.now()%1000; S.pisos.push({ id, sedeId:m.sede, nombre:m.nombre, nivel:+m.nivel, ancho:+m.ancho, fondo:+m.fondo, plano:m.plano, planoNombre:m.planoNombre, publicado:false, dirty:true, ambientes:[], zonas:[], borrador:[] }); audit('Gemelo','Creó piso',m.nombre,`${m.ancho} × ${m.fondo} m · borrador`); S.ed.pisoId = id; S.ed.sel = null; S.ed.tool = 'rect'; closeModal(); toast(`${m.nombre} creado como borrador. Dibuje sus zonas.`); render(); },
+  escalaOk: () => { const p = pisoById(S.ed.pisoId), m = S.ui.modal; p.ancho = +m.ancho||p.ancho; p.fondo = +m.fondo||p.fondo; p.dirty = true; audit('Gemelo','Fijó escala',p.nombre,`${p.ancho} × ${p.fondo} m`); closeModal(); render(); },
+  // Dispositivos
+  disTab: el => { S.ui.disTab = el.dataset.v; render(); },
+  nodoNuevo: () => { const n = S.nodos.length+1; openModal({ type:'nodo', nombre:'N-'+pad2(n), mac:'', piso:'p2', zona:'z2-sala', noTick:true }); },
+  nodoEditar: el => { const n = S.nodos.find(x=>x.id===el.dataset.n); openModal({ type:'nodo', edit:n.id, piso:n.pisoId, zona:n.zonaId, noTick:true }); },
+  nodoBaja: el => openModal({ type:'confirm', title:`Dar de baja ${el.dataset.n}`, body:'El nodo dejará de usarse y su zona se verá «Sin datos» hasta registrar otro.', ok:'Dar de baja', danger:true, fn:()=>{ const n = S.nodos.find(x=>x.id===el.dataset.n); n.estado='Baja'; audit('Dispositivos','Dio de baja nodo',n.id,zonaById(n.zonaId)?.nombre); toast(`${n.id} dado de baja`,'warn'); } }),
+  tarjetaNueva: () => openModal({ type:'tarjeta', code:'T-'+pad2(S.tarjetas.length+1), noTick:true }),
+  leerBle: () => { const m = S.ui.modal; m.code = $('#tj-c')?.value || m.code; m.leyendo = true; renderModal(); setTimeout(()=>{ if (S.ui.modal===m){ m.leyendo = false; m.ble = '0x' + Math.floor(0xC0A000 + Math.random()*0xFFF).toString(16).toUpperCase(); renderModal(); } }, 1200); },
+  tarjetaBaja: el => openModal({ type:'confirm', title:`Dar de baja ${el.dataset.t}`, body:'La tarjeta no podrá volver a entregarse. Úselo si está dañada o se perdió definitivamente.', ok:'Dar de baja', danger:true, fn:()=>{ const t = S.tarjetas.find(x=>x.id===el.dataset.t); t.estado='Baja'; t.desde=S.now; audit('Dispositivos','Dio de baja tarjeta',t.id,''); toast(`${t.id} dada de baja`,'warn'); } }),
+  // Usuarios
+  usrNuevo: () => openModal({ type:'usuario', rol:'Operador', noTick:true }),
+  usrEditar: el => openModal({ type:'usuario', edit:el.dataset.u, noTick:true }),
+  mrol: el => { const m = S.ui.modal; m.n = $('#us-n')?.value; m.c = $('#us-c')?.value; m.rol = el.dataset.v; renderModal(); const a = $('#us-n'), b = $('#us-c'); if (a && m.n!=null) a.value = m.n; if (b && m.c!=null) b.value = m.c; },
+  usrReset: el => { const u = S.usuarios.find(x=>x.id===el.dataset.u); const pass = tempPass(); u.pass = pass; if (u.estado!=='Desactivado') u.estado = 'Primer ingreso'; audit('Usuarios','Restableció contraseña',u.nombre,'Contraseña temporal generada'); openModal({ type:'usuario', pass, nombre:u.nombre, reset:true }); render(); },
+  usrToggle: el => { const u = S.usuarios.find(x=>x.id===el.dataset.u);
+    if (u.estado!=='Desactivado' && u.rol==='Administrador' && S.usuarios.filter(x=>x.rol==='Administrador' && x.estado!=='Desactivado').length===1){ toast('No se puede desactivar al único Administrador activo.','bad'); return; }
+    if (u.estado==='Desactivado'){ u.estado = 'Activo'; audit('Usuarios','Reactivó usuario',u.nombre,'Desactivado → Activo'); toast(`${u.nombre} reactivado`); render(); }
+    else openModal({ type:'confirm', title:`Desactivar a ${u.nombre}`, body:'No podrá iniciar sesión. Sus registros se conservan en la auditoría. Puede reactivarlo cuando quiera.', ok:'Desactivar', danger:true, fn:()=>{ u.estado = 'Desactivado'; audit('Usuarios','Desactivó usuario',u.nombre,'Activo → Desactivado'); toast(`${u.nombre} desactivado`,'warn'); } }); },
+  copiar: el => { const v = el.dataset.v; navigator.clipboard?.writeText(v).then(()=>toast('Contraseña copiada')).catch(()=>{ const r = document.createRange(); r.selectNodeContents($('#pwtxt')); getSelection().removeAllRanges(); getSelection().addRange(r); toast('Seleccionada: use Ctrl+C para copiar','warn'); }); },
+  // Modales
+  close: () => closeModal(),
+  scrim: (el, e) => { if (e.target===el) closeModal(); },
+  confirmOk: () => { const fn = S.ui.modal.fn; closeModal(); fn && fn(); render(); }
+};
+const tempPass = () => 'Creo-' + rint(1000,9999) + 'XYZW'[rint(0,3)];
+function planoEjemplo(){
+  const s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 390"><rect width="720" height="390" fill="#fff"/><g fill="none" stroke="#7d7470" stroke-width="5"><rect x="6" y="6" width="708" height="378"/><path d="M6 270h708M240 6v264M480 6v264M480 150h234M240 150h120"/></g><g fill="none" stroke="#bdb3ad" stroke-width="2"><path d="M300 270a30 30 0 0 1 30-30M560 150a30 30 0 0 0 30 30"/></g><g font-family="sans-serif" font-size="16" fill="#9a9294"><text x="90" y="140">Recepción</text><text x="320" y="210">Espera</text><text x="560" y="80">Tópico</text><text x="560" y="220">Consultorio</text><text x="320" y="330">Pasillo</text></g></svg>`;
+  return 'data:image/svg+xml;utf8,' + encodeURIComponent(s);
+}
+
+/* ---- Formularios ---- */
+const F = {
+  login: f => doLogin(f.mail.value, f.pass.value),
+  escanear: f => scanCode(f.code.value),
+  cambiar: f => {
+    const u = S.user, a = f.a.value, n = f.n.value, c = f.c.value;
+    if (a!==u.pass) S.ui.cpErr = 'La contraseña actual no es correcta.';
+    else if (n.length<8 || !/[A-Z]/.test(n) || !/\d/.test(n)) S.ui.cpErr = 'La nueva contraseña no cumple los requisitos.';
+    else if (n!==c) S.ui.cpErr = 'Las contraseñas no coinciden.';
+    else { u.pass = n; const first = u.estado==='Primer ingreso'; u.estado = 'Activo'; S.ui.cpErr = ''; audit('Sesión','Cambió su contraseña','—',first?'Primer ingreso':''); toast('Contraseña actualizada'); go(home()); S.route = home(); render(); return; }
+    render();
+  },
+  sede: f => { const n = f.n.value.trim(); if (!n) return; S.sedes.push({ id:'s'+(S.sedes.length+1), nombre:n, direccion:f.d.value }); audit('Gemelo','Creó sede',n,f.d.value||''); closeModal(); toast(`Sede «${n}» creada. Agregue su primer piso.`); render(); },
+  nodo: f => {
+    const m = S.ui.modal, zona = f.z.value, piso = $('#nd-p').value;
+    if (m.edit){ const n = S.nodos.find(x=>x.id===m.edit); const z = zonaById(zona); n.zonaId = zona; n.pisoId = piso; n.x = z.x + z.w/2; n.y = z.y + 1.2; audit('Dispositivos','Cambió zona de nodo',n.id,z.nombre); closeModal(); toast(`${n.id} ahora cubre ${z.nombre}`); render(); return; }
+    const nom = f.n.value.trim().toUpperCase(), mac = f.m.value.trim().toUpperCase();
+    if (S.nodos.some(x=>x.id===nom)){ m.err = `Ya existe un nodo llamado ${nom}.`; m.nombre = nom; m.mac = mac; renderModal(); return; }
+    if (!/^([0-9A-F]{2}:){5}[0-9A-F]{2}$/.test(mac)){ m.err = 'La MAC debe tener el formato 24:6F:28:AA:01:04.'; m.nombre = nom; m.mac = mac; renderModal(); return; }
+    const z = zonaById(zona); const n = { id:nom, mac, pisoId:piso, zonaId:zona, x:z.x+z.w/2, y:z.y+1.2, estado:'Esperando primera señal', latido:Date.now() };
+    S.nodos.push(n); audit('Dispositivos','Registró nodo',nom,`${pisoById(piso).nombre} · ${z.nombre}`); closeModal(); toast(`${nom} registrado. Esperando su primera señal…`); render();
+    setTimeout(()=>{ n.estado = 'En línea'; n.latido = Date.now(); toast(`${nom} en línea · ${z.nombre} ya envía datos`); render(true); }, 5000);
+  },
+  tarjeta: f => { const m = S.ui.modal; const c = f.c.value.trim().toUpperCase(); if (S.tarjetas.some(t=>t.id===c)){ m.err = `La tarjeta ${c} ya está registrada.`; m.code = c; renderModal(); return; } S.tarjetas.push({ id:c, estado:'Disponible', atencionId:null, ble:m.ble, desde:S.now }); audit('Dispositivos','Registró tarjeta',c,m.ble); closeModal(); toast(`${c} registrada y disponible`); render(); },
+  usuario: f => {
+    const m = S.ui.modal, n = f.n.value.trim(), c = f.c.value.trim().toLowerCase(), rol = m.rol || S.usuarios.find(x=>x.id===m.edit)?.rol || 'Operador';
+    const pisos = [...f.querySelectorAll('input[name=p]:checked')].map(x=>x.value);
+    if (S.usuarios.some(u=>u.correo===c && u.id!==m.edit)){ m.err = 'Ya existe un usuario con ese correo.'; renderModal(); $('#us-n').value = n; $('#us-c').value = c; return; }
+    if (rol==='Operador' && !pisos.length){ m.err = 'Asigne al menos un piso al Operador.'; renderModal(); $('#us-n').value = n; $('#us-c').value = c; return; }
+    if (m.edit){ const u = S.usuarios.find(x=>x.id===m.edit); const antes = u.rol; Object.assign(u, { nombre:n, correo:c, rol, pisos: rol==='Operador'?pisos:S.pisos.map(p=>p.id) }); audit('Usuarios','Editó usuario',n, antes!==rol?`${antes} → ${rol}`:'Datos actualizados'); closeModal(); toast('Cambios guardados'); render(); return; }
+    const pass = tempPass(); S.usuarios.push({ id:'u'+Date.now(), nombre:n, correo:c, rol, pisos: rol==='Operador'?pisos:S.pisos.map(p=>p.id), estado:'Primer ingreso', pass, ultimo:null });
+    audit('Usuarios','Creó usuario',n,`Rol ${rol}${rol==='Operador'?' · '+pisos.map(id=>pisoById(id).nombre).join(', '):''}`);
+    openModal({ type:'usuario', pass, nombre:n }); render();
+  }
+};
+
+/* ---- Inputs ---- */
+const I = {
+  piso: el => { S.ui.piso = el.value; render(); },
+  hRango: el => { S.ui.hRango = el.value; S.ui.hPage = 0; render(); },
+  hDesde: el => { S.ui.hDesde = el.value; render(); }, hHasta: el => { S.ui.hHasta = el.value; render(); },
+  hPiso: el => { S.ui.hPiso = el.value; S.ui.hZona = ''; S.ui.hPage = 0; render(); },
+  hZona: el => { S.ui.hZona = el.value; S.ui.hPage = 0; render(); },
+  hQ: el => { S.ui.hQ = el.value; S.ui.hPage = 0; render(); },
+  usrQ: el => { S.ui.usrQ = el.value; render(); }, usrRol: el => { S.ui.usrRol = el.value; render(); },
+  audU: el => { S.ui.audU = el.value; render(); }, audT: el => { S.ui.audT = el.value; render(); },
+  pwcheck: el => { const c = $('#pwchecks'); if (c) c.innerHTML = pwChecks(el.value); },
+  edNodo: el => { S.ed.nodo = el.value; },
+  mf: el => { const m = S.ui.modal; m[el.dataset.k] = el.value; if (el.dataset.k==='ancho' && m.type==='piso') m.fondo = Math.round(+el.value*(m.ratio||13/24)*2)/2; if (el.dataset.k==='piso'){ m.zona = pisoById(el.value).zonas.find(z=>z.tipo!=='Tránsito')?.id; renderModal(); } else if (m.type==='piso' && el.dataset.k!=='ancho') { const b = $('#modal .m-f .btn-p'); if (b) b.disabled = !m.nombre; } else if (m.type==='piso') renderModal(); },
+  planoFile: el => { const f = el.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { const m = S.ui.modal; m.plano = r.result; m.planoNombre = f.name; const img = new Image(); img.onload = () => { m.ratio = img.naturalHeight/img.naturalWidth; m.fondo = Math.round(m.ancho*m.ratio*2)/2; renderModal(); }; img.src = r.result; }; r.readAsDataURL(f); },
+  zprop: el => {
+    const p = pisoById(S.ed.pisoId), z = borr(p).find(x=>x.id===S.ed.sel); if (!z) return;
+    const k = el.dataset.k, v = el.value;
+    if (k==='nombre') z.nombre = v; if (k==='aforo') z.aforo = Math.max(1, +v||1);
+    if (k==='u0') z.umb[0] = clamp(+v||0, 0, z.umb[1]); if (k==='u1') z.umb[1] = clamp(+v||0, z.umb[0], 200);
+    p.dirty = true; $('#edwrap').innerHTML = edSVG(p); $('#edprev').innerHTML = isoSVG([p],{ mini:true, zonas:borr(p), s:9 });
+  }
+};
+
+/* ---- Eventos globales ---- */
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-a]');
+  if (!t){ if (S.ui.bell || S.ui.menu){ if (!e.target.closest('.dd')){ S.ui.bell = false; S.ui.menu = false; S.alertas.forEach(a=>a.leida = true); render(); } } return; }
+  if (t.tagName==='A') return;
+  const fn = A[t.dataset.a]; if (fn){ if (t.tagName==='BUTTON' && t.type!=='submit') e.preventDefault(); fn(t, e); }
+});
+document.addEventListener('submit', e => { const f = e.target.closest('[data-f]'); if (f){ e.preventDefault(); F[f.dataset.f]?.(f); } });
+document.addEventListener('input', e => { const el = e.target.closest('[data-i]'); if (el && el.type!=='file' && el.tagName!=='SELECT') I[el.dataset.i]?.(el); });
+document.addEventListener('change', e => { const el = e.target.closest('[data-i]'); if (el && (el.tagName==='SELECT' || el.type==='file' || el.type==='date')) I[el.dataset.i]?.(el); });
+document.addEventListener('keydown', e => { if (e.key==='Escape' && S.ui.modal) closeModal(); });
+// Tooltip del gemelo
+document.addEventListener('mouseover', e => {
+  const g = e.target.closest('#stage [data-zona]'); const tip = $('#tip');
+  if (!g){ tip.hidden = true; return; }
+  const z = zonaById(g.dataset.zona), lv = nivel(z), n = nodoDeZona(z), at = enZona(z);
+  const esp = avg(at.map(a=>mins(S.now - a.eventos[a.eventos.length-1].entrada)));
+  tip.innerHTML = `<b>${esc(z.nombre)}</b><div>${lv==='nd'?'Sin datos':lv==='pausa'?'Seguimiento pausado':`${at.length}/${z.aforo} pacientes · concentración ${NIV[lv].toLowerCase()}`}</div>${lv!=='nd'&&lv!=='pausa'&&at.length?`<div>Permanencia prom. ahora: ${esp} min</div>`:''}<div>Nodo ${n?`${n.id} ${n.estado.toLowerCase()}`:'no instalado'}</div><div style="color:#FBB62F;margin-top:4px">Clic para ver el detalle</div>`;
+  tip.hidden = false;
+});
+document.addEventListener('mousemove', e => { const tip = $('#tip'); if (!tip.hidden){ tip.style.left = Math.min(innerWidth-230, e.clientX+14)+'px'; tip.style.top = (e.clientY+14)+'px'; } });
+
+// Editor: arrastre
+function svgPt(svg, e){ const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY; const r = pt.matrixTransform(svg.getScreenCTM().inverse()); return [r.x/30, r.y/30]; }
+const snap = v => Math.round(v*2)/2;
+document.addEventListener('pointerdown', e => {
+  const svg = e.target.closest('#edsvg'); if (!svg) return;
+  const p = pisoById(S.ed.pisoId), zs = borr(p); const [mx,my] = svgPt(svg, e);
+  if (S.ed.tool==='rect'){ const z = { id:'z-'+Date.now(), nombre:'Zona nueva', tipo:'Espera', aforo:10, umb:[50,80], x:snap(mx), y:snap(my), w:0, h:0, pausa:null }; zs.push(z); S.ed.sel = z.id; S.ed.drag = { kind:'new', z, ox:snap(mx), oy:snap(my) }; }
+  else if (S.ed.tool==='nodo'){ const n = S.nodos.find(x=>x.id===S.ed.nodo); if (!n) return; const z = zs.find(z=>mx>=z.x&&mx<=z.x+z.w&&my>=z.y&&my<=z.y+z.h && z.tipo!=='Tránsito'); n.x = snap(mx); n.y = snap(my); n.pisoId = p.id; if (z) n.zonaId = z.id; audit('Gemelo','Ubicó nodo',n.id,`${p.nombre} · ${z?z.nombre:'sin zona'}`); toast(`${n.id} ubicado${z?' en '+z.nombre:''}`); render(); return; }
+  else {
+    const h = e.target.closest('[data-h]'), g = e.target.closest('[data-ez]');
+    if (h){ const z = zs.find(x=>x.id===S.ed.sel); S.ed.drag = { kind:'resize', h:h.dataset.h, z, o:{...z} }; }
+    else if (g){ const z = zs.find(x=>x.id===g.dataset.ez); if (S.ed.sel!==z.id){ S.ed.sel = z.id; } S.ed.drag = { kind:'move', z, dx:mx-z.x, dy:my-z.y, moved:false }; }
+    else { S.ed.sel = null; render(); return; }
+  }
+  svg.setPointerCapture?.(e.pointerId); e.preventDefault();
+  $('#edwrap').innerHTML = edSVG(p);
+});
+document.addEventListener('pointermove', e => {
+  const d = S.ed.drag; if (!d) return; const svg = $('#edsvg'); if (!svg) return;
+  const p = pisoById(S.ed.pisoId); const [mx,my] = svgPt(svg, e); const z = d.z;
+  if (d.kind==='new'){ const x1 = clamp(snap(mx),0,p.ancho), y1 = clamp(snap(my),0,p.fondo); z.x = Math.min(d.ox,x1); z.y = Math.min(d.oy,y1); z.w = Math.abs(x1-d.ox); z.h = Math.abs(y1-d.oy); }
+  if (d.kind==='move'){ z.x = clamp(snap(mx-d.dx),0,p.ancho-z.w); z.y = clamp(snap(my-d.dy),0,p.fondo-z.h); d.moved = true; }
+  if (d.kind==='resize'){ const o = d.o, X = clamp(snap(mx),0,p.ancho), Y = clamp(snap(my),0,p.fondo);
+    let x0 = o.x, y0 = o.y, x1 = o.x+o.w, y1 = o.y+o.h;
+    if (d.h.includes('w')) x0 = Math.min(X, x1-1); if (d.h.includes('e')) x1 = Math.max(X, x0+1);
+    if (d.h.includes('n')) y0 = Math.min(Y, y1-1); if (d.h.includes('s')) y1 = Math.max(Y, y0+1);
+    Object.assign(z, { x:x0, y:y0, w:x1-x0, h:y1-y0 }); }
+  $('#edwrap').innerHTML = edSVG(p);
+});
+document.addEventListener('pointerup', () => {
+  const d = S.ed.drag; if (!d) return; S.ed.drag = null;
+  const p = pisoById(S.ed.pisoId);
+  if (d.kind==='new'){ if (d.z.w < 1 || d.z.h < 1){ p.borrador = borr(p).filter(z=>z!==d.z); S.ed.sel = null; } else { S.ed.tool = 'sel'; p.dirty = true; toast('Zona creada. Complete sus propiedades a la derecha.'); } }
+  else if (d.kind==='resize' || d.moved) p.dirty = true;
+  render();
+});
+
+/* ---- Router ---- */
+function route(){
+  const r = location.hash.slice(1) || 'login';
+  if (!S.user){ S.route = 'login'; if (r!=='login') history.replaceState(null,'','#login'); }
+  else if (r==='login'){ go(home()); return; }
+  else S.route = TITLES[r] ? r : home();
+  S.ui.bell = false; S.ui.menu = false; S.ui.modal = null;
+  if (S.route!=='admision'){ S.ui.admRes = null; }
+  render(); window.scrollTo(0,0);
+}
+window.addEventListener('hashchange', route);
+
+seedData();
+route();
+setInterval(tick, 8000);
+</script>
+</body></html>

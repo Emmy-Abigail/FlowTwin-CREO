@@ -1,0 +1,43 @@
+:host { display: contents; }
+
+.adm { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(300px, 1fr); gap: 18px; align-items: start; }
+.col { display: flex; flex-direction: column; gap: 14px; }
+
+.modes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.mode {
+  border: 1.5px solid var(--linea); background: #fff; border-radius: var(--r); padding: 16px 18px;
+  text-align: left; display: flex; flex-direction: column; gap: 2px;
+}
+.mode b { font-family: var(--f-disp); font-size: 18px; font-weight: 800; }
+.mode span { color: var(--gris); }
+.mode.on { background: var(--negro); border-color: var(--negro); color: #fff; }
+.mode.on span { color: #BDB5B7; }
+
+.escaneo { display: flex; flex-direction: column; gap: 10px; }
+.escaneo label { font-weight: 700; }
+.scan-row { display: flex; gap: 10px; }
+.scan-row .inp { font-size: 24px; font-family: var(--f-disp); font-weight: 800; min-height: 58px; letter-spacing: .02em; }
+.scan-row .btn { min-height: 58px; padding: 0 22px; font-size: 15px; }
+
+.result { border-radius: var(--r); padding: 22px; display: flex; flex-direction: column; gap: 8px; animation: pop .25s ease-out; }
+.result.ok { background: var(--baja-s); border: 1.5px solid #BFE3D0; }
+.result.info { background: #fff; border: 1.5px solid var(--linea); }
+.result.error { background: var(--alta-s); border: 1.5px solid #F5C2BE; }
+.result .big { font-family: var(--f-disp); font-weight: 900; font-size: 56px; line-height: 1; letter-spacing: .01em; }
+.result .titulo { font-size: 18px; }
+.result .ok-txt { color: #1E6E4A; }
+.result .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.result .tiempos { font-size: 15px; }
+
+.helpbox .kbd {
+  display: inline-block; background: #fff; border: 1px solid #E9C978; border-radius: 6px;
+  padding: 1px 6px; margin: 2px 2px 0 0; font-weight: 800; font-size: 12.5px; color: inherit;
+}
+
+.panel { display: flex; flex-direction: column; gap: 14px; }
+.ops-titulo { margin-bottom: 6px; }
+.ops { display: flex; flex-direction: column; }
+.op { display: grid; grid-template-columns: 44px 104px 1fr; gap: 8px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--linea); font-size: 13px; }
+.sin-margen { margin: 0; }
+
+@media (max-width: 1000px) { .adm { grid-template-columns: 1fr; } }

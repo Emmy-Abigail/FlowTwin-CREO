@@ -1,0 +1,123 @@
+<div class="page-head">
+  <div>
+    <h1>Gemelo en vivo</h1>
+    <p>Pase el cursor o haga clic sobre una zona para ver su detalle.</p>
+  </div>
+</div>
+
+<!-- 4 KPI -->
+@let k = store.kpis();
+<div class="kpis">
+  <app-kpi etiqueta="En la clínica" [valor]="k.enClinica">{{ k.atendidosHoy }} atendidos hoy</app-kpi>
+  <app-kpi etiqueta="En sala de espera" [valor]="k.enSala" [sufijo]="'/' + k.aforoSala">
+    <span class="dot" [class]="'dot ' + k.nivelSala"></span> Concentración {{ k.textoNivelSala }}
+  </app-kpi>
+  <app-kpi etiqueta="Espera promedio hoy" [valor]="k.esperaHoy" sufijo=" min">{{ k.esperaVsAyer }}</app-kpi>
+  <app-kpi etiqueta="Consulta promedio hoy" [valor]="k.consultaHoy" sufijo=" min">{{ k.consultaVsAyer }}</app-kpi>
+</div>
+
+<div class="twin-grid">
+  <!-- Gemelo 3D -->
+  <section class="card twin-card">
+    <div class="card-h">
+      <div>
+        <h2>Piso 1 · {{ sede }}</h2>
+        <p>Concentración de pacientes por zona, actualizada en vivo. Arrastre para girar, rueda para acercar.</p>
+      </div>
+      <!-- Selector de piso: oculto porque hoy hay un solo piso publicado. -->
+    </div>
+
+    <div class="twin-stage">
+      @if (store.geometria(); as geo) {
+        <app-render-3d
+          [geometria]="geo"
+          [ocupacion]="store.ocupacion()"
+          [planoUrl]="store.planoUrl"
+          (zonaClic)="store.zonaSeleccionada.set($event)"
+          (zonaHover)="store.hover.set($event)" />
+      } @else {
+        <div class="cargando"><span class="spin"></span> Cargando el gemelo del Piso 1…</div>
+      }
+
+      @let l = store.leyenda();
+      <div class="legend">
+        <b>Concentración de pacientes</b>
+        <div><span class="dot alta"></span>Alta · {{ l.alta }}</div>
+        <div><span class="dot media"></span>Media · {{ l.media }}</div>
+        <div><span class="dot baja"></span>Baja · {{ l.baja }}</div>
+        <div><span class="dot nd"></span>Sin datos o pausado</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Feed en vivo -->
+  <section class="card feed-card">
+    <div class="card-h">
+      <div><h2>Actividad en vivo</h2><p>Clic en una tarjeta para ver su recorrido.</p></div>
+    </div>
+    <div class="feed-filtros">
+      <div class="seg" role="group" aria-label="Filtro">
+        @for (f of filtros; track f.valor) {
+          <button type="button" [class.on]="store.filtroFeed() === f.valor" (click)="store.filtroFeed.set(f.valor)">
+            {{ f.texto }} <span class="num conteo">{{ store.conteos()[f.valor] }}</span>
+          </button>
+        }
+      </div>
+    </div>
+    <div class="feed">
+      @for (item of store.feed(); track item.id) {
+        <button type="button" class="fc" [class]="'fc ' + item.borde" [class.flash]="item.recien" (click)="abrirAtencion(item.id)">
+          <span class="ic"><app-icono [nombre]="item.icono" [tamano]="17" /></span>
+          <span class="mid"><b>{{ item.id }}</b><p>{{ item.detalle }}</p></span>
+          <span class="r">
+            <app-chip [tono]="item.estado.tono">{{ item.estado.texto }}</app-chip>
+            @if (item.derecha) { <span class="num">{{ item.derecha }}</span> }
+          </span>
+        </button>
+      } @empty {
+        <div class="empty">Aún no hay atenciones con este filtro.</div>
+      }
+    </div>
+  </section>
+</div>
+
+<!-- Tooltip al pasar el cursor sobre una zona -->
+@if (store.tooltip(); as t) {
+  <div class="tip" [style.left.px]="t.x + 14" [style.top.px]="t.y + 14">
+    <b>{{ t.zona.nombre }}</b>
+    @if (t.nivel === 'nd') {
+      <div>Sin datos</div>
+    } @else {
+      <div>{{ t.personas }}/{{ t.zona.aforo }} pacientes · concentración {{ t.nombreNivel.toLowerCase() }}</div>
+      @if (t.permanenciaAhora != null) { <div>Permanencia prom. ahora: {{ t.permanenciaAhora }} min</div> }
+    }
+    <div>{{ t.textoNodo }}</div>
+    <div class="tip-accion">Clic para ver el detalle</div>
+  </div>
+}
+
+<!-- M2 · Detalle de zona -->
+@if (store.detalle(); as d) {
+  <app-modal variante="panel" [titulo]="d.zona.nombre" [antetitulo]="d.tipo" (cerrar)="store.zonaSeleccionada.set(null)">
+    <div class="detalle-cifra">
+      <span class="tag-id num">{{ d.nivel === 'nd' ? '—' : d.personas }}<small>/{{ d.zona.aforo }}</small></span>
+      <app-chip [tono]="d.nivel">{{ d.nombreNivel }}</app-chip>
+    </div>
+    <div class="tiles">
+      <div class="tile t2"><b class="num">{{ d.permanenciaHoy ?? '—' }}<small> min</small></b><span>Permanencia promedio hoy</span></div>
+      <div class="tile t2"><b class="nodo">{{ d.nodo?.codigo ?? '—' }}</b><span>{{ d.nodo?.estado ?? 'Sin nodo propio' }}</span></div>
+    </div>
+    <p class="hint umbrales">Umbrales: media desde {{ d.zona.umbralMedia }} % · alta desde {{ d.zona.umbralAlta }} % · área {{ (d.zona.ancho * d.zona.fondo).toFixed(1) }} m²</p>
+    <h3>Atenciones en la zona</h3>
+    <div class="list">
+      @for (a of d.atenciones; track a.id) {
+        <button type="button" class="fc" (click)="abrirAtencion(a.id)">
+          <span class="mid"><b>{{ a.id }}</b><p>en la zona hace {{ a.minutos }} min</p></span>
+          <app-chip>{{ a.tarjetaId }}</app-chip>
+        </button>
+      } @empty {
+        <div class="empty">No hay pacientes en esta zona.</div>
+      }
+    </div>
+  </app-modal>
+}
