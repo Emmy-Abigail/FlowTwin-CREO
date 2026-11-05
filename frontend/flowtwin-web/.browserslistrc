@@ -1,0 +1,6 @@
+# Navegadores soportados por FlowTwin (matriz de soporte, ADR de diseño del 05/11/2026).
+# Angular genera el código y el CSS compatibles exactamente con esta lista.
+# En la clínica se usan PC con Windows: Edge y Chrome; Firefox también se prueba.
+last 2 Chrome versions
+last 2 Edge versions
+last 2 Firefox versions

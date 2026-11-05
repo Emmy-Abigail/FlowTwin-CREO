@@ -10,7 +10,7 @@
 }
 .inp:focus { border-color: var(--negro-3); outline: none; box-shadow: 0 0 0 3px rgba(251, 182, 47, .35); }
 .hint { color: var(--gris); font-size: 12px; }
-.err { color: var(--alta); font-size: 13px; font-weight: 600; }
+.err { color: var(--error); font-size: 13px; font-weight: 600; }
 .lbl-up { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--gris); }
 .link {
   background: none; border: 0; padding: 0; color: var(--tinta);
