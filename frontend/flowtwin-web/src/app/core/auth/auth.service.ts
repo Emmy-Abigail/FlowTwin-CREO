@@ -1,97 +1,111 @@
+import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { ClinicaStore } from '../datos/clinica.store';
-import { Actor, Rol, Usuario } from '../datos/modelos';
+import { firstValueFrom } from 'rxjs';
+import { API, mensajeDe, problemaDe } from '../api/problema';
+import { Actor, Rol } from '../datos/modelos';
 import { ToastService } from '../ui/toast.service';
 import { MIN } from '../utils/tiempo';
 import { INICIO_POR_ROL } from './permisos';
-import { USUARIOS_DEMO } from './usuarios-demo';
 
-const CLAVE_SESION = 'flowtwin.sesion';
-const MAX_INTENTOS = 5;
-const BLOQUEO_MS = 5 * MIN;
-const INACTIVIDAD_MS = 15 * MIN;
+/** Usuario con sesión, tal como lo devuelve la API (/auth/login, /auth/yo). */
+export interface UsuarioSesion {
+  id: number;
+  nombre: string;
+  correo: string;
+  rol: Rol;
+  pisos: number[];
+  debeCambiarContrasena: boolean;
+}
+
+interface UsuarioApi {
+  id: number; correo: string; nombres: string; apellidos: string; rol: string; pisos: number[]; debeCambiarContrasena: boolean;
+}
+interface SesionApi { accessToken: string; expiraEn: string; usuario: UsuarioApi; }
 
 export type ResultadoLogin = { ok: true; destino: string } | { ok: false; error: string };
 
+/** Código de rol de la API → nombre que usan el menú y los permisos del frontend. */
+const ROLES: Record<string, Rol> = { ADMIN: 'Administrador', OPERADOR: 'Operador', GERENCIA: 'Gerencia' };
+
+/** 30 minutos sin actividad cierran la sesión (RNF11). */
+const INACTIVIDAD_MS = 30 * MIN;
+
 /**
- * Login SIMULADO: valida contra los usuarios demo en memoria. En el sistema real
- * este servicio llamará a POST /api/auth/login y guardará el token que devuelva;
- * el resto de la app (guards, menú, pantallas) solo usa usuario() y rol().
+ * Sesión contra la API real (flujos F-01, F-02 y F-03, ADR-13):
+ * - el token de acceso (15 min) vive SOLO en memoria, nunca en localStorage;
+ * - el token de refresco va en una cookie HttpOnly que JavaScript no puede leer;
+ * - al recargar la página, restaurarSesion() pide un token nuevo con esa cookie.
  */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
+  private http = inject(HttpClient);
   private router = inject(Router);
-  private clinica = inject(ClinicaStore);
   private toast = inject(ToastService);
 
-  readonly usuarios = signal<Usuario[]>(USUARIOS_DEMO);
-  private correo = signal<string | null>(leerSesion());
-  private intentos = new Map<string, { fallos: number; hasta: number }>();
+  private sesion = signal<{ token: string; usuario: UsuarioSesion } | null>(null);
   private temporizadorInactividad: ReturnType<typeof setTimeout> | null = null;
+  private refrescoEnCurso: Promise<boolean> | null = null;
 
-  readonly usuario = computed(() => this.usuarios().find(u => u.correo === this.correo()) ?? null);
+  readonly usuario = computed(() => this.sesion()?.usuario ?? null);
+  readonly token = computed(() => this.sesion()?.token ?? null);
   readonly rol = computed<Rol | null>(() => this.usuario()?.rol ?? null);
   readonly soloLectura = computed(() => this.rol() === 'Gerencia');
 
-  /** Para firmar las acciones en la auditoría. */
+  /** Para firmar las acciones de las pantallas que aún son simuladas (gemelo, historial). */
   readonly actor = computed<Actor>(() => {
     const u = this.usuario();
     return u ? { nombre: u.nombre, rol: u.rol } : { nombre: 'Sistema', rol: '—' };
   });
 
-  iniciarSesion(correoIngresado: string, clave: string): ResultadoLogin {
-    const correo = correoIngresado.trim().toLowerCase();
-    const intento = this.intentos.get(correo) ?? { fallos: 0, hasta: 0 };
-    if (intento.hasta > Date.now()) {
-      return { ok: false, error: 'Cuenta bloqueada 5 min por demasiados intentos. Pide ayuda al Administrador.' };
+  async iniciarSesion(correo: string, clave: string): Promise<ResultadoLogin> {
+    try {
+      const r = await firstValueFrom(this.http.post<SesionApi>(`${API}/auth/login`, { correo, clave }));
+      this.guardar(r);
+      return { ok: true, destino: this.usuario()!.debeCambiarContrasena ? '/cambiar-contrasena' : this.rutaInicio() };
+    } catch (e) {
+      return { ok: false, error: mensajeDe(problemaDe(e)) };
     }
-
-    const u = this.usuarios().find(x => x.correo === correo);
-    if (!u || u.clave !== clave) {
-      intento.fallos++;
-      if (intento.fallos >= MAX_INTENTOS) intento.hasta = Date.now() + BLOQUEO_MS;
-      this.intentos.set(correo, intento);
-      return {
-        ok: false,
-        error: intento.hasta > Date.now()
-          ? 'Cuenta bloqueada 5 min por demasiados intentos.'
-          : `Correo o contraseña incorrectos. Intento ${intento.fallos} de ${MAX_INTENTOS}.`,
-      };
-    }
-    if (u.estado === 'Desactivado') {
-      return { ok: false, error: 'Esta cuenta está desactivada. Pide ayuda al Administrador.' };
-    }
-
-    this.intentos.delete(correo);
-    this.actualizarUsuario(u.id, { ultimoIngreso: this.clinica.ahora() });
-    this.correo.set(correo);
-    guardarSesion(correo);
-    this.clinica.auditar('Sesión', 'Inició sesión', '—', 'Navegador web', this.actor());
-    this.registrarActividad();
-    return { ok: true, destino: u.estado === 'Primer ingreso' ? '/cambiar-contrasena' : this.rutaInicio() };
   }
 
-  cerrarSesion(motivo?: string): void {
-    if (this.usuario()) this.clinica.auditar('Sesión', 'Cerró sesión', '—', motivo ?? '', this.actor());
-    this.correo.set(null);
-    guardarSesion(null);
-    if (this.temporizadorInactividad) clearTimeout(this.temporizadorInactividad);
+  /** Al abrir la app: si la cookie de refresco sigue vigente, la sesión vuelve sin pedir la contraseña. */
+  async restaurarSesion(): Promise<void> {
+    await this.refrescar();
+  }
+
+  /** Pide un token nuevo con la cookie. Si varias peticiones lo piden a la vez, se hace una sola vez. */
+  refrescar(): Promise<boolean> {
+    this.refrescoEnCurso ??= firstValueFrom(this.http.post<SesionApi>(`${API}/auth/refresh`, {}))
+      .then(r => { this.guardar(r); return true; })
+      .catch(() => { this.limpiar(); return false; })
+      .finally(() => (this.refrescoEnCurso = null));
+    return this.refrescoEnCurso;
+  }
+
+  async cerrarSesion(motivo?: string): Promise<void> {
+    try { await firstValueFrom(this.http.post(`${API}/auth/logout`, {})); } catch { /* la sesión se limpia igual */ }
+    this.limpiar();
     if (motivo) this.toast.mostrar(motivo, 'warn');
+    await this.router.navigateByUrl('/login');
+  }
+
+  /** El servidor rechazó el token y no se pudo renovar: vuelve al login. */
+  sesionExpirada(): void {
+    if (!this.sesion()) return;
+    this.limpiar();
+    this.toast.mostrar('Tu sesión expiró. Vuelve a iniciar sesión.', 'warn');
     this.router.navigateByUrl('/login');
   }
 
   /** Devuelve un mensaje de error, o null si la contraseña se cambió. */
-  cambiarClave(actual: string, nueva: string, confirmacion: string): string | null {
-    const u = this.usuario();
-    if (!u) return 'No hay una sesión activa.';
-    if (actual !== u.clave) return 'La contraseña actual no es correcta.';
-    if (!cumpleRequisitos(nueva).every(r => r.ok)) return 'La nueva contraseña no cumple los requisitos.';
-    if (nueva !== confirmacion) return 'Las contraseñas no coinciden.';
-    const primerIngreso = u.estado === 'Primer ingreso';
-    this.actualizarUsuario(u.id, { clave: nueva, estado: 'Activo' });
-    this.clinica.auditar('Sesión', 'Cambió su contraseña', '—', primerIngreso ? 'Primer ingreso' : '', this.actor());
-    return null;
+  async cambiarClave(actual: string, nueva: string, confirmacion: string): Promise<string | null> {
+    try {
+      const r = await firstValueFrom(this.http.post<SesionApi>(`${API}/auth/cambiar-contrasena`, { actual, nueva, confirmacion }));
+      this.guardar(r);
+      return null;
+    } catch (e) {
+      return mensajeDe(problemaDe(e));
+    }
   }
 
   rutaInicio(): string {
@@ -104,37 +118,38 @@ export class AuthService {
     return rol != null && roles.includes(rol);
   }
 
-  /** La sesión se cierra tras 15 min sin actividad (flujo F1). */
+  /** Cada clic o tecla reinicia la cuenta de 30 minutos de inactividad. */
   registrarActividad(): void {
     if (this.temporizadorInactividad) clearTimeout(this.temporizadorInactividad);
-    if (!this.usuario()) return;
-    this.temporizadorInactividad = setTimeout(
-      () => this.cerrarSesion('Sesión cerrada por inactividad'), INACTIVIDAD_MS);
+    if (!this.sesion()) return;
+    this.temporizadorInactividad = setTimeout(() => this.cerrarSesion('Sesión cerrada por inactividad'), INACTIVIDAD_MS);
   }
 
-  private actualizarUsuario(id: string, cambios: Partial<Usuario>): void {
-    this.usuarios.update(lista => lista.map(u => (u.id === id ? { ...u, ...cambios } : u)));
+  private guardar(r: SesionApi): void {
+    const u = r.usuario;
+    this.sesion.set({
+      token: r.accessToken,
+      usuario: {
+        id: u.id, correo: u.correo, nombre: `${u.nombres} ${u.apellidos}`.trim(),
+        rol: ROLES[u.rol], pisos: u.pisos, debeCambiarContrasena: u.debeCambiarContrasena,
+      },
+    });
+    this.registrarActividad();
+  }
+
+  private limpiar(): void {
+    this.sesion.set(null);
+    if (this.temporizadorInactividad) clearTimeout(this.temporizadorInactividad);
   }
 }
 
-/** Requisitos visibles de la nueva contraseña (P2). */
+/** Requisitos visibles de la nueva contraseña (sección Seguridad → Contraseñas). La API los vuelve a validar. */
 export function cumpleRequisitos(clave: string): { ok: boolean; texto: string }[] {
   return [
     { ok: clave.length >= 8, texto: 'Al menos 8 caracteres' },
-    { ok: /[A-Z]/.test(clave), texto: 'Una letra mayúscula' },
+    { ok: /[A-ZÁÉÍÓÚÑ]/.test(clave), texto: 'Una letra mayúscula' },
+    { ok: /[a-záéíóúñ]/.test(clave), texto: 'Una letra minúscula' },
     { ok: /\d/.test(clave), texto: 'Un número' },
+    { ok: /[^A-Za-zÁÉÍÓÚÑáéíóúñ0-9]/.test(clave), texto: 'Un símbolo (# $ % & * ! ?)' },
   ];
-}
-
-// La sesión se recuerda en sessionStorage para que recargar la página no saque al usuario.
-// Puede fallar en modo privado: en ese caso simplemente no se recuerda.
-function leerSesion(): string | null {
-  try { return sessionStorage.getItem(CLAVE_SESION); } catch { return null; }
-}
-
-function guardarSesion(correo: string | null): void {
-  try {
-    if (correo) sessionStorage.setItem(CLAVE_SESION, correo);
-    else sessionStorage.removeItem(CLAVE_SESION);
-  } catch { /* sin almacenamiento disponible */ }
 }

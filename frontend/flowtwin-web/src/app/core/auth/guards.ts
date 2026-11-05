@@ -18,7 +18,7 @@ export const invitadoGuard: CanActivateFn = () => {
 /** En el primer ingreso, cualquier pantalla redirige a Cambiar contraseña (P2). */
 export const primerIngresoGuard: CanActivateChildFn = (_ruta, estado) => {
   const auth = inject(AuthService);
-  const pendiente = auth.usuario()?.estado === 'Primer ingreso';
+  const pendiente = auth.usuario()?.debeCambiarContrasena === true;
   return pendiente && !estado.url.startsWith('/cambiar-contrasena')
     ? inject(Router).parseUrl('/cambiar-contrasena')
     : true;

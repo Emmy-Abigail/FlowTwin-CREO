@@ -23,17 +23,18 @@ export class AdmisionPage {
   protected store = inject(AdmisionStore);
   protected codigo = signal('');
   /** Tarjeta que se va a marcar como extraviada (abre la confirmación). */
-  protected confirmarExtraviada = signal<string | null>(null);
+  protected confirmarExtraviada = signal<{ id: number; codigo: string } | null>(null);
   private campo = viewChild.required<ElementRef<HTMLInputElement>>('campo');
 
   constructor() {
     afterNextRender(() => this.enfocar());
   }
 
-  protected registrar(): void {
-    const ok = this.store.escanear(this.codigo());
-    if (ok) pitido();
+  protected async registrar(): Promise<void> {
+    const texto = this.codigo();
     this.codigo.set('');
+    const ok = await this.store.escanear(texto);
+    if (ok) pitido();
     this.enfocar();
   }
 
@@ -48,20 +49,20 @@ export class AdmisionPage {
     this.enfocar();
   }
 
-  protected desinfectar(id: string): void {
-    this.store.marcarDesinfectada(id);
+  protected async desinfectar(tarjeta: { id: number; codigo: string }): Promise<void> {
+    await this.store.marcarDesinfectada(tarjeta.id, tarjeta.codigo);
     this.enfocar();
   }
 
-  protected extraviar(): void {
-    const id = this.confirmarExtraviada();
-    if (id) this.store.marcarExtraviada(id);
+  protected async extraviar(): Promise<void> {
+    const tarjeta = this.confirmarExtraviada();
     this.confirmarExtraviada.set(null);
+    if (tarjeta) await this.store.marcarExtraviada(tarjeta.id, tarjeta.codigo);
     this.enfocar();
   }
 
-  protected deshacer(): void {
-    this.store.deshacer();
+  protected async deshacer(): Promise<void> {
+    await this.store.deshacer();
     this.enfocar();
   }
 
