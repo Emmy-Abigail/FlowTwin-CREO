@@ -103,6 +103,53 @@ namespace FlowTwin.Persistence.Migraciones
                         });
                 });
 
+            modelBuilder.Entity("FlowTwin.Atenciones.Domain.LecturaBle", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<DateTime>("LeidaEn")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int>("NodoId")
+                        .HasColumnType("int");
+
+                    b.Property<short>("Rssi")
+                        .HasColumnType("smallint");
+
+                    b.Property<int>("UsuarioRegistroId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
+                    b.Property<string>("UuidBle")
+                        .IsRequired()
+                        .HasColumnType("varchar(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LeidaEn");
+
+                    b.HasIndex("NodoId");
+
+                    b.HasIndex("UuidBle", "LeidaEn");
+
+                    b.ToTable("LecturaBle", "ope", t =>
+                        {
+                            t.HasCheckConstraint("CK_LecturaBle_Rssi", "[Rssi] BETWEEN -127 AND 0");
+                        });
+                });
+
             modelBuilder.Entity("FlowTwin.Auditoria.Domain.RegistroAuditoria", b =>
                 {
                     b.Property<long>("Id")
@@ -2157,6 +2204,15 @@ namespace FlowTwin.Persistence.Migraciones
                     b.HasOne("FlowTwin.Dispositivos.Domain.Tarjeta", null)
                         .WithMany()
                         .HasForeignKey("TarjetaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("FlowTwin.Atenciones.Domain.LecturaBle", b =>
+                {
+                    b.HasOne("FlowTwin.Dispositivos.Domain.Nodo", null)
+                        .WithMany()
+                        .HasForeignKey("NodoId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
