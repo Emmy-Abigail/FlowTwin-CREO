@@ -1,4 +1,5 @@
 using FlowTwin.Atenciones.Application;
+using FlowTwin.Atenciones.Contracts;
 using FlowTwin.SharedKernel;
 using FluentValidation;
 using Microsoft.AspNetCore.Builder;
@@ -24,6 +25,7 @@ public static class ModuloAtenciones
         services.AddSingleton<EstadoPresencia>();
         services.AddScoped<ProcesadorPresencia>();
         services.AddHostedService<MotorPresenciaEnSegundoPlano>();
+        services.AddScoped<IAtencionesEnCurso, AtencionesEnCursoConsulta>();
         services.AddValidatorsFromAssemblyContaining<EscaneoValidador>(ServiceLifetime.Singleton);
         return services;
     }

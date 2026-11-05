@@ -23,6 +23,30 @@ public interface IUsuarioActual
     void IdentificarComo(int usuarioId);
 }
 
+/// <summary>
+/// RN-24 en un solo lugar: el Administrador ve todos los pisos; Operador y Gerencia, solo los asignados.
+/// Antes estaba copiada en cada servicio; una regla de seguridad copiada es una regla que algún día
+/// queda distinta en una de sus copias.
+/// </summary>
+public static class AccesoPisos
+{
+    public const string RolAdmin = "ADMIN";
+
+    public static bool EsAdmin(this IUsuarioActual usuario) => usuario.Rol == RolAdmin;
+
+    public static bool PuedeVerPiso(this IUsuarioActual usuario, int pisoId) =>
+        usuario.EsAdmin() || usuario.Pisos.Contains(pisoId);
+
+    /// <summary>
+    /// La misma regla sobre los claims del token. La usa el hub SignalR: una conexión dura mucho y
+    /// Context.User es el usuario de ESA conexión, mientras que el HttpContext de una invocación puede
+    /// no serlo según el transporte.
+    /// </summary>
+    public static bool PuedeVerPiso(this System.Security.Claims.ClaimsPrincipal? usuario, int pisoId) =>
+        usuario?.FindFirst(Claims.Rol)?.Value == RolAdmin
+        || (usuario?.FindAll(Claims.Piso).Any(c => c.Value == pisoId.ToString()) ?? false);
+}
+
 /// <summary>Hora del servidor, siempre en UTC (ADR-14). Se inyecta para poder fijarla en las pruebas.</summary>
 public interface IReloj
 {
