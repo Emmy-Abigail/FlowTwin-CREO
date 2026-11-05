@@ -1,0 +1,101 @@
+# Integración continua: en cada pull request y en cada push a develop o main se compila todo y se
+# corren las pruebas. Si algo falla, el PR queda en rojo y (con la protección de ramas) no se puede unir.
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+
+# Solo lectura del repositorio: la CI no necesita escribir nada (principio de mínimo privilegio)
+permissions:
+  contents: read
+
+# Si subes otro commit al mismo PR, se cancela la corrida anterior y no se gastan minutos
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (.NET + SQL Server)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # La misma edición de SQL Server que en desarrollo, en un contenedor que vive solo durante la corrida
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_PID: Developer
+          # Contraseña de un SQL Server desechable que solo existe durante esta corrida: no es un secreto real
+          MSSQL_SA_PASSWORD: Ci_Pruebas#2026
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P Ci_Pruebas#2026 -Q 'SELECT 1' -b -o /dev/null"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+
+    env:
+      ConnectionStrings__FlowTwin: Server=localhost,1433;Database=FlowTwin;User Id=sa;Password=Ci_Pruebas#2026;TrustServerCertificate=True
+      DOTNET_NOLOGO: "true"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: backend/global.json
+
+      # Clave JWT solo para firmar tokens de prueba, distinta en cada corrida
+      - name: Clave JWT de prueba
+        run: echo "Jwt__Clave=$(openssl rand -base64 48)" >> "$GITHUB_ENV"
+
+      - name: Restaurar
+        run: dotnet restore
+
+      - name: Compilar
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Pruebas unitarias
+        run: dotnet test tests/FlowTwin.UnitTests --no-build --configuration Release
+
+      - name: Pruebas de arquitectura
+        run: dotnet test tests/FlowTwin.ArchitectureTests --no-build --configuration Release
+
+      - name: Pruebas de integración
+        timeout-minutes: 10
+        run: dotnet test tests/FlowTwin.IntegrationTests --no-build --configuration Release
+
+  frontend:
+    name: Frontend (Angular)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: frontend/flowtwin-web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/flowtwin-web/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Compilar en modo producción
+        run: npx ng build --configuration production

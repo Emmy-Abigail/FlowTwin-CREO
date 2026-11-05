@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using FlowTwin.Persistence;
+using Microsoft.Data.SqlClient;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -20,11 +21,15 @@ public sealed class ApiFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        // Misma cadena de conexión que en desarrollo (user-secrets), pero otra base.
-        var secretos = new ConfigurationBuilder().AddUserSecrets<Program>().Build();
-        var cadena = secretos.GetConnectionString("FlowTwin")
-            ?? throw new InvalidOperationException("Configura ConnectionStrings:FlowTwin en los user-secrets de FlowTwin.Api.");
-        var cadenaPruebas = cadena.Replace("Database=FlowTwin;", "Database=FlowTwin_Pruebas;");
+        // Misma cadena de conexión que en desarrollo, pero otra base. En tu máquina sale de los
+        // user-secrets; en la integración continua (GitHub Actions), de variables de entorno.
+        var config = new ConfigurationBuilder().AddUserSecrets<Program>(optional: true).AddEnvironmentVariables().Build();
+        var cadena = config.GetConnectionString("FlowTwin")
+            ?? throw new InvalidOperationException(
+                "Configura ConnectionStrings:FlowTwin en los user-secrets de FlowTwin.Api o en la variable ConnectionStrings__FlowTwin.");
+        // Se cambia la base con el constructor oficial, no reemplazando texto: así funciona escriba
+        // la cadena "Database=" o "Initial Catalog=", y nunca apunta por error a la base de desarrollo.
+        var cadenaPruebas = new SqlConnectionStringBuilder(cadena) { InitialCatalog = "FlowTwin_Pruebas" }.ConnectionString;
 
         Environment.SetEnvironmentVariable("ConnectionStrings__FlowTwin", cadenaPruebas);
         Environment.SetEnvironmentVariable("BaseDatos__MigrarAlIniciar", "true");
