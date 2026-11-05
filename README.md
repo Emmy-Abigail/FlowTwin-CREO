@@ -9,6 +9,7 @@ real a partir de emisores BLE y nodos ESP32, sin datos personales.
 |---|---|---|
 | [`backend/`](backend/README.md) | API .NET 10 (monolito modular) y SQL Server | `backend/README.md` |
 | [`frontend/flowtwin-web/`](frontend/flowtwin-web/README.md) | SPA Angular con el gemelo 2D/3D | `frontend/flowtwin-web/README.md` |
+| [`docs/contrato-integracion-nodos.md`](docs/contrato-integracion-nodos.md) | Contrato entre el firmware de los ESP32 y la API | Para el equipo de hardware |
 | `.github/workflows/` | Integración continua | Corre sola en cada pull request |
 
 ## Cómo se trabaja

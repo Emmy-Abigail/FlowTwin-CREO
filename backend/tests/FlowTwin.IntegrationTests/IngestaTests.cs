@@ -6,6 +6,7 @@ using FlowTwin.Atenciones.Application;
 using FlowTwin.Atenciones.Domain;
 using FlowTwin.Dispositivos.Application;
 using FlowTwin.Dispositivos.Domain;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -103,6 +104,21 @@ public class IngestaTests(ApiFixture api)
             .PostAsJsonAsync("/api/v1/ingesta/lecturas", Lote("02:00:00:00:00:01", 3003, ("uuid-y", 12, 100)));
 
         Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode);
+    }
+
+    [Fact]
+    public async Task Al_superar_el_limite_responde_429_con_Retry_After()
+    {
+        using var app = api.Fabrica.WithWebHostBuilder(b => b.UseSetting("LimitePeticiones:IngestaPorMinuto", "1"));
+        var nodo = app.CreateClient();
+        nodo.DefaultRequestHeaders.Add("X-Node-Key", SemillaDesarrollo.ClaveNodoDemo("N-01"));
+        var latido = new { mac = "02:00:00:00:00:01" };
+
+        await nodo.PostAsJsonAsync("/api/v1/ingesta/latidos", latido);
+        var r = await nodo.PostAsJsonAsync("/api/v1/ingesta/latidos", latido);
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, r.StatusCode);
+        Assert.True(int.Parse(r.Headers.GetValues("Retry-After").Single()) > 0);   // el ESP32 sabe cuánto esperar
     }
 
     [Fact]

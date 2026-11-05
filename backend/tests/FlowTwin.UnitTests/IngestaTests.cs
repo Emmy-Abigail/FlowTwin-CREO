@@ -1,5 +1,6 @@
 using FlowTwin.Atenciones.Application;
 using FlowTwin.Atenciones.Domain;
+using FlowTwin.Dispositivos.Contracts;
 using Microsoft.Extensions.Options;
 
 namespace FlowTwin.UnitTests;
@@ -16,6 +17,13 @@ public class IngestaTests
 
         Assert.Equal(Recibida.AddMilliseconds(-350), lectura.LeidaEn);
         Assert.Equal("uuid-0007", lectura.UuidBle);   // normalizado: el mismo emisor no aparece dos veces
+    }
+
+    [Fact]
+    public void El_identificador_del_emisor_sigue_el_contrato_con_el_hardware()
+    {
+        // Si esta prueba falla, se rompió el contrato con el firmware (docs/contrato-integracion-nodos.md)
+        Assert.Equal("b14c70f2-314c-41eb-b11a-93fa9c7ace90-1-7", EmisorBle.Identificador(major: 1, minor: 7));
     }
 
     [Fact]
