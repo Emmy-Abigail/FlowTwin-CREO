@@ -3,7 +3,7 @@ using FlowTwin.SharedKernel;
 
 namespace FlowTwin.Dispositivos.Domain;
 
-/// <summary>Catálogo cat.EstadoNodo (los nodos llegan en el Avance 2).</summary>
+/// <summary>Catálogo cat.EstadoNodo: el ciclo de vida de un nodo (F-15, RN-20).</summary>
 public enum EstadoNodo
 {
     [Catalogo("EN_LINEA", "En línea")] EnLinea = 1,

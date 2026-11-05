@@ -13,6 +13,7 @@ public static class ModuloGemelo
     {
         services.AddScoped<GemeloServicio>();
         services.AddScoped<ISedesConsultas>(sp => sp.GetRequiredService<GemeloServicio>());
+        services.AddScoped<IZonasConsultas, ZonasConsultas>();
         return services;
     }
 
