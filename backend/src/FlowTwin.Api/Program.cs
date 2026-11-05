@@ -156,6 +156,13 @@ if (app.Environment.IsDevelopment())
 
 // ---- Endpoints de cada módulo
 app.MapGet("/api/v1/salud", () => Results.Ok(new { estado = "ok" })).AllowAnonymous().WithTags("Sistema");
+// Lo que el frontend necesita saber de esta instalación. SimulacionDisponible es temporal (ADR-22): solo
+// para presentar el sistema antes de que lleguen los nodos; en la clínica es false y el botón no existe.
+app.MapGet("/api/v1/configuracion", (IConfiguration config) => Results.Ok(new
+    {
+        simulacionDisponible = config.GetValue("Demo:SimulacionDisponible", false),
+    }))
+    .RequireAuthorization().WithTags("Sistema").WithSummary("Configuración de esta instalación para el frontend");
 app.MapIdentidad();
 app.MapGemelo();
 app.MapDispositivos();

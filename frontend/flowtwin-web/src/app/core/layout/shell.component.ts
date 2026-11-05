@@ -1,30 +1,25 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { filter, map } from 'rxjs';
-import { BotonDirective } from '../../shared/componentes/boton.directive';
+import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { IconoComponent } from '../../shared/componentes/icono.component';
-import { LogoComponent } from '../../shared/componentes/logo.component';
 import { AuthService } from '../auth/auth.service';
-import { ClinicaStore } from '../datos/clinica.store';
-import { SEDE } from '../datos/clinica.config';
-import { Alerta } from '../datos/modelos';
-import { SimuladorService } from '../datos/simulador.service';
-import { ToastService } from '../ui/toast.service';
-import { hhmm } from '../utils/tiempo';
-import { MENU_POR_ROL } from './menu';
+import { ModoDatosService } from '../datos/modo-datos.service';
+import { PisoActualService } from '../datos/piso-actual.service';
+import { menuDe } from './menu';
+
+/** Clave de localStorage: la barra colapsada o expandida es una preferencia de cada persona. */
+const CLAVE_COLAPSADA = 'flowtwin.menuColapsado';
 
 /**
- * Marco de la app con sesión iniciada: barra lateral negra con el menú del rol,
- * barra superior y el pie de demo. Las pantallas se dibujan en <router-outlet>.
+ * Marco de la app con sesión iniciada: barra lateral oscura (colapsable) con el menú del rol, la franja
+ * de simulación cuando está activa y el área de cada pantalla. El título y los filtros (sede, piso) van
+ * en el encabezado de cada pantalla, no aquí: así no se repiten.
  */
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, LogoComponent, IconoComponent, BotonDirective],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, IconoComponent],
   templateUrl: './shell.component.html',
   styleUrl: './shell.component.scss',
   host: {
-    '(document:click)': 'clicFuera($event)',
     '(document:pointerdown)': 'auth.registrarActividad()',
     '(document:keydown)': 'auth.registrarActividad()',
   },
@@ -32,70 +27,37 @@ import { MENU_POR_ROL } from './menu';
 })
 export class ShellComponent {
   protected auth = inject(AuthService);
-  protected clinica = inject(ClinicaStore);
-  private router = inject(Router);
-  private ruta = inject(ActivatedRoute);
-  private toast = inject(ToastService);
+  protected modo = inject(ModoDatosService);
 
-  protected readonly sede = SEDE;
-  protected readonly hhmm = hhmm;
-  protected menu = computed(() => MENU_POR_ROL[this.auth.rol() ?? 'Gerencia']);
-  protected iniciales = computed(() =>
-    (this.auth.usuario()?.nombre ?? '').split(' ').map(p => p[0]).join('').slice(0, 2));
-  protected primerNombre = computed(() => this.auth.usuario()?.nombre.split(' ')[0] ?? '');
+  protected menu = computed(() => {
+    const rol = this.auth.rol();
+    return rol ? menuDe(rol) : [];
+  });
+  protected iniciales = computed(() => {
+    const u = this.auth.usuario();
+    return u ? `${u.nombre.charAt(0)}${u.nombre.split(' ')[1]?.charAt(0) ?? ''}`.toUpperCase() : '';
+  });
 
-  /** Título de la pantalla actual, tomado de data.titulo de la ruta, para las migas de pan. */
-  protected titulo = toSignal(
-    this.router.events.pipe(filter(e => e instanceof NavigationEnd), map(() => this.tituloActual())),
-    { initialValue: this.tituloActual() },
-  );
-
-  /** Hora real de la clínica en la barra superior (se actualiza cada 30 s). */
-  protected ahora = signal(Date.now());
-
-  protected campanaAbierta = signal(false);
-  protected menuUsuarioAbierto = signal(false);
+  protected colapsada = signal(leerColapsada());
 
   constructor() {
-    // El simulador sigue alimentando el Gemelo y el Historial hasta que llegue SignalR (Avance 2).
-    inject(SimuladorService).iniciar();
-    const reloj = setInterval(() => this.ahora.set(Date.now()), 30_000);
-    inject(DestroyRef).onDestroy(() => clearInterval(reloj));
+    this.modo.cargar();
+    inject(PisoActualService).cargar();
+    // Al salir del sistema (cerrar sesión, sesión vencida) la simulación se apaga: nunca queda prendida
+    inject(DestroyRef).onDestroy(() => this.modo.salir());
   }
 
-  protected alternarCampana(): void {
-    if (this.campanaAbierta()) this.clinica.marcarTodasLeidas();
-    this.campanaAbierta.update(v => !v);
-    this.menuUsuarioAbierto.set(false);
-  }
-
-  protected alternarMenuUsuario(): void {
-    this.menuUsuarioAbierto.update(v => !v);
-    this.campanaAbierta.set(false);
-  }
-
-  protected irAAlerta(alerta: Alerta): void {
-    this.clinica.marcarTodasLeidas();
-    this.campanaAbierta.set(false);
-    this.router.navigateByUrl(alerta.ruta);
+  protected alternarColapsada(): void {
+    this.colapsada.update(v => !v);
+    try { localStorage.setItem(CLAVE_COLAPSADA, String(this.colapsada())); } catch { /* sin almacenamiento */ }
   }
 
   protected alternarSimulacion(): void {
-    this.clinica.simulacionActiva.update(v => !v);
-    this.toast.mostrar(this.clinica.simulacionActiva() ? 'Simulación reanudada' : 'Simulación en pausa');
+    if (this.modo.simulacion()) this.modo.salir();
+    else this.modo.activar();
   }
+}
 
-  /** Cierra los menús desplegables al hacer clic fuera de ellos. */
-  protected clicFuera(evento: MouseEvent): void {
-    if ((evento.target as HTMLElement).closest('.dd-wrap')) return;
-    if (this.campanaAbierta()) this.clinica.marcarTodasLeidas();
-    this.campanaAbierta.set(false);
-    this.menuUsuarioAbierto.set(false);
-  }
-
-  private tituloActual(): string {
-    let r = this.ruta.snapshot;
-    while (r.firstChild) r = r.firstChild;
-    return (r.data['titulo'] as string) ?? '';
-  }
+function leerColapsada(): boolean {
+  try { return localStorage.getItem(CLAVE_COLAPSADA) === 'true'; } catch { return false; }
 }
