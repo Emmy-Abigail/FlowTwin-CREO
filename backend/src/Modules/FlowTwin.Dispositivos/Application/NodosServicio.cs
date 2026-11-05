@@ -25,7 +25,7 @@ public sealed class NodosServicio(IDispositivosDb db, IZonasConsultas zonas, IUs
         var lista = await db.Nodos.OrderBy(n => n.Codigo).ToListAsync(ct);
         var zonasPorId = (await zonas.ZonasAsync([.. lista.Select(n => n.ZonaId).Distinct()], ct)).ToDictionary(z => z.Id);
         return [.. lista
-            .Where(n => usuario.Rol == "ADMIN" || usuario.Pisos.Contains(zonasPorId[n.ZonaId].PisoId))
+            .Where(n => usuario.PuedeVerPiso(zonasPorId[n.ZonaId].PisoId))
             .Select(n => Dto(n, zonasPorId[n.ZonaId]))];
     }
 

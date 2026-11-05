@@ -21,7 +21,7 @@ public class AdmisionTests(ApiFixture api)
     {
         var operador = await api.ClienteDeAsync("operador@creo.pe");
 
-        var entrega = await Json(await Escanear(operador, "T-05"));
+        var entrega = await Json(await Escanear(operador, TarjetasDePrueba.CicloCompleto));
         Assert.Equal("ENTREGA", entrega.GetProperty("operacion").GetString());
         Assert.Equal("EN_USO", entrega.GetProperty("tarjeta").GetProperty("estado").GetString());
         var codigo = entrega.GetProperty("atencion").GetProperty("codigo").GetString();
@@ -38,7 +38,7 @@ public class AdmisionTests(ApiFixture api)
         // Lo que quedó en la base: estado, columnas de registro (ADR-18) y auditoría (RN-27)
         var (estado, cambiadoPor, acciones) = await api.EnBaseAsync(async db =>
         {
-            var t = await db.Tarjetas.SingleAsync(x => x.Codigo == "T-05");
+            var t = await db.Tarjetas.SingleAsync(x => x.Codigo == TarjetasDePrueba.CicloCompleto);
             var operadorId = await db.Usuarios.Where(u => u.Correo == "operador@creo.pe").Select(u => u.Id).SingleAsync();
             var acc = await db.Auditoria.Where(a => a.UsuarioRegistroId == operadorId)
                 .Select(a => a.AccionAuditoriaId).ToListAsync();
@@ -55,7 +55,7 @@ public class AdmisionTests(ApiFixture api)
     public async Task Deshacer_la_entrega_anula_la_atencion_y_libera_la_tarjeta()
     {
         var operador = await api.ClienteDeAsync("operador@creo.pe");
-        var entrega = await Json(await Escanear(operador, "6"));
+        var entrega = await Json(await Escanear(operador, TarjetasDePrueba.Deshacer));
         var atencionId = entrega.GetProperty("atencion").GetProperty("id").GetInt64();
 
         var r = await operador.PostAsync($"/api/v1/admision/atenciones/{atencionId}/deshacer", null);
@@ -91,7 +91,7 @@ public class AdmisionTests(ApiFixture api)
     {
         var gerencia = await api.ClienteDeAsync("gerencia@creo.pe");
 
-        var r = await Escanear(gerencia, "T-07");
+        var r = await Escanear(gerencia, TarjetasDePrueba.SinPermiso);
 
         Assert.Equal(HttpStatusCode.Forbidden, r.StatusCode);
         Assert.Equal("SIN_PERMISO", (await Json(r)).GetProperty("codigo").GetString());

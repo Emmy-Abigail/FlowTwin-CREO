@@ -29,7 +29,7 @@ public class PresenciaTests(ApiFixture api)
     {
         // 1. El Operador entrega T-09; la atención "empezó" hace 5 minutos para poder poner lecturas antes de ahora
         var operador = await api.ClienteDeAsync("operador@creo.pe");
-        var entrega = await (await operador.PostAsJsonAsync("/api/v1/admision/escaneos", new { codigoQr = "T-09", modo = "AUTO" }))
+        var entrega = await (await operador.PostAsJsonAsync("/api/v1/admision/escaneos", new { codigoQr = TarjetasDePrueba.Presencia, modo = "AUTO" }))
             .Content.ReadFromJsonAsync<JsonElement>();
         var atencionId = entrega.GetProperty("atencion").GetProperty("id").GetInt64();
         await api.EnBaseAsync(db => db.Atenciones.Where(a => a.Id == atencionId)
@@ -40,7 +40,7 @@ public class PresenciaTests(ApiFixture api)
         await api.EnBaseAsync(async db =>
         {
             var n02 = await db.Nodos.Where(n => n.Codigo == "N-02").Select(n => n.Id).SingleAsync();
-            var emisor = EmisorBle.Identificador(major: 1, minor: 9);
+            var emisor = EmisorBle.Identificador(major: 1, minor: int.Parse(TarjetasDePrueba.Presencia[2..]));
             db.LecturasBle.AddRange(Enumerable.Range(0, 31).Select(i => LecturaBle.Desde(n02, emisor, -58, 0, inicio.AddSeconds(i * 2))));
             return await db.SaveChangesAsync();
         });
@@ -59,7 +59,7 @@ public class PresenciaTests(ApiFixture api)
         Assert.Equal(1, await api.EnBaseAsync(db => db.EventosZona.CountAsync(e => e.AtencionId == atencionId)));
 
         // 4. Al devolver la tarjeta, la estadía termina en el mismo instante
-        await operador.PostAsJsonAsync("/api/v1/admision/escaneos", new { codigoQr = "T-09", modo = "AUTO" });
+        await operador.PostAsJsonAsync("/api/v1/admision/escaneos", new { codigoQr = TarjetasDePrueba.Presencia, modo = "AUTO" });
 
         var cerrada = await api.EnBaseAsync(db => db.EventosZona.SingleAsync(e => e.AtencionId == atencionId));
         Assert.NotNull(cerrada.SalidaEn);
@@ -72,7 +72,7 @@ public class PresenciaTests(ApiFixture api)
         await api.EnBaseAsync(async db =>
         {
             var n02 = await db.Nodos.Where(n => n.Codigo == "N-02").Select(n => n.Id).SingleAsync();
-            var emisor = EmisorBle.Identificador(major: 1, minor: 12);
+            var emisor = EmisorBle.Identificador(major: 1, minor: TarjetasDePrueba.SinAtencion);
             var inicio = DateTime.UtcNow.AddSeconds(-60);
             db.LecturasBle.AddRange(Enumerable.Range(0, 31).Select(i => LecturaBle.Desde(n02, emisor, -55, 0, inicio.AddSeconds(i * 2))));
             return await db.SaveChangesAsync();
