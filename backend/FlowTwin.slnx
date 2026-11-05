@@ -18,4 +18,7 @@
     <Project Path="tests/FlowTwin.IntegrationTests/FlowTwin.IntegrationTests.csproj" />
     <Project Path="tests/FlowTwin.UnitTests/FlowTwin.UnitTests.csproj" />
   </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/FlowTwin.Simulador/FlowTwin.Simulador.csproj" />
+  </Folder>
 </Solution>

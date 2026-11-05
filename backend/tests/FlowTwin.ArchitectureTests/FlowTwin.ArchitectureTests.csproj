@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\FlowTwin.Api\FlowTwin.Api.csproj" />
+    <ProjectReference Include="..\..\tools\FlowTwin.Simulador\FlowTwin.Simulador.csproj" />
   </ItemGroup>
 
 </Project>

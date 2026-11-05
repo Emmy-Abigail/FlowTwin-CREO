@@ -1,0 +1,25 @@
+{
+  // Demo rápida: el mismo recorrido con tiempos cortos, para ver moverse el gemelo en pocos minutos.
+  // La histéresis del motor es de 45 s: por eso ninguna etapa dura menos de 1,5 minutos.
+  "api": "http://localhost:5080",
+  "correoOperador": "operador@creo.pe",
+  "claveOperador": "demo123",
+  "pisoId": 1,
+  "uuidClinica": "b14c70f2-314c-41eb-b11a-93fa9c7ace90",
+  "sede": 1,
+  "llegadaCada": { "min": 0.5, "max": 1 },
+  "enAdmision": { "min": 1.5, "max": 2 },
+  "espera": { "min": 2, "max": 4 },
+  "consulta": { "min": 1.5, "max": 3 },
+  "zonaAdmision": 1,
+  "zonaEspera": 3,
+  "zonaConsulta": 7,
+  "maxPacientes": 8,
+  "ruidoDb": 4,
+  "semilla": null,
+  "nodos": [
+    { "codigo": "N-01", "mac": "02:00:00:00:00:01", "clave": "nk_dev_N-01" },
+    { "codigo": "N-02", "mac": "02:00:00:00:00:02", "clave": "nk_dev_N-02" },
+    { "codigo": "N-03", "mac": "02:00:00:00:00:03", "clave": "nk_dev_N-03" }
+  ]
+}
