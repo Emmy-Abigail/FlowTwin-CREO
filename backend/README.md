@@ -29,6 +29,9 @@ dotnet run --project src/FlowTwin.Api
 - Peticiones de ejemplo: `src/FlowTwin.Api/FlowTwin.Api.http`
 - Usuarios de demo, **solo en desarrollo** (contraseña `demo123`): `admin@creo.pe`, `operador@creo.pe`,
   `gerencia@creo.pe`, `nuevo@creo.pe`. Tarjetas `T-01` a `T-15`; `T-11` por desinfectar y `T-14` sin devolver.
+- Nodos de demo, **solo en desarrollo**: `N-01` (Admisión), `N-02` (Sala de espera) y `N-03` (Módulo 2), con
+  MAC `02:00:00:00:00:0n` y clave `nk_dev_N-0n`. En producción cada nodo se registra con `POST /api/v1/nodos`
+  y su clave aleatoria se muestra una sola vez.
 
 ## Administrador inicial (instalación en la clínica)
 

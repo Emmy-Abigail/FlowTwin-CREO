@@ -160,6 +160,44 @@ namespace FlowTwin.Persistence.Migraciones
                         });
                 });
 
+            modelBuilder.Entity("FlowTwin.Dispositivos.Domain.EventoNodo", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Detalle")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("EstadoNodoId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<int>("NodoId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UsuarioRegistroId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EstadoNodoId");
+
+                    b.HasIndex("NodoId", "Id");
+
+                    b.ToTable("EventoNodo", "dis");
+                });
+
             modelBuilder.Entity("FlowTwin.Dispositivos.Domain.MovimientoTarjeta", b =>
                 {
                     b.Property<long>("Id")
@@ -206,6 +244,103 @@ namespace FlowTwin.Persistence.Migraciones
                     b.HasIndex("TarjetaId", "Id");
 
                     b.ToTable("MovimientoTarjeta", "dis");
+                });
+
+            modelBuilder.Entity("FlowTwin.Dispositivos.Domain.Nodo", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<short>("AjusteRssiDb")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("smallint")
+                        .HasDefaultValue((short)0);
+
+                    b.Property<byte[]>("ClaveApiHash")
+                        .IsRequired()
+                        .HasColumnType("binary(32)");
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasColumnType("varchar(10)");
+
+                    b.Property<int>("EstadoNodoId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("EstadoRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<DateTime?>("FechaActualizacion")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<string>("Mac")
+                        .IsRequired()
+                        .HasColumnType("char(17)");
+
+                    b.Property<decimal?>("PosX")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("decimal(6,2)");
+
+                    b.Property<decimal?>("PosY")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("decimal(6,2)");
+
+                    b.Property<DateTime?>("UltimoLatidoEn")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("UsuarioActualizacionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UsuarioRegistroId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
+                    b.Property<byte[]>("Version")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("VersionFirmware")
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<int>("ZonaId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Codigo")
+                        .IsUnique()
+                        .HasFilter("[EstadoRegistro] = 1");
+
+                    b.HasIndex("EstadoNodoId");
+
+                    b.HasIndex("Mac")
+                        .IsUnique()
+                        .HasFilter("[EstadoRegistro] = 1");
+
+                    b.HasIndex("ZonaId");
+
+                    b.ToTable("Nodo", "dis", t =>
+                        {
+                            t.HasCheckConstraint("CK_Nodo_AjusteRssiDb", "[AjusteRssiDb] BETWEEN -20 AND 20");
+
+                            t.HasCheckConstraint("CK_Nodo_Mac", "[Mac] COLLATE Latin1_General_BIN2 LIKE '[0-9A-F][0-9A-F]:[0-9A-F][0-9A-F]:[0-9A-F][0-9A-F]:[0-9A-F][0-9A-F]:[0-9A-F][0-9A-F]:[0-9A-F][0-9A-F]'");
+                        });
                 });
 
             modelBuilder.Entity("FlowTwin.Dispositivos.Domain.Tarjeta", b =>
@@ -1989,6 +2124,15 @@ namespace FlowTwin.Persistence.Migraciones
                             FechaRegistro = new DateTime(2026, 10, 27, 0, 0, 0, 0, DateTimeKind.Utc),
                             Nombre = "Recuperó tarjeta",
                             UsuarioRegistroId = 1
+                        },
+                        new
+                        {
+                            Id = 20,
+                            Codigo = "REGENERAR_CLAVE",
+                            EstadoRegistro = true,
+                            FechaRegistro = new DateTime(2026, 10, 27, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Nombre = "Regeneró la clave",
+                            UsuarioRegistroId = 1
                         });
                 });
 
@@ -2026,6 +2170,21 @@ namespace FlowTwin.Persistence.Migraciones
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("FlowTwin.Dispositivos.Domain.EventoNodo", b =>
+                {
+                    b.HasOne("FlowTwin.SharedKernel.Catalogo<FlowTwin.Dispositivos.Domain.EstadoNodo>", null)
+                        .WithMany()
+                        .HasForeignKey("EstadoNodoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FlowTwin.Dispositivos.Domain.Nodo", null)
+                        .WithMany()
+                        .HasForeignKey("NodoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("FlowTwin.Dispositivos.Domain.MovimientoTarjeta", b =>
                 {
                     b.HasOne("FlowTwin.Atenciones.Domain.Atencion", null)
@@ -2047,6 +2206,21 @@ namespace FlowTwin.Persistence.Migraciones
                     b.HasOne("FlowTwin.Dispositivos.Domain.Tarjeta", null)
                         .WithMany()
                         .HasForeignKey("TarjetaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("FlowTwin.Dispositivos.Domain.Nodo", b =>
+                {
+                    b.HasOne("FlowTwin.SharedKernel.Catalogo<FlowTwin.Dispositivos.Domain.EstadoNodo>", null)
+                        .WithMany()
+                        .HasForeignKey("EstadoNodoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FlowTwin.Gemelo.Domain.Zona", null)
+                        .WithMany()
+                        .HasForeignKey("ZonaId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

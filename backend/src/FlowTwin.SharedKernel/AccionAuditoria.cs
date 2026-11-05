@@ -22,4 +22,5 @@ public enum AccionAuditoria
     [Catalogo("DESINFECTAR", "Marcó desinfectada")] Desinfectar = 17,
     [Catalogo("EXTRAVIAR", "Marcó extraviada")] Extraviar = 18,
     [Catalogo("RECUPERAR", "Recuperó tarjeta")] Recuperar = 19,
+    [Catalogo("REGENERAR_CLAVE", "Regeneró la clave")] RegenerarClave = 20,
 }

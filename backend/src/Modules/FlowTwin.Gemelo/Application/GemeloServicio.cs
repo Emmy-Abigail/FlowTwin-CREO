@@ -29,12 +29,13 @@ public sealed record ElementoGeometriaDto(
     string Tipo, string? Nombre, decimal X, decimal Y, decimal Ancho, decimal Fondo, decimal? AltoM,
     IReadOnlyList<double[]>? Poligono, IReadOnlyList<IReadOnlyList<double[]>>? Huecos);
 
-/// <summary>GET /pisos/{id}/geometria. "nodos" se agrega cuando exista dis.Nodo.</summary>
+/// <summary>GET /pisos/{id}/geometria: todo lo que el 2D y el 3D necesitan para dibujar el piso.</summary>
 public sealed record GeometriaPisoDto(
     int PisoId, string Nombre, short Nivel, decimal? AnchoM, decimal? FondoM, decimal AltoMuroM,
-    string? PlanoUrl, IReadOnlyList<ZonaGeometriaDto> Zonas, IReadOnlyList<ElementoGeometriaDto> Elementos);
+    string? PlanoUrl, IReadOnlyList<ZonaGeometriaDto> Zonas, IReadOnlyList<ElementoGeometriaDto> Elementos,
+    IReadOnlyList<NodoEnPlano> Nodos);
 
-public sealed class GemeloServicio(IGemeloDb db, IUsuarioActual usuario) : ISedesConsultas
+public sealed class GemeloServicio(IGemeloDb db, IUsuarioActual usuario, IUbicacionNodos nodos) : ISedesConsultas
 {
     /// <summary>GET /sedes: sedes y pisos publicados que el usuario puede ver (Admin ve todos, RN-24).</summary>
     public async Task<List<SedeDto>> SedesVisiblesAsync(CancellationToken ct)
@@ -74,7 +75,8 @@ public sealed class GemeloServicio(IGemeloDb db, IUsuarioActual usuario) : ISede
             [.. zonas.Select(z => new ZonaGeometriaDto(
                 z.Id, z.Nombre, z.TipoZonaId.Codigo(), z.X, z.Y, z.AnchoM, z.FondoM,
                 z.Aforo, z.UmbralMediaPct, z.UmbralAltaPct))],
-            [.. elementos.Select(ElementoDto)]);
+            [.. elementos.Select(ElementoDto)],
+            await nodos.DeZonasAsync([.. zonas.Select(z => z.Id)], ct));
     }
 
     private static ElementoGeometriaDto ElementoDto(ElementoPlano e)
