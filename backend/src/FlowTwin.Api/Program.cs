@@ -7,6 +7,7 @@ using FlowTwin.Gemelo;
 using FlowTwin.Identidad;
 using FlowTwin.Identidad.Application;
 using FlowTwin.Identidad.Endpoints;
+using FlowTwin.Monitoreo;
 using FlowTwin.Persistence;
 using FlowTwin.SharedKernel;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -65,6 +66,7 @@ builder.Services.AddModuloGemelo();
 builder.Services.AddModuloDispositivos(builder.Configuration);
 builder.Services.AddModuloAtenciones(builder.Configuration);
 builder.Services.AddModuloAuditoria();
+builder.Services.AddModuloMonitoreo();
 
 // ---- Autenticación JWT y políticas por rol (sección Seguridad)
 var jwt = builder.Configuration.GetSection("Jwt").Get<OpcionesJwt>() ?? new OpcionesJwt();
@@ -80,6 +82,18 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             NameClaimType = "sub",
             RoleClaimType = Claims.Rol,
             ClockSkew = TimeSpan.FromSeconds(30),
+        };
+        // SignalR por WebSocket no puede enviar la cabecera Authorization: el navegador manda el token
+        // en ?access_token=…, y SOLO se acepta en /hubs. El log de peticiones registra la ruta sin la
+        // consulta, así el token no queda escrito en los logs.
+        o.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = ctx =>
+            {
+                if (ctx.HttpContext.Request.Path.StartsWithSegments("/hubs"))
+                    ctx.Token = ctx.Request.Query["access_token"];
+                return Task.CompletedTask;
+            },
         };
     });
 builder.Services.AddAuthorizationBuilder()
@@ -146,6 +160,7 @@ app.MapIdentidad();
 app.MapGemelo();
 app.MapDispositivos();
 app.MapAtenciones();
+app.MapMonitoreo();
 
 app.Run();
 
