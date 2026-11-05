@@ -51,6 +51,17 @@ describe('LoginPage', () => {
     expect(correo().getAttribute('aria-invalid')).toBe('true');
   });
 
+  it('después de enviar vacío, mientras corrige un campo su error se oculta y no cambia a otro (caso 2 de Emmy)', async () => {
+    await enviar();
+
+    await escribir(correo(), 'ana');
+
+    expect(pagina().querySelector('#lg-mail-error')).toBeNull();          // corrigiendo: no se le regaña a mitad
+    expect(texto()).toContain('Escribe tu contraseña.');                  // el otro campo conserva su error
+    await salir(correo());
+    expect(pagina().querySelector('#lg-mail-error')?.textContent).toContain('Escribe un correo con la forma nombre@creo.pe');
+  });
+
   it('el botón nunca se deshabilita: al enviar vacío dice qué falta y no llama al servidor', async () => {
     expect(pagina().querySelector<HTMLButtonElement>('button[type=submit]')!.disabled).toBe(false);
 
