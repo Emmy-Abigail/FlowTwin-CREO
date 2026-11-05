@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\FlowTwin.SharedKernel\FlowTwin.SharedKernel.csproj" />
+    <ProjectReference Include="..\FlowTwin.Gemelo\FlowTwin.Gemelo.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
