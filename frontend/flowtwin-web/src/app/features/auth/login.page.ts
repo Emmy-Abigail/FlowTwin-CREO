@@ -35,21 +35,22 @@ export class LoginPage {
   /** Sacude el formulario un instante cuando el servidor rechaza el ingreso (se apaga si se pide menos movimiento). */
   protected sacudir = signal(false);
 
-  /** Un campo muestra su error si ya se salió de él o si se intentó enviar. */
-  private tocadoCorreo = signal(false);
-  private tocadoClave = signal(false);
-  private intentoEnviar = signal(false);
+  /**
+   * «Premia rápido, corrige tarde»: cada campo se revisa al salir de él o al enviar, y mientras la
+   * persona escribe en él su error se oculta (ya está corrigiendo). Es un estado POR CAMPO: escribir
+   * en el correo no oculta el error de la contraseña.
+   */
+  private revisarCorreo = signal(false);
+  private revisarClave = signal(false);
 
   /** Errores que devolvió el servidor: generales (credenciales, bloqueo, conexión) y por campo. */
   protected errorServidor = signal('');
   private errorServidorCampo = signal<Partial<Record<'correo' | 'clave', string>>>({});
 
   protected mensajeCorreo = computed(() =>
-    this.errorServidorCampo().correo
-    ?? (this.tocadoCorreo() || this.intentoEnviar() ? errorCorreo(this.correo()) : null));
+    this.errorServidorCampo().correo ?? (this.revisarCorreo() ? errorCorreo(this.correo()) : null));
   protected mensajeClave = computed(() =>
-    this.errorServidorCampo().clave
-    ?? (this.tocadoClave() || this.intentoEnviar() ? errorClave(this.clave()) : null));
+    this.errorServidorCampo().clave ?? (this.revisarClave() ? errorClave(this.clave()) : null));
 
   private campoCorreo = viewChild.required<ElementRef<HTMLInputElement>>('campoCorreo');
   private campoClave = viewChild.required<ElementRef<HTMLInputElement>>('campoClave');
@@ -61,13 +62,15 @@ export class LoginPage {
 
   protected escribir(campo: 'correo' | 'clave', valor: string): void {
     (campo === 'correo' ? this.correo : this.clave).set(valor);
+    // Está corrigiendo: el error de ESTE campo se oculta hasta que salga de él o vuelva a enviar
+    (campo === 'correo' ? this.revisarCorreo : this.revisarClave).set(false);
     // El error del servidor se va en cuanto la persona corrige algo
     this.errorServidor.set('');
     this.errorServidorCampo.set({});
   }
 
   protected salir(campo: 'correo' | 'clave'): void {
-    (campo === 'correo' ? this.tocadoCorreo : this.tocadoClave).set(true);
+    (campo === 'correo' ? this.revisarCorreo : this.revisarClave).set(true);
     if (campo === 'clave') this.mayusculas.set(false);
   }
 
@@ -78,7 +81,8 @@ export class LoginPage {
 
   protected async ingresar(): Promise<void> {
     if (this.enviando()) return;
-    this.intentoEnviar.set(true);
+    this.revisarCorreo.set(true);
+    this.revisarClave.set(true);
     // Lleva el foco al primer campo con problema, así el lector de pantalla lee su mensaje
     if (errorCorreo(this.correo())) { this.campoCorreo().nativeElement.focus(); return; }
     if (errorClave(this.clave())) { this.campoClave().nativeElement.focus(); return; }
@@ -97,8 +101,7 @@ export class LoginPage {
     this.sacudir.set(true);
     // La contraseña se vacía por seguridad; no se le dice «escribe tu contraseña» por algo que no hizo mal
     this.clave.set('');
-    this.tocadoClave.set(false);
-    this.intentoEnviar.set(false);
+    this.revisarClave.set(false);
     this.campoClave().nativeElement.focus();
   }
 }
