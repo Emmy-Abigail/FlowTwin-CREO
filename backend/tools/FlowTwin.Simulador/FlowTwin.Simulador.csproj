@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Simulador de nodos y recepción (sección "Simulador de nodos"). Es una caja negra: NO referencia
+    ningún proyecto del backend y solo habla con la API por HTTP, igual que el firmware de los ESP32.
+    Así prueba el contrato de verdad (docs/contrato-integracion-nodos.md).
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>FlowTwin.Simulador</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Update="escenarios\*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
