@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace FlowTwin.Persistence.Configuraciones;
 
-/// <summary>Esquema gem. ElementoPlano y PublicacionPiso llegan en los siguientes pasos del Avance 2.</summary>
+/// <summary>Esquema gem. PublicacionPiso llega en un paso siguiente del Avance 2.</summary>
 public sealed class SedeConfig : IEntityTypeConfiguration<Sede>
 {
     public void Configure(EntityTypeBuilder<Sede> b)
@@ -105,6 +105,32 @@ public sealed class ZonaConfig : IEntityTypeConfiguration<Zona>
         EnBorrador = false,
         EstadoRegistro = true, FechaRegistro = Semilla.Fecha, UsuarioRegistroId = UsuarioSistema.Id,
     };
+}
+
+/// <summary>
+/// gem.ElementoPlano. Los muros del Piso 1 NO van con HasData: son ~28 KB y EF los copiaría en el
+/// snapshot de cada migración futura. Se cargan una sola vez en la migración Avance2_Muros.
+/// </summary>
+public sealed class ElementoPlanoConfig : IEntityTypeConfiguration<ElementoPlano>
+{
+    public void Configure(EntityTypeBuilder<ElementoPlano> b)
+    {
+        b.ToTable("ElementoPlano", "gem", t =>
+        {
+            t.HasCheckConstraint("CK_ElementoPlano_AltoM", "[AltoM] IS NULL OR [AltoM] > 0");
+            t.HasCheckConstraint("CK_ElementoPlano_Geometria", "[Geometria] IS NULL OR ISJSON([Geometria]) = 1");
+            t.HasCheckConstraint("CK_ElementoPlano_NombreAmbiente",
+                $"[TipoElementoPlanoId] <> {(int)TipoElementoPlano.Ambiente} OR [Nombre] IS NOT NULL");
+        });
+        b.Property(e => e.Nombre).HasMaxLength(80);
+        b.Property(e => e.X1).HasPrecision(6, 2);
+        b.Property(e => e.Y1).HasPrecision(6, 2);
+        b.Property(e => e.X2).HasPrecision(6, 2);
+        b.Property(e => e.Y2).HasPrecision(6, 2);
+        b.Property(e => e.AltoM).HasPrecision(4, 2);
+        b.HasOne<Piso>().WithMany().HasForeignKey(e => e.PisoId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<Catalogo<TipoElementoPlano>>().WithMany().HasForeignKey(e => e.TipoElementoPlanoId).OnDelete(DeleteBehavior.Restrict);
+    }
 }
 
 /// <summary>Esquema dis. Nodo y EventoNodo llegan en el Avance 2.</summary>
