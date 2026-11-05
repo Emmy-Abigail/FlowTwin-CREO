@@ -36,6 +36,20 @@ public class GemeloTests(ApiFixture api)
     }
 
     [Fact]
+    public async Task La_geometria_trae_los_20_muros_importados_de_AutoCAD()
+    {
+        var gerencia = await api.ClienteDeAsync("gerencia@creo.pe");
+
+        var piso = await Json(await gerencia.GetAsync("/api/v1/pisos/1/geometria"));
+
+        var muros = piso.GetProperty("elementos").EnumerateArray().Where(e => e.GetProperty("tipo").GetString() == "MURO").ToList();
+        Assert.Equal(20, muros.Count);
+        Assert.All(muros, m => Assert.True(m.GetProperty("poligono").GetArrayLength() >= 3));
+        // Los vanos de puertas y las columnas viajan como huecos de los polígonos
+        Assert.Equal(59, muros.Sum(m => m.GetProperty("huecos").GetArrayLength()));
+    }
+
+    [Fact]
     public async Task Un_piso_que_no_existe_responde_404()
     {
         var admin = await api.ClienteDeAsync("admin@creo.pe");
