@@ -30,7 +30,7 @@ public class Sede : EntidadEditable
     public char PrefijoAtencion { get; set; } = 'A';
 }
 
-/// <summary>gem.Piso. Las zonas, muros y versiones publicadas llegan en el Avance 2.</summary>
+/// <summary>gem.Piso. Sus zonas están en gem.Zona; los muros y versiones publicadas llegan después.</summary>
 public class Piso : EntidadEditable
 {
     public int Id { get; set; }
