@@ -30,7 +30,7 @@
       @if (auth.soloLectura()) { <span class="ro">Modo: Solo lectura</span> }
 
       <span class="live" [class.off]="!clinica.simulacionActiva()">
-        <i></i>{{ clinica.simulacionActiva() ? 'En vivo' : 'En pausa' }} · <span class="num">{{ hhmm(clinica.ahora()) }}</span>
+        <i></i>{{ clinica.simulacionActiva() ? 'En vivo' : 'En pausa' }} · <span class="num">{{ hhmm(ahora()) }}</span>
       </span>
 
       <div class="dd-wrap">
@@ -76,7 +76,8 @@
     </main>
 
     <footer class="demo-foot">
-      Prototipo con datos simulados · cada 5 s pasa 1 minuto en la clínica.
+      Login, usuarios y Admisión usan la base de datos real. El Gemelo y el Historial siguen con datos simulados
+      (cada 5 s pasa 1 minuto) hasta conectar los nodos en el Avance 2.
       <button appBoton="borde" [chico]="true" type="button" (click)="alternarSimulacion()">
         @if (clinica.simulacionActiva()) { <app-icono nombre="pause" [tamano]="16" /> Pausar simulación }
         @else { <app-icono nombre="play" [tamano]="16" /> Reanudar simulación }

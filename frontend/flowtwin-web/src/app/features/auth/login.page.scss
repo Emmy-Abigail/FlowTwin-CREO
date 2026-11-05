@@ -14,11 +14,49 @@
 .login-box { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 16px; }
 .login-box h1 { font-size: 24px; }
 .login-box .sub { color: var(--gris); margin: -8px 0 4px; }
-.login-box .link { align-self: flex-start; }
-.demo-acc { border-top: 1px solid var(--linea); padding-top: 18px; display: flex; flex-direction: column; gap: 8px; }
+.login-l small { display: flex; align-items: center; gap: 6px; }
+.puntos { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.puntos li { display: flex; align-items: center; gap: 10px; color: #E4DFE0; font-size: 14px; }
+.puntos app-icono { color: var(--amarillo); }
+
+.login-box header { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
+.login-box .sub { margin: 0; }
+
+/* Campo con ícono a la izquierda (y botón de ver contraseña a la derecha) */
+.con-icono { position: relative; display: flex; align-items: center; }
+.con-icono > app-icono { position: absolute; left: 12px; color: var(--gris); pointer-events: none; }
+.con-icono .inp { width: 100%; padding-left: 38px; }
+.con-icono .inp#lg-pass { padding-right: 44px; }
+.ver {
+  position: absolute; right: 4px; width: 36px; height: 36px; border: 0; border-radius: 8px;
+  background: none; color: var(--gris); cursor: pointer; display: grid; place-items: center;
+}
+.ver:hover { color: var(--negro); background: rgba(0, 0, 0, .05); }
+.ver:focus-visible { outline: 2px solid var(--amarillo); outline-offset: 1px; }
+.inp[aria-invalid="true"] { border-color: var(--alta); }
+
+.mayus { min-height: 16px; display: flex; align-items: center; gap: 5px; color: #9A6700; font-size: 12px; font-weight: 600; }
+
+.aviso-err {
+  display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 10px;
+  background: #FDECEC; border: 1px solid #F3C2C2; color: var(--alta); font-size: 14px; font-weight: 600;
+}
+.aviso-err app-icono { flex: none; margin-top: 1px; }
+
+.fila { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: -4px; }
+.check { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
+.check input { width: 16px; height: 16px; accent-color: var(--negro); }
+
+.spin {
+  width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent;
+  animation: girar .7s linear infinite;
+}
+@keyframes girar { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation-duration: 2s; } }
 
 @media (max-width: 860px) {
   .login { grid-template-columns: 1fr; }
   .login-l { padding: 32px 20px; }
+  .puntos { display: none; }
   .login-l h1 { font-size: 32px; }
 }

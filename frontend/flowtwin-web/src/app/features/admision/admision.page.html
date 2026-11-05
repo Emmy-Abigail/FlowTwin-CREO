@@ -22,7 +22,7 @@
       <div class="scan-row">
         <input #campo class="inp" id="scan" name="codigo" placeholder="T-07" autocomplete="off"
                [ngModel]="codigo()" (ngModelChange)="codigo.set($event)">
-        <button appBoton="oscuro" type="submit">{{ store.modo() === 'recibir' ? 'Recibir' : 'Registrar' }}</button>
+        <button appBoton="oscuro" type="submit" [disabled]="store.ocupado()">{{ store.modo() === 'recibir' ? 'Recibir' : 'Registrar' }}</button>
       </div>
       <span class="hint">
         Use el lector QR o escriba el número de la tarjeta (por ejemplo, 7) y presione Enter.
@@ -48,7 +48,7 @@
             <span>Total <b>{{ t.total }}</b></span>
           </div>
         }
-        <span>{{ r.texto }}</span>
+        @if (r.texto) { <span>{{ r.texto }}</span> }
         @if (r.desinfectar) {
           <div class="row">
             <button appBoton="oscuro" [chico]="true" type="button" (click)="desinfectar(r.desinfectar)">
@@ -79,7 +79,8 @@
       <div>Por desinfectar (error):
         @for (id of a.porDesinfectar; track id) { <button type="button" class="kbd" (click)="rellenar(id)">{{ id }}</button> } @empty { — }
         · No registrada: <button type="button" class="kbd" (click)="rellenar('T-80')">T-80</button>
-        · Sin devolver: <button type="button" class="kbd" (click)="rellenar('T-14')">T-14</button>
+        · Sin devolver:
+        @for (id of a.sinDevolver; track id) { <button type="button" class="kbd" (click)="rellenar(id)">{{ id }}</button> } @empty { — }
       </div>
     </div>
   </div>
@@ -100,8 +101,8 @@
           <h3>Por desinfectar</h3>
           @for (t of store.porDesinfectar(); track t.id) {
             <div class="li">
-              <div><b>{{ t.id }}</b><p>Devuelta a las {{ t.desde }} · limpiar con alcohol al 70%</p></div>
-              <button appBoton="borde" [chico]="true" type="button" (click)="desinfectar(t.id)">
+              <div><b>{{ t.codigo }}</b><p>Devuelta a las {{ t.desde }} · limpiar con alcohol al 70%</p></div>
+              <button appBoton="borde" [chico]="true" type="button" (click)="desinfectar(t)">
                 <app-icono nombre="check" [tamano]="16" /> Marcar desinfectada
               </button>
             </div>
@@ -114,8 +115,8 @@
           <h3>Pendientes de devolución</h3>
           @for (t of store.pendientes(); track t.id) {
             <div class="li warn">
-              <div><b>{{ t.id }} · {{ t.atencionId }}</b><p>Sin lecturas hace {{ t.sinLecturas }} · atención cerrada por inactividad</p></div>
-              <button appBoton="borde" [chico]="true" type="button" (click)="confirmarExtraviada.set(t.id)">Marcar extraviada</button>
+              <div><b>{{ t.codigo }} · {{ t.atencion }}</b><p>Sin lecturas hace {{ t.sinLecturas }} · atención cerrada por inactividad</p></div>
+              <button appBoton="borde" [chico]="true" type="button" (click)="confirmarExtraviada.set(t)">Marcar extraviada</button>
             </div>
           }
         </div>
@@ -129,16 +130,18 @@
           <div class="op">
             <b class="num">{{ o.hora }}</b>
             <app-chip [tono]="o.tono">{{ o.tipo }}</app-chip>
-            <span>{{ o.tarjetaId }}@if (o.atencionId) { · {{ o.atencionId }} }@if (o.totalMin) { · {{ o.totalMin }} min en total }</span>
+            <span>{{ o.tarjeta }}@if (o.atencion) { · {{ o.atencion }} }@if (o.totalMin) { · {{ o.totalMin }} min en total }</span>
           </div>
+        } @empty {
+          <p class="hint sin-margen">Aún no hay operaciones.</p>
         }
       </div>
     </div>
   </aside>
 </div>
 
-@if (confirmarExtraviada(); as id) {
-  <app-modal [titulo]="'Marcar ' + id + ' como extraviada'" (cerrar)="confirmarExtraviada.set(null)">
+@if (confirmarExtraviada(); as t) {
+  <app-modal [titulo]="'Marcar ' + t.codigo + ' como extraviada'" (cerrar)="confirmarExtraviada.set(null)">
     <p class="sin-margen">La tarjeta saldrá de «Pendientes de devolución». Si aparece, escanéela en Admisión y pasará a «Por desinfectar».</p>
     <div pie>
       <button appBoton="borde" type="button" (click)="confirmarExtraviada.set(null)">Cancelar</button>

@@ -4,7 +4,7 @@ import { minutos } from '../utils/tiempo';
 import { esperaCorriendo, zonaActual } from './calculos';
 import { ClinicaStore } from './clinica.store';
 import { ESPERA_CRITICA_MIN, HORA_APERTURA, LLEGADAS_POR_HORA, PACIENTES_POR_PESO, ZONAS, ZONAS_CON_CUPO } from './clinica.config';
-import { GeometriaService } from './geometria.service';
+import { GeometriaService } from './geometria.service'; 
 import { Actor } from './modelos';
 import { crearRuta } from './recorrido';
 
