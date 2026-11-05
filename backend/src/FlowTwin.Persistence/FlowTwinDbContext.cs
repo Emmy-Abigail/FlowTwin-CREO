@@ -37,6 +37,7 @@ public sealed class FlowTwinDbContext(DbContextOptions<FlowTwinDbContext> option
     public DbSet<EventoNodo> EventosNodo => Set<EventoNodo>();
     public DbSet<Atencion> Atenciones => Set<Atencion>();
     public DbSet<LecturaBle> LecturasBle => Set<LecturaBle>();
+    public DbSet<EventoZona> EventosZona => Set<EventoZona>();
     public DbSet<RegistroAuditoria> Auditoria => Set<RegistroAuditoria>();
 
     public Task<int> GuardarAsync(CancellationToken ct = default) => SaveChangesAsync(ct);

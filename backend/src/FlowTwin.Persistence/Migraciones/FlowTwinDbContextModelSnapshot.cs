@@ -103,6 +103,63 @@ namespace FlowTwin.Persistence.Migraciones
                         });
                 });
 
+            modelBuilder.Entity("FlowTwin.Atenciones.Domain.EventoZona", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("AtencionId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("EntradaEn")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateTime?>("FechaActualizacion")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<DateTime?>("SalidaEn")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("UsuarioActualizacionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UsuarioRegistroId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
+                    b.Property<int>("ZonaId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AtencionId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_EventoZona_AtencionAbierta")
+                        .HasFilter("[SalidaEn] IS NULL");
+
+                    b.HasIndex("AtencionId", "EntradaEn");
+
+                    b.HasIndex("ZonaId", "SalidaEn");
+
+                    b.ToTable("EventoZona", "ope", t =>
+                        {
+                            t.HasCheckConstraint("CK_EventoZona_Salida", "[SalidaEn] IS NULL OR [SalidaEn] >= [EntradaEn]");
+                        });
+                });
+
             modelBuilder.Entity("FlowTwin.Atenciones.Domain.LecturaBle", b =>
                 {
                     b.Property<long>("Id")
@@ -2204,6 +2261,21 @@ namespace FlowTwin.Persistence.Migraciones
                     b.HasOne("FlowTwin.Dispositivos.Domain.Tarjeta", null)
                         .WithMany()
                         .HasForeignKey("TarjetaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("FlowTwin.Atenciones.Domain.EventoZona", b =>
+                {
+                    b.HasOne("FlowTwin.Atenciones.Domain.Atencion", null)
+                        .WithMany()
+                        .HasForeignKey("AtencionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FlowTwin.Gemelo.Domain.Zona", null)
+                        .WithMany()
+                        .HasForeignKey("ZonaId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

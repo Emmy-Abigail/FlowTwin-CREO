@@ -21,6 +21,7 @@ public static class ModuloDispositivos
         services.AddScoped<IngestaNodosServicio>();
         services.AddScoped<IAutenticacionNodos>(sp => sp.GetRequiredService<IngestaNodosServicio>());
         services.AddHostedService<VigilanteLatidos>();
+        services.AddScoped<IPresenciaDispositivos, PresenciaDispositivos>();
         services.AddScoped<TarjetasServicio>();
         services.AddScoped<ITarjetasAdmision>(sp => sp.GetRequiredService<TarjetasServicio>());
         services.AddScoped<NodosServicio>();
