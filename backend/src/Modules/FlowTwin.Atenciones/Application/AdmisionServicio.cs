@@ -11,6 +11,7 @@ public interface IAtencionesDb : IUnidadDeTrabajo
 {
     DbSet<Atencion> Atenciones { get; }
     DbSet<LecturaBle> LecturasBle { get; }
+    DbSet<EventoZona> EventosZona { get; }
 }
 
 /// <summary>Modo del escaneo. AUTO deduce entrega o devolución por el estado de la tarjeta.</summary>
@@ -113,6 +114,7 @@ public sealed class AdmisionServicio(
         var atencion = await db.Atenciones.SingleOrDefaultAsync(a => a.TarjetaId == tarjeta.Id && a.FinEn == null, ct)
             ?? throw new ConflictoException($"La tarjeta {tarjeta.Codigo} está en uso pero no tiene una atención abierta.");
         atencion.Cerrar(MotivoCierreAtencion.Devuelta, ahora, usuario.Id);
+        await CerrarEstadiaAsync(atencion.Id, ahora, ct);
         var t = await tarjetas.CambiarEstadoAsync(tarjeta.Id, EstadoTarjeta.PorDesinfectar, atencion.Id, ct: ct);
         auditoria.Registrar(AccionAuditoria.Recibir, "Atencion", atencion.Codigo,
             despues: new { tarjeta = tarjeta.Codigo, totalMin = atencion.TotalMinutos(ahora) });
@@ -139,10 +141,18 @@ public sealed class AdmisionServicio(
             throw new NoEncontradoException("La atención no existe.");
 
         atencion.Anular(reloj.AhoraUtc);
+        await CerrarEstadiaAsync(atencion.Id, reloj.AhoraUtc, ct);
         var t = await tarjetas.CambiarEstadoAsync(atencion.TarjetaId, EstadoTarjeta.Disponible, atencion.Id, "Entrega deshecha", ct);
         auditoria.Registrar(AccionAuditoria.Deshacer, "Atencion", atencion.Codigo, new { estado = "ABIERTA" }, new { estado = "ANULADA" });
         await db.GuardarAsync(ct);
         return Dto(t);
+    }
+
+    /// <summary>Al terminar la atención, su estadía abierta en una zona termina en el mismo instante.</summary>
+    private async Task CerrarEstadiaAsync(long atencionId, DateTime en, CancellationToken ct)
+    {
+        var abierto = await db.EventosZona.SingleOrDefaultAsync(e => e.AtencionId == atencionId && e.SalidaEn == null, ct);
+        abierto?.Cerrar(en);
     }
 
     /// <summary>Panel derecho de Admisión: contadores, listas y últimas operaciones.</summary>

@@ -26,6 +26,13 @@ public static class Metricas
     public static readonly Counter<long> Latidos =
         Ingesta.CreateCounter<long>("flowtwin.ingesta.latidos", "{latido}", "Latidos de nodos recibidos");
 
+    public static readonly Histogram<double> RetrasoPresencia =
+        Ingesta.CreateHistogram<double>("flowtwin.presencia.retraso", "ms",
+            "Desde que una lectura llega al servidor hasta que el motor de presencia la procesa (meta: el gemelo al día en 5 s o menos)");
+
+    public static readonly Counter<long> EntradasZona =
+        Ingesta.CreateCounter<long>("flowtwin.presencia.entradas", "{entrada}", "Entradas a zona confirmadas por el motor");
+
     public static readonly Histogram<double> DuracionLote =
         Ingesta.CreateHistogram<double>("flowtwin.ingesta.duracion", "ms", "Tiempo en procesar un lote, de la llegada al 202");
 }

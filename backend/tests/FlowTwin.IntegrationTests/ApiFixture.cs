@@ -36,6 +36,8 @@ public sealed class ApiFixture : IAsyncLifetime
         Environment.SetEnvironmentVariable("BaseDatos__SembrarDemo", "true");
         Environment.SetEnvironmentVariable("LimitePeticiones__AuthPorMinuto", "1000");
         Environment.SetEnvironmentVariable("LimitePeticiones__IngestaPorMinuto", "10000");
+        // El motor no corre solo: las pruebas lo llaman a mano (ProcesarAsync) para controlar el tiempo
+        Environment.SetEnvironmentVariable("Presencia__MotorActivo", "false");
         // Las pruebas verifican la regla F-02 encendida (en appsettings está apagada por ahora)
         Environment.SetEnvironmentVariable("Contrasenas__ExigirCambioPrimerIngreso", "true");
 

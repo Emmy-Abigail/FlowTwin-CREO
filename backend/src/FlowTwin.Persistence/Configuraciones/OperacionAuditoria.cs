@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace FlowTwin.Persistence.Configuraciones;
 
-/// <summary>Esquema ope. EventoZona, PausaZona y Alerta llegan en los siguientes pasos del Avance 2.</summary>
+/// <summary>Esquema ope. PausaZona y Alerta llegan en los siguientes pasos del Avance 2.</summary>
 public sealed class AtencionConfig : IEntityTypeConfiguration<Atencion>
 {
     public void Configure(EntityTypeBuilder<Atencion> b)
@@ -67,5 +67,22 @@ public sealed class LecturaBleConfig : IEntityTypeConfiguration<LecturaBle>
         b.HasIndex(l => l.LeidaEn);
         b.HasIndex(l => new { l.UuidBle, l.LeidaEn });
         b.HasOne<Nodo>().WithMany().HasForeignKey(l => l.NodoId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+/// <summary>
+/// ope.EventoZona: entradas y salidas. RN-11 también en la base: un índice único filtrado impide dos
+/// estadías abiertas de la misma atención aunque un error del código lo intentara.
+/// </summary>
+public sealed class EventoZonaConfig : IEntityTypeConfiguration<EventoZona>
+{
+    public void Configure(EntityTypeBuilder<EventoZona> b)
+    {
+        b.ToTable("EventoZona", "ope", t => t.HasCheckConstraint("CK_EventoZona_Salida", "[SalidaEn] IS NULL OR [SalidaEn] >= [EntradaEn]"));
+        b.HasIndex(e => e.AtencionId).IsUnique().HasFilter("[SalidaEn] IS NULL").HasDatabaseName("UX_EventoZona_AtencionAbierta");
+        b.HasIndex(e => new { e.AtencionId, e.EntradaEn });   // recorrido de una atención
+        b.HasIndex(e => new { e.ZonaId, e.SalidaEn });        // quién está ahora en cada zona
+        b.HasOne<Atencion>().WithMany().HasForeignKey(e => e.AtencionId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<Zona>().WithMany().HasForeignKey(e => e.ZonaId).OnDelete(DeleteBehavior.Restrict);
     }
 }
