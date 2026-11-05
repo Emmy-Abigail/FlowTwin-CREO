@@ -1,62 +1,78 @@
-.login { display: grid; grid-template-columns: 1fr 1fr; min-height: 100vh; }
-.login-l {
-  background: var(--negro); color: #fff; padding: 48px 56px;
-  display: flex; flex-direction: column; justify-content: space-between; gap: 32px;
+/* Login limpio: una tarjeta centrada sobre blanco, con ilustraciones de línea a los costados. */
+.login {
+  min-height: 100dvh; display: flex;
+  padding: clamp(12px, 2.4vw, 36px); background: var(--fondo-2);
 }
-.sub-logo { color: #BDB5B7; margin-top: 4px; }
-.pitch { display: flex; flex-direction: column; gap: 14px; max-width: 460px; }
-.eyebrow { color: var(--amarillo); font-weight: 700; display: flex; align-items: center; gap: 8px; }
-.eyebrow::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--amarillo); }
-.login-l h1 { font-size: 44px; line-height: 1.1; font-weight: 900; color: #fff; }
-.login-l p { color: #BDB5B7; margin: 0; font-size: 16px; }
-.login-l small { color: #8C8486; }
-.login-r { display: flex; align-items: center; justify-content: center; padding: 48px 24px; }
-.login-box { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 16px; }
-.login-box h1 { font-size: 24px; }
-.login-box .sub { color: var(--gris); margin: -8px 0 4px; }
-.login-l small { display: flex; align-items: center; gap: 6px; }
-.puntos { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
-.puntos li { display: flex; align-items: center; gap: 10px; color: #E4DFE0; font-size: 14px; }
-.puntos app-icono { color: var(--amarillo); }
+.lienzo {
+  flex: 1; position: relative; overflow: hidden; border-radius: 24px; background: var(--fondo);
+  padding: clamp(18px, 2.6vw, 40px); display: flex; flex-direction: column;
+}
+.marcas { display: flex; justify-content: space-between; align-items: center; gap: 20px; position: relative; z-index: 1; }
+.logo-flowtwin { height: clamp(40px, 4vw, 54px); width: auto; }
+.logo-creo { height: clamp(32px, 3.2vw, 44px); width: auto; }
 
-.login-box header { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
-.login-box .sub { margin: 0; }
+.ilustracion { position: absolute; bottom: 64px; width: clamp(220px, 23vw, 330px); height: auto; }
+.ilustracion.izq { left: clamp(8px, 4vw, 70px); }
+.ilustracion.der { right: clamp(8px, 4vw, 70px); width: clamp(200px, 20vw, 290px); }
+.trazo { stroke: var(--tinta); stroke-width: 1.6; stroke-linejoin: round; }
+.trazo.fino { stroke-width: 1.4; }
+/* En pantallas angostas las ilustraciones chocarían con la tarjeta: se ocultan */
+@media (max-width: 1080px) { .ilustracion { display: none; } }
 
-/* Campo con ícono a la izquierda (y botón de ver contraseña a la derecha) */
-.con-icono { position: relative; display: flex; align-items: center; }
-.con-icono > app-icono { position: absolute; left: 12px; color: var(--gris); pointer-events: none; }
-.con-icono .inp { width: 100%; padding-left: 38px; }
-.con-icono .inp#lg-pass { padding-right: 44px; }
+.centro { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; z-index: 1; padding: 12px 0; }
+.tarjeta {
+  width: 100%; max-width: 410px; background: var(--fondo); border-radius: 20px; padding: clamp(24px, 3.2vh, 34px) 32px;
+  box-shadow: var(--sombra-flotante); display: flex; flex-direction: column; gap: clamp(12px, 1.8vh, 16px);
+}
+.titulo { display: flex; flex-direction: column; gap: 6px; }
+.titulo h1 { font-size: 26px; font-weight: 900; line-height: 1.15; }
+.titulo p { margin: 0; color: var(--gris); }
+
+.campo { display: flex; flex-direction: column; gap: 6px; }
+.campo label { font-size: 14px; font-weight: 700; }
+.entrada {
+  display: flex; align-items: center; gap: 10px; height: 50px; padding: 0 6px 0 14px;
+  border-radius: 12px; border: 1.5px solid transparent; background: var(--campo); color: var(--gris);
+  transition: border-color .15s, background .15s;
+}
+.entrada:focus-within { border-color: var(--tinta); background: var(--fondo); }
+.entrada input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: transparent; font-size: 16px; color: var(--tinta); }
+.entrada input::placeholder { color: var(--gris-2); }
+.con-error .entrada { border-color: var(--error-borde); background: var(--fondo); }
 .ver {
-  position: absolute; right: 4px; width: 36px; height: 36px; border: 0; border-radius: 8px;
-  background: none; color: var(--gris); cursor: pointer; display: grid; place-items: center;
+  width: 38px; height: 38px; border: 0; border-radius: 9px; background: none; color: var(--gris);
+  display: grid; place-items: center; flex: none;
 }
-.ver:hover { color: var(--negro); background: rgba(0, 0, 0, .05); }
-.ver:focus-visible { outline: 2px solid var(--amarillo); outline-offset: 1px; }
-.inp[aria-invalid="true"] { border-color: var(--alta); }
-
-.mayus { min-height: 16px; display: flex; align-items: center; gap: 5px; color: #9A6700; font-size: 12px; font-weight: 600; }
+.ver:hover { color: var(--tinta); background: var(--fondo-2); }
+.msg-error, .msg-mayus { display: flex; align-items: flex-start; gap: 6px; font-size: 14px; font-weight: 600; }
+.msg-error { color: var(--error); }
+.msg-mayus { color: var(--ambar-t); }
+.msg-error app-icono, .msg-mayus app-icono { margin-top: 2px; flex: none; }
 
 .aviso-err {
-  display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 10px;
-  background: #FDECEC; border: 1px solid #F3C2C2; color: var(--alta); font-size: 14px; font-weight: 600;
+  display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 12px;
+  background: var(--durazno); color: var(--error); font-size: 15px; font-weight: 600;
 }
 .aviso-err app-icono { flex: none; margin-top: 1px; }
 
-.fila { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: -4px; }
-.check { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
-.check input { width: 16px; height: 16px; accent-color: var(--negro); }
+.ingresar {
+  height: 52px; margin-top: 4px; border: 0; border-radius: 12px; background: var(--rojo); color: #fff;
+  font-size: 17px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  transition: background .15s;
+}
+.ingresar:hover { background: var(--rojo-osc); }
+.ingresar[aria-busy="true"] { cursor: progress; }
+
+.fila { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; font-size: 14px; }
+.check { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.check input { width: 18px; height: 18px; accent-color: var(--tinta); }
+.enlace { border: 0; background: none; padding: 0; color: var(--rojo); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.ayuda { margin: 0; padding: 12px 14px; border-radius: 12px; background: var(--amarillo-suave); color: var(--ambar-t); font-size: 14px; }
+
+.pie { position: relative; z-index: 1; align-self: center; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--gris-2); }
 
 .spin {
-  width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent;
+  width: 18px; height: 18px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent;
   animation: girar .7s linear infinite;
 }
 @keyframes girar { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .spin { animation-duration: 2s; } }
-
-@media (max-width: 860px) {
-  .login { grid-template-columns: 1fr; }
-  .login-l { padding: 32px 20px; }
-  .puntos { display: none; }
-  .login-l h1 { font-size: 32px; }
-}

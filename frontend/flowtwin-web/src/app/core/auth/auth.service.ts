@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { API, mensajeDe, problemaDe } from '../api/problema';
+import { API, erroresPorCampo, mensajeDe, problemaDe } from '../api/problema';
 import { Actor, Rol } from '../datos/modelos';
 import { ToastService } from '../ui/toast.service';
 import { MIN } from '../utils/tiempo';
@@ -23,7 +23,14 @@ interface UsuarioApi {
 }
 interface SesionApi { accessToken: string; expiraEn: string; usuario: UsuarioApi; }
 
-export type ResultadoLogin = { ok: true; destino: string } | { ok: false; error: string };
+/**
+ * Resultado del login. Si falla: «error» es el mensaje general (credenciales, bloqueo, sin conexión) y
+ * «campos» los errores que el servidor atribuye a un campo concreto (correo, clave), para mostrarlos
+ * debajo de ese campo.
+ */
+export type ResultadoLogin =
+  | { ok: true; destino: string }
+  | { ok: false; error: string; campos: Partial<Record<'correo' | 'clave', string>> };
 
 /** Código de rol de la API → nombre que usan el menú y los permisos del frontend. */
 const ROLES: Record<string, Rol> = { ADMIN: 'Administrador', OPERADOR: 'Operador', GERENCIA: 'Gerencia' };
@@ -64,7 +71,9 @@ export class AuthService {
       this.guardar(r);
       return { ok: true, destino: this.usuario()!.debeCambiarContrasena ? '/cambiar-contrasena' : this.rutaInicio() };
     } catch (e) {
-      return { ok: false, error: mensajeDe(problemaDe(e)) };
+      const p = problemaDe(e);
+      const campos = erroresPorCampo(p);
+      return { ok: false, error: Object.keys(campos).length ? '' : mensajeDe(p), campos };
     }
   }
 

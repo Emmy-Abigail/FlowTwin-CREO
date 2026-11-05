@@ -2,7 +2,7 @@
 html, body { height: 100%; }
 body {
   margin: 0; background: var(--fondo); color: var(--tinta);
-  font-family: var(--f-body); font-size: 14px; line-height: 1.45;
+  font-family: var(--f-body); font-size: 15px; line-height: 1.45;
   -webkit-font-smoothing: antialiased;
 }
 button, input, select, textarea { font: inherit; color: inherit; }
@@ -12,6 +12,8 @@ h1 { font-size: 26px; font-weight: 800; }
 h2 { font-size: 17px; font-weight: 800; }
 h3 { font-size: 14px; font-weight: 800; }
 .num { font-variant-numeric: tabular-nums; }
+/* Códigos que se leen en voz alta (A-0143, T-07, N-01): distingue 0/O y 1/l */
+.codigo { font-family: var(--f-mono); font-weight: 600; letter-spacing: .01em; }
 :focus-visible { outline: 3px solid var(--amarillo); outline-offset: 2px; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
