@@ -1,87 +1,66 @@
-<div class="app">
-  <aside class="side">
-    <div class="brand">
-      <app-logo />
-      <small>Clínica Renal y Oncológica</small>
-    </div>
+<div class="app" [class.colapsada]="colapsada()" [class.simulando]="modo.simulacion()">
+  <aside class="lateral">
+    <a class="marca" routerLink="/" aria-label="FlowTwin, ir al inicio">
+      <span class="isotipo"><img src="marca/flowtwin-isotipo.png" alt=""></span>
+      <b class="nombre">Flow<span>Twin</span></b>
+    </a>
 
     <nav class="nav" aria-label="Menú principal">
       @for (item of menu(); track item.ruta) {
-        <a [routerLink]="item.ruta" routerLinkActive="on">
-          <app-icono [nombre]="item.icono" /><span>{{ item.texto }}</span>
+        <a class="item" [routerLink]="item.ruta" routerLinkActive="activo" ariaCurrentWhenActive="page"
+           [attr.title]="colapsada() ? item.texto : null">
+          <app-icono [nombre]="item.icono" [tamano]="22" />
+          <span class="texto">{{ item.texto }}</span>
         </a>
       }
     </nav>
 
-    @if (auth.usuario(); as u) {
-      <div class="me">
-        <b>{{ u.nombre }}</b>
-        <span>{{ u.rol }} · {{ u.correo }}</span>
-        <button type="button" (click)="auth.cerrarSesion()"><app-icono nombre="out" [tamano]="16" /> Cerrar sesión</button>
-      </div>
-    }
+    <div class="abajo">
+      @if (modo.puedeSimular()) {
+        <button class="item simulacion" type="button" (click)="alternarSimulacion()" [attr.aria-pressed]="modo.simulacion()"
+                [attr.title]="colapsada() ? (modo.simulacion() ? 'Salir de la simulación' : 'Simulación') : null">
+          <app-icono nombre="matraz" [tamano]="22" />
+          <span class="texto">{{ modo.simulacion() ? 'Salir de la simulación' : 'Simulación' }}</span>
+        </button>
+      }
+
+      <button class="item" type="button" (click)="alternarColapsada()"
+              [attr.aria-label]="colapsada() ? 'Expandir el menú' : 'Colapsar el menú'" [attr.aria-expanded]="!colapsada()">
+        <app-icono [nombre]="colapsada() ? 'sig' : 'back'" [tamano]="20" />
+        <span class="texto">Colapsar</span>
+      </button>
+
+      @if (auth.usuario(); as u) {
+        <!-- El avatar abre «Mi cuenta»; cerrar sesión tiene su propio botón al lado, a un clic -->
+        <div class="usuario">
+          <a class="item yo" routerLink="/cuenta" routerLinkActive="activo" ariaCurrentWhenActive="page"
+             [attr.aria-label]="'Mi cuenta: ' + u.nombre" [attr.title]="colapsada() ? 'Mi cuenta' : null">
+            <span class="avatar" aria-hidden="true">{{ iniciales() }}</span>
+            <span class="texto quien"><b>{{ u.nombre }}</b><small>{{ u.rol }}</small></span>
+          </a>
+          <button class="salir" type="button" (click)="auth.cerrarSesion()" aria-label="Cerrar sesión" title="Cerrar sesión">
+            <app-icono nombre="out" [tamano]="20" />
+          </button>
+        </div>
+      }
+    </div>
   </aside>
 
-  <div class="main">
-    <header class="top">
-      <div class="crumbs">{{ sede }} › Piso 1 › <b>{{ titulo() }}</b></div>
-      <span class="sp"></span>
-
-      @if (auth.soloLectura()) { <span class="ro">Modo: Solo lectura</span> }
-
-      <span class="live" [class.off]="!clinica.simulacionActiva()">
-        <i></i>{{ clinica.simulacionActiva() ? 'En vivo' : 'En pausa' }} · <span class="num">{{ hhmm(ahora()) }}</span>
-      </span>
-
-      <div class="dd-wrap">
-        <button class="iconbtn" type="button" aria-label="Alertas" (click)="alternarCampana()">
-          <app-icono nombre="bell" />
-          @if (clinica.alertasSinLeer()) { <span class="badge num">{{ clinica.alertasSinLeer() }}</span> }
-        </button>
-        @if (campanaAbierta()) {
-          <div class="dd">
-            <div class="dd-title">Alertas</div>
-            @for (a of clinica.alertas().slice(0, 8); track a.id) {
-              <button class="dd-item" type="button" (click)="irAAlerta(a)">
-                <span class="dot" [class]="'dot ' + a.nivel"></span>
-                <span><b>{{ a.texto }}</b><br><span class="hint">{{ a.detalle }} · {{ hhmm(a.t) }}</span></span>
-              </button>
-            } @empty {
-              <div class="hint" style="padding: 10px">Sin alertas.</div>
-            }
-          </div>
-        }
+  <div class="principal">
+    @if (modo.simulacion()) {
+      <div class="franja-simulacion" role="status">
+        <span><app-icono nombre="matraz" [tamano]="18" /><b>SIMULACIÓN</b> · datos ficticios para la presentación · no se guardan ni aparecen en reportes</span>
+        <button type="button" (click)="modo.salir()">Salir de la simulación</button>
       </div>
-
-      <div class="dd-wrap">
-        <button class="usr" type="button" (click)="alternarMenuUsuario()">
-          <span class="av">{{ iniciales() }}</span>
-          <span>{{ primerNombre() }}<small>{{ auth.rol() }}</small></span>
-        </button>
-        @if (menuUsuarioAbierto()) {
-          <div class="dd" style="width: 220px">
-            <a class="dd-item" routerLink="/cambiar-contrasena" (click)="menuUsuarioAbierto.set(false)">
-              <app-icono nombre="lock" [tamano]="16" /> Cambiar contraseña
-            </a>
-            <button class="dd-item" type="button" (click)="auth.cerrarSesion()">
-              <app-icono nombre="out" [tamano]="16" /> Cerrar sesión
-            </button>
-          </div>
-        }
-      </div>
-    </header>
-
-    <main class="content">
+    }
+    <main class="contenido">
       <router-outlet />
     </main>
+  </div>
 
-    <footer class="demo-foot">
-      Login, usuarios y Admisión usan la base de datos real. El Gemelo y el Historial siguen con datos simulados
-      (cada 5 s pasa 1 minuto) hasta conectar los nodos en el Avance 2.
-      <button appBoton="borde" [chico]="true" type="button" (click)="alternarSimulacion()">
-        @if (clinica.simulacionActiva()) { <app-icono nombre="pause" [tamano]="16" /> Pausar simulación }
-        @else { <app-icono nombre="play" [tamano]="16" /> Reanudar simulación }
-      </button>
-    </footer>
+  <div class="aviso-movil" role="alert">
+    <app-icono nombre="monitor" [tamano]="44" />
+    <h2>FlowTwin está diseñado para computadora</h2>
+    <p>Ábrelo en una PC o laptop para ver el gemelo y los reportes completos.</p>
   </div>
 </div>

@@ -1,7 +1,10 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { NOMBRE_SEDE } from '../../core/datos/clinica.config';
+import { ModoDatosService } from '../../core/datos/modo-datos.service';
 import { ChipComponent } from '../../shared/componentes/chip.component';
+import { EstadoVacioComponent } from '../../shared/componentes/estado-vacio.component';
+import { SelectorPisoComponent } from '../../shared/componentes/selector-piso.component';
 import { IconoComponent } from '../../shared/componentes/icono.component';
 import { KpiComponent } from '../../shared/componentes/kpi.component';
 import { ModalComponent } from '../../shared/componentes/modal.component';
@@ -15,7 +18,7 @@ import { FiltroFeed, GemeloStore } from './gemelo.store';
  */
 @Component({
   selector: 'app-gemelo',
-  imports: [Render3dComponent, KpiComponent, ChipComponent, IconoComponent, ModalComponent],
+  imports: [Render3dComponent, KpiComponent, ChipComponent, IconoComponent, ModalComponent, EstadoVacioComponent, SelectorPisoComponent],
   templateUrl: './gemelo.page.html',
   styleUrl: './gemelo.page.scss',
   providers: [GemeloStore],
@@ -23,6 +26,7 @@ import { FiltroFeed, GemeloStore } from './gemelo.store';
 })
 export class GemeloPage {
   protected store = inject(GemeloStore);
+  protected modo = inject(ModoDatosService);
   private router = inject(Router);
 
   protected readonly sede = NOMBRE_SEDE;
