@@ -10,6 +10,7 @@ public interface IGemeloDb : IUnidadDeTrabajo
     DbSet<Sede> Sedes { get; }
     DbSet<Piso> Pisos { get; }
     DbSet<Zona> Zonas { get; }
+    DbSet<ElementoPlano> ElementosPlano { get; }
 }
 
 public sealed record PisoDto(int Id, string Nombre, short Nivel, decimal? AnchoM, decimal? FondoM, bool Publicado);
@@ -21,12 +22,17 @@ public sealed record ZonaGeometriaDto(
     short? Aforo, byte? UmbralMedia, byte? UmbralAlta);
 
 /// <summary>
-/// GET /pisos/{id}/geometria. Por ahora lleva el piso y sus zonas; "elementos" (muros) y "nodos"
-/// se agregan cuando existan gem.ElementoPlano y dis.Nodo.
+/// Un muro, puerta, ventana o ambiente. X, Y, Ancho y Fondo son el rectángulo que lo contiene
+/// (como en las zonas); Poligono y Huecos solo vienen en los muros importados de AutoCAD.
 /// </summary>
+public sealed record ElementoGeometriaDto(
+    string Tipo, string? Nombre, decimal X, decimal Y, decimal Ancho, decimal Fondo, decimal? AltoM,
+    IReadOnlyList<double[]>? Poligono, IReadOnlyList<IReadOnlyList<double[]>>? Huecos);
+
+/// <summary>GET /pisos/{id}/geometria. "nodos" se agrega cuando exista dis.Nodo.</summary>
 public sealed record GeometriaPisoDto(
     int PisoId, string Nombre, short Nivel, decimal? AnchoM, decimal? FondoM, decimal AltoMuroM,
-    string? PlanoUrl, IReadOnlyList<ZonaGeometriaDto> Zonas);
+    string? PlanoUrl, IReadOnlyList<ZonaGeometriaDto> Zonas, IReadOnlyList<ElementoGeometriaDto> Elementos);
 
 public sealed class GemeloServicio(IGemeloDb db, IUsuarioActual usuario) : ISedesConsultas
 {
@@ -58,12 +64,26 @@ public sealed class GemeloServicio(IGemeloDb db, IUsuarioActual usuario) : ISede
             .Where(z => z.PisoId == pisoId && !z.EnBorrador)
             .OrderBy(z => z.Id)
             .ToListAsync(ct);
+        var elementos = await db.ElementosPlano
+            .Where(e => e.PisoId == pisoId && !e.EnBorrador)
+            .OrderBy(e => e.Id)
+            .ToListAsync(ct);
         return new GeometriaPisoDto(
             piso.Id, piso.Nombre, piso.Nivel, piso.AnchoM, piso.FondoM, piso.AltoMuroM,
             piso.PlanoRuta is null ? null : "/" + piso.PlanoRuta,
             [.. zonas.Select(z => new ZonaGeometriaDto(
                 z.Id, z.Nombre, z.TipoZonaId.Codigo(), z.X, z.Y, z.AnchoM, z.FondoM,
-                z.Aforo, z.UmbralMediaPct, z.UmbralAltaPct))]);
+                z.Aforo, z.UmbralMediaPct, z.UmbralAltaPct))],
+            [.. elementos.Select(ElementoDto)]);
+    }
+
+    private static ElementoGeometriaDto ElementoDto(ElementoPlano e)
+    {
+        var forma = e.Forma();
+        return new ElementoGeometriaDto(
+            e.TipoElementoPlanoId.Codigo(), e.Nombre,
+            Math.Min(e.X1, e.X2), Math.Min(e.Y1, e.Y2), Math.Abs(e.X2 - e.X1), Math.Abs(e.Y2 - e.Y1), e.AltoM,
+            forma?.Poligono, forma?.Huecos);
     }
 
     public async Task<IReadOnlyList<int>> SedesDePisosAsync(IEnumerable<int> pisoIds, CancellationToken ct = default)

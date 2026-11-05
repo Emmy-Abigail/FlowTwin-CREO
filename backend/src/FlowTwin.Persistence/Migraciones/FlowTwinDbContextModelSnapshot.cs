@@ -284,6 +284,95 @@ namespace FlowTwin.Persistence.Migraciones
                     b.ToTable("Tarjeta", "dis");
                 });
 
+            modelBuilder.Entity("FlowTwin.Gemelo.Domain.ElementoPlano", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal?>("AltoM")
+                        .HasPrecision(4, 2)
+                        .HasColumnType("decimal(4,2)");
+
+                    b.Property<bool>("EnBorrador")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("EstadoRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<DateTime?>("FechaActualizacion")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<string>("Geometria")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Nombre")
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<int>("PisoId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TipoElementoPlanoId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("UsuarioActualizacionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UsuarioRegistroId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
+                    b.Property<byte[]>("Version")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<decimal>("X1")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("decimal(6,2)");
+
+                    b.Property<decimal>("X2")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("decimal(6,2)");
+
+                    b.Property<decimal>("Y1")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("decimal(6,2)");
+
+                    b.Property<decimal>("Y2")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("decimal(6,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PisoId");
+
+                    b.HasIndex("TipoElementoPlanoId");
+
+                    b.ToTable("ElementoPlano", "gem", t =>
+                        {
+                            t.HasCheckConstraint("CK_ElementoPlano_AltoM", "[AltoM] IS NULL OR [AltoM] > 0");
+
+                            t.HasCheckConstraint("CK_ElementoPlano_Geometria", "[Geometria] IS NULL OR ISJSON([Geometria]) = 1");
+
+                            t.HasCheckConstraint("CK_ElementoPlano_NombreAmbiente", "[TipoElementoPlanoId] <> 4 OR [Nombre] IS NOT NULL");
+                        });
+                });
+
             modelBuilder.Entity("FlowTwin.Gemelo.Domain.Piso", b =>
                 {
                     b.Property<int>("Id")
@@ -1973,6 +2062,21 @@ namespace FlowTwin.Persistence.Migraciones
                     b.HasOne("FlowTwin.Gemelo.Domain.Sede", null)
                         .WithMany()
                         .HasForeignKey("SedeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("FlowTwin.Gemelo.Domain.ElementoPlano", b =>
+                {
+                    b.HasOne("FlowTwin.Gemelo.Domain.Piso", null)
+                        .WithMany()
+                        .HasForeignKey("PisoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FlowTwin.SharedKernel.Catalogo<FlowTwin.Gemelo.Domain.TipoElementoPlano>", null)
+                        .WithMany()
+                        .HasForeignKey("TipoElementoPlanoId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
