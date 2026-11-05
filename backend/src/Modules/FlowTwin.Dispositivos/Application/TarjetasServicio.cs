@@ -10,6 +10,8 @@ public interface IDispositivosDb : IUnidadDeTrabajo
 {
     DbSet<Tarjeta> Tarjetas { get; }
     DbSet<MovimientoTarjeta> MovimientosTarjeta { get; }
+    DbSet<Nodo> Nodos { get; }
+    DbSet<EventoNodo> EventosNodo { get; }
 }
 
 public sealed record TarjetaDto(int Id, string Codigo, string Estado, string EstadoNombre, DateTime? Desde);

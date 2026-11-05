@@ -1,5 +1,6 @@
 using FlowTwin.Dispositivos.Application;
 using FlowTwin.Dispositivos.Contracts;
+using FlowTwin.Gemelo.Contracts;
 using FlowTwin.SharedKernel;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -14,10 +15,12 @@ public static class ModuloDispositivos
     {
         services.AddScoped<TarjetasServicio>();
         services.AddScoped<ITarjetasAdmision>(sp => sp.GetRequiredService<TarjetasServicio>());
+        services.AddScoped<NodosServicio>();
+        services.AddScoped<IUbicacionNodos, UbicacionNodos>();
         return services;
     }
 
-    /// <summary>Rutas /api/v1/tarjetas (sección API → Dispositivos). Nodos y registro de tarjetas: Avance 2 y 3.</summary>
+    /// <summary>Rutas /api/v1/tarjetas y /api/v1/nodos (sección API → Dispositivos). Registro de tarjetas (F-16): más adelante.</summary>
     public static void MapDispositivos(this IEndpointRouteBuilder app)
     {
         var tarjetas = app.MapGroup("/api/v1/tarjetas").WithTags("Dispositivos");
@@ -35,5 +38,34 @@ public static class ModuloDispositivos
                 Results.Ok(await s.ExtraviarAsync(id, ct)))
             .RequireAuthorization(Politicas.OperadorOAdmin)
             .WithSummary("Sin devolver → Extraviada (F-10)");
+
+        var nodos = app.MapGroup("/api/v1/nodos").WithTags("Dispositivos");
+
+        nodos.MapGet("/", async (NodosServicio s, CancellationToken ct) => Results.Ok(await s.ListarAsync(ct)))
+            .RequireAuthorization(Politicas.OperadorOAdmin)
+            .WithSummary("Nodos y su estado (F-15)");
+
+        nodos.MapPost("/", async (RegistrarNodoRequest req, NodosServicio s, CancellationToken ct) =>
+            {
+                var r = await s.RegistrarAsync(req, ct);
+                return Results.Created($"/api/v1/nodos/{r.Nodo.Id}", r);
+            })
+            .RequireAuthorization(Politicas.SoloAdmin)
+            .WithSummary("Registra un nodo y devuelve su clave, solo esta vez (F-15)");
+
+        nodos.MapPut("/{id:int}", async (int id, EditarNodoRequest req, NodosServicio s, CancellationToken ct) =>
+                Results.Ok(await s.EditarAsync(id, req, ct)))
+            .RequireAuthorization(Politicas.SoloAdmin)
+            .WithSummary("Cambia la zona, la posición o el ajuste de señal");
+
+        nodos.MapPost("/{id:int}/regenerar-clave", async (int id, NodosServicio s, CancellationToken ct) =>
+                Results.Ok(await s.RegenerarClaveAsync(id, ct)))
+            .RequireAuthorization(Politicas.SoloAdmin)
+            .WithSummary("Nueva clave; la anterior deja de servir");
+
+        nodos.MapPost("/{id:int}/baja", async (int id, NodosServicio s, CancellationToken ct) =>
+                Results.Ok(await s.DarDeBajaAsync(id, ct)))
+            .RequireAuthorization(Politicas.SoloAdmin)
+            .WithSummary("Retira el nodo e invalida su clave");
     }
 }

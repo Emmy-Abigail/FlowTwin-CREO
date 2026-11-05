@@ -133,7 +133,44 @@ public sealed class ElementoPlanoConfig : IEntityTypeConfiguration<ElementoPlano
     }
 }
 
-/// <summary>Esquema dis. Nodo y EventoNodo llegan en el Avance 2.</summary>
+/// <summary>Esquema dis.</summary>
+public sealed class NodoConfig : IEntityTypeConfiguration<Nodo>
+{
+    public void Configure(EntityTypeBuilder<Nodo> b)
+    {
+        b.ToTable("Nodo", "dis", t =>
+        {
+            // Formato XX:XX:XX:XX:XX:XX en mayúsculas (COLLATE binario: LIKE distinguiría 'a' de 'A')
+            var hex = "[0-9A-F][0-9A-F]";
+            t.HasCheckConstraint("CK_Nodo_Mac", $"[Mac] COLLATE Latin1_General_BIN2 LIKE '{string.Join(":", Enumerable.Repeat(hex, 6))}'");
+            t.HasCheckConstraint("CK_Nodo_AjusteRssiDb", $"[AjusteRssiDb] BETWEEN -{Nodo.AjusteMaximoDb} AND {Nodo.AjusteMaximoDb}");
+        });
+        b.Property(n => n.Codigo).HasColumnType("varchar(10)").IsRequired();
+        b.Property(n => n.Mac).HasColumnType("char(17)").IsRequired();
+        b.Property(n => n.ClaveApiHash).HasColumnType("binary(32)").IsRequired();
+        b.Property(n => n.PosX).HasPrecision(6, 2);
+        b.Property(n => n.PosY).HasPrecision(6, 2);
+        b.Property(n => n.VersionFirmware).HasColumnType("varchar(20)");
+        b.Property(n => n.AjusteRssiDb).HasDefaultValue((short)0);
+        b.HasIndex(n => n.Codigo).IsUnique().HasFilter("[EstadoRegistro] = 1");
+        b.HasIndex(n => n.Mac).IsUnique().HasFilter("[EstadoRegistro] = 1");
+        b.HasOne<Zona>().WithMany().HasForeignKey(n => n.ZonaId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<Catalogo<EstadoNodo>>().WithMany().HasForeignKey(n => n.EstadoNodoId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+public sealed class EventoNodoConfig : IEntityTypeConfiguration<EventoNodo>
+{
+    public void Configure(EntityTypeBuilder<EventoNodo> b)
+    {
+        b.ToTable("EventoNodo", "dis");
+        b.Property(e => e.Detalle).HasMaxLength(200);
+        b.HasOne<Nodo>().WithMany().HasForeignKey(e => e.NodoId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<Catalogo<EstadoNodo>>().WithMany().HasForeignKey(e => e.EstadoNodoId).OnDelete(DeleteBehavior.Restrict);
+        b.HasIndex(e => new { e.NodoId, e.Id });
+    }
+}
+
 public sealed class TarjetaConfig : IEntityTypeConfiguration<Tarjeta>
 {
     public void Configure(EntityTypeBuilder<Tarjeta> b)
