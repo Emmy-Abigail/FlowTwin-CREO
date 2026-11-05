@@ -1,6 +1,9 @@
 using FlowTwin.Dispositivos.Application;
 using FlowTwin.Dispositivos.Contracts;
 using FlowTwin.Gemelo.Contracts;
+using FluentValidation;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using FlowTwin.SharedKernel;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -11,8 +14,13 @@ namespace FlowTwin.Dispositivos;
 
 public static class ModuloDispositivos
 {
-    public static IServiceCollection AddModuloDispositivos(this IServiceCollection services)
+    public static IServiceCollection AddModuloDispositivos(this IServiceCollection services, IConfiguration config)
     {
+        services.Configure<OpcionesNodos>(config.GetSection("Presencia"));
+        services.AddValidatorsFromAssemblyContaining<LatidoValidador>(ServiceLifetime.Singleton);
+        services.AddScoped<IngestaNodosServicio>();
+        services.AddScoped<IAutenticacionNodos>(sp => sp.GetRequiredService<IngestaNodosServicio>());
+        services.AddHostedService<VigilanteLatidos>();
         services.AddScoped<TarjetasServicio>();
         services.AddScoped<ITarjetasAdmision>(sp => sp.GetRequiredService<TarjetasServicio>());
         services.AddScoped<NodosServicio>();
@@ -67,5 +75,15 @@ public static class ModuloDispositivos
                 Results.Ok(await s.DarDeBajaAsync(id, ct)))
             .RequireAuthorization(Politicas.SoloAdmin)
             .WithSummary("Retira el nodo e invalida su clave");
+
+        // Ingesta: la llaman los ESP32, no personas. No usa JWT: se autentica con X-Node-Key (sección Seguridad → Nodos)
+        app.MapPost("/api/v1/ingesta/latidos", async (
+                [FromHeader(Name = "X-Node-Key")] string? clave, LatidoRequest req, IngestaNodosServicio s, CancellationToken ct) =>
+            {
+                await s.RegistrarLatidoAsync(clave, req, ct);
+                return Results.Accepted();
+            })
+            .WithTags("Ingesta").AllowAnonymous().RequireRateLimiting("ingesta")
+            .WithSummary("Latido del nodo cada 30 s (F-15)");
     }
 }

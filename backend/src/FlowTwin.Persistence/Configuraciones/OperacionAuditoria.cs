@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace FlowTwin.Persistence.Configuraciones;
 
-/// <summary>Esquema ope. EventoZona, LecturaBle, PausaZona y Alerta llegan en el Avance 2.</summary>
+/// <summary>Esquema ope. EventoZona, PausaZona y Alerta llegan en los siguientes pasos del Avance 2.</summary>
 public sealed class AtencionConfig : IEntityTypeConfiguration<Atencion>
 {
     public void Configure(EntityTypeBuilder<Atencion> b)
@@ -50,5 +50,22 @@ public sealed class AuditoriaConfig : IEntityTypeConfiguration<RegistroAuditoria
         b.HasOne<Catalogo<AccionAuditoria>>().WithMany().HasForeignKey(a => a.AccionAuditoriaId).OnDelete(DeleteBehavior.Restrict);
         b.HasIndex(a => a.FechaRegistro);
         b.HasIndex(a => new { a.UsuarioRegistroId, a.FechaRegistro });
+    }
+}
+
+/// <summary>
+/// ope.LecturaBle: la tabla de más volumen (~1 millón de filas por jornada, ver PurgaLecturasServicio).
+/// Índice por LeidaEn para el motor y la purga; por (UuidBle, LeidaEn) para seguir un emisor y detectar
+/// los no registrados (F-16).
+/// </summary>
+public sealed class LecturaBleConfig : IEntityTypeConfiguration<LecturaBle>
+{
+    public void Configure(EntityTypeBuilder<LecturaBle> b)
+    {
+        b.ToTable("LecturaBle", "ope", t => t.HasCheckConstraint("CK_LecturaBle_Rssi", "[Rssi] BETWEEN -127 AND 0"));
+        b.Property(l => l.UuidBle).HasColumnType("varchar(64)").IsRequired();
+        b.HasIndex(l => l.LeidaEn);
+        b.HasIndex(l => new { l.UuidBle, l.LeidaEn });
+        b.HasOne<Nodo>().WithMany().HasForeignKey(l => l.NodoId).OnDelete(DeleteBehavior.Restrict);
     }
 }

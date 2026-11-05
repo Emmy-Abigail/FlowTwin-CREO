@@ -3,16 +3,23 @@ using FlowTwin.SharedKernel;
 using FluentValidation;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace FlowTwin.Atenciones;
 
 public static class ModuloAtenciones
 {
-    public static IServiceCollection AddModuloAtenciones(this IServiceCollection services)
+    public static IServiceCollection AddModuloAtenciones(this IServiceCollection services, IConfiguration config)
     {
+        services.Configure<OpcionesIngesta>(config.GetSection("Ingesta"));
         services.AddScoped<AdmisionServicio>();
+        services.AddScoped<IngestaServicio>();
+        services.AddScoped<PurgaLecturasServicio>();
+        services.AddSingleton<RegistroSecuencias>();
+        services.AddHostedService<PurgaLecturas>();
         services.AddValidatorsFromAssemblyContaining<EscaneoValidador>(ServiceLifetime.Singleton);
         return services;
     }
@@ -32,5 +39,12 @@ public static class ModuloAtenciones
 
         admision.MapGet("/resumen", async (AdmisionServicio s, CancellationToken ct) => Results.Ok(await s.ResumenAsync(ct)))
             .WithSummary("Conteo de tarjetas, pendientes y últimas operaciones");
+
+        // Ingesta: la llaman los ESP32 con X-Node-Key, no personas con JWT (sección Seguridad → Nodos)
+        app.MapPost("/api/v1/ingesta/lecturas", async (
+                [FromHeader(Name = "X-Node-Key")] string? clave, LoteLecturasRequest req, IngestaServicio s, CancellationToken ct) =>
+                Results.Accepted(value: await s.RecibirLoteAsync(clave, req, ct)))
+            .WithTags("Ingesta").AllowAnonymous().RequireRateLimiting("ingesta")
+            .WithSummary("Lote de lecturas BLE cada 2 s (F-07)");
     }
 }
