@@ -1,4 +1,6 @@
+using FlowTwin.Atenciones.Application;
 using FlowTwin.Dispositivos.Application;
+using FlowTwin.Dispositivos.Contracts;
 using FlowTwin.Gemelo.Application;
 using FlowTwin.Gemelo.Contracts;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,6 +22,10 @@ public class ContenedorTests(ApiFixture api)
     [InlineData(typeof(IUbicacionNodos))]
     [InlineData(typeof(NodosServicio))]
     [InlineData(typeof(TarjetasServicio))]
+    [InlineData(typeof(IAutenticacionNodos))]
+    [InlineData(typeof(IngestaNodosServicio))]
+    [InlineData(typeof(IngestaServicio))]
+    [InlineData(typeof(PurgaLecturasServicio))]
     public async Task Cada_servicio_se_construye_sin_ciclos(Type servicio)
     {
         using var scope = api.Fabrica.Services.CreateScope();

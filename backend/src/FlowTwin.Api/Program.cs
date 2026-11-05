@@ -62,8 +62,8 @@ builder.Services.AddOpenApi();
 builder.Services.AddPersistencia(builder.Configuration);
 builder.Services.AddModuloIdentidad(builder.Configuration);
 builder.Services.AddModuloGemelo();
-builder.Services.AddModuloDispositivos();
-builder.Services.AddModuloAtenciones();
+builder.Services.AddModuloDispositivos(builder.Configuration);
+builder.Services.AddModuloAtenciones(builder.Configuration);
 builder.Services.AddModuloAuditoria();
 
 // ---- Autenticación JWT y políticas por rol (sección Seguridad)
@@ -89,12 +89,19 @@ builder.Services.AddAuthorizationBuilder()
 
 // ---- Límite de peticiones en /auth: frena a quien intenta adivinar contraseñas
 var porMinuto = builder.Configuration.GetValue("LimitePeticiones:AuthPorMinuto", 20);
+var ingestaPorMinuto = builder.Configuration.GetValue("LimitePeticiones:IngestaPorMinuto", 600);
 builder.Services.AddRateLimiter(o =>
 {
     o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     o.AddPolicy("auth", http => RateLimitPartition.GetFixedWindowLimiter(
         http.Connection.RemoteIpAddress?.ToString() ?? "desconocida",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = porMinuto, Window = TimeSpan.FromMinutes(1) }));
+    // Ingesta, por IP (en la clínica cada ESP32 tiene la suya). No por la clave de la cabecera: quien
+    // inventa una clave distinta en cada petición tendría un límite nuevo cada vez. Un nodo normal hace
+    // ~32 peticiones/min; el margen cubre el reenvío de 10 minutos de lotes tras un corte de Wi-Fi.
+    o.AddPolicy("ingesta", http => RateLimitPartition.GetFixedWindowLimiter(
+        http.Connection.RemoteIpAddress?.ToString() ?? "desconocida",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = ingestaPorMinuto, Window = TimeSpan.FromMinutes(1) }));
 });
 
 var app = builder.Build();
