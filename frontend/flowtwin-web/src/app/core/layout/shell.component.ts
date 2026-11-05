@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs';
@@ -50,11 +50,17 @@ export class ShellComponent {
     { initialValue: this.tituloActual() },
   );
 
+  /** Hora real de la clínica en la barra superior (se actualiza cada 30 s). */
+  protected ahora = signal(Date.now());
+
   protected campanaAbierta = signal(false);
   protected menuUsuarioAbierto = signal(false);
 
   constructor() {
+    // El simulador sigue alimentando el Gemelo y el Historial hasta que llegue SignalR (Avance 2).
     inject(SimuladorService).iniciar();
+    const reloj = setInterval(() => this.ahora.set(Date.now()), 30_000);
+    inject(DestroyRef).onDestroy(() => clearInterval(reloj));
   }
 
   protected alternarCampana(): void {

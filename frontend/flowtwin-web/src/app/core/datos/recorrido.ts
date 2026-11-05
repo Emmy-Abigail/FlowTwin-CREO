@@ -6,7 +6,7 @@ import { Aleatorio } from '../utils/aleatorio';
 import { MIN } from '../utils/tiempo';
 import { ZONAS } from './clinica.config';
 import { EventoZona, PasoRuta } from './modelos';
-
+ 
 /** Admisión → Hall → Sala → Triaje → Sala → zona de atención → Hall (sale y devuelve la tarjeta). */
 export function crearRuta(rnd: Aleatorio): PasoRuta[] {
   const destino = rnd.ponderado([

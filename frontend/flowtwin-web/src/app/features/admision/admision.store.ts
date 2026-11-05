@@ -1,10 +1,10 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
-import { AuthService } from '../../core/auth/auth.service';
-import { consulta, espera, total } from '../../core/datos/calculos';
-import { ClinicaStore, EstadoPrevio } from '../../core/datos/clinica.store';
-import { EstadoTarjeta, TipoOperacion, TonoChip } from '../../core/datos/modelos';
+import { HttpClient } from '@angular/common/http';
+import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
+import { API, mensajeDe, problemaDe } from '../../core/api/problema';
+import { TonoChip } from '../../core/datos/modelos';
 import { ToastService } from '../../core/ui/toast.service';
-import { duracion, hhmm, minutos, pad2 } from '../../core/utils/tiempo';
+import { duracion, hhmm, minutos } from '../../core/utils/tiempo';
 
 /** Modo de Admisión. En "auto" el sistema deduce si es entrega o devolución. */
 export type ModoAdmision = 'auto' | 'entregar' | 'recibir';
@@ -20,160 +20,221 @@ export interface ResultadoEscaneo {
   texto: string;
   tiempos?: { espera: string; consulta: string; total: string };
   /** Si viene, se muestra el botón "Marcar desinfectada" para esa tarjeta. */
-  desinfectar?: string;
+  desinfectar?: { id: number; codigo: string };
 }
 
-const DESHACER_MS = 30_000;
+// ---- Respuestas de la API (sección API → Atenciones e ingesta)
+interface TarjetaApi { id: number; codigo: string; estado: string; estadoNombre: string; desde?: string | null; }
+interface AtencionApi { id: number; codigo: string; inicioEn: string; finEn: string | null; esperaMin: number | null; consultaMin: number | null; totalMin: number | null; }
+interface EscaneoApi { operacion: 'ENTREGA' | 'DEVOLUCION' | 'RECUPERADA'; tarjeta: TarjetaApi; atencion: AtencionApi | null; deshacerHasta: string | null; }
+interface PendienteApi { tarjetaId: number; codigo: string; desde: string | null; atencionCodigo: string | null; }
+interface OperacionApi { fecha: string; tipo: string; tarjeta: string; atencion: string | null; totalMin: number | null; }
+interface ResumenApi {
+  contadores: Record<string, number>;
+  porDesinfectar: PendienteApi[];
+  sinDevolver: PendienteApi[];
+  ultimasOperaciones: OperacionApi[];
+}
 
-export const TONO_OPERACION: Record<TipoOperacion, TonoChip> = {
-  Entregada: 'baja', Recibida: '', Desinfectada: 'media', Recuperada: 'media',
+const MODO_API: Record<ModoAdmision, string> = { auto: 'AUTO', entregar: 'ENTREGA', recibir: 'DEVOLUCION' };
+
+/** Nombre y color de cada operación en "Últimas operaciones". */
+const OPERACIONES: Record<string, { texto: string; tono: TonoChip }> = {
+  ENTREGADA: { texto: 'Entregada', tono: 'baja' },
+  RECIBIDA: { texto: 'Recibida', tono: '' },
+  DESINFECTADA: { texto: 'Desinfectada', tono: 'media' },
+  RECUPERADA: { texto: 'Recuperada', tono: 'media' },
+  ANULADA: { texto: 'Anulada', tono: 'nd' },
+  SIN_DEVOLVER: { texto: 'Sin devolver', tono: 'alta' },
+  EXTRAVIADA: { texto: 'Extraviada', tono: 'alta' },
+  BAJA: { texto: 'De baja', tono: 'dark' },
+  REGISTRADA: { texto: 'Registrada', tono: 'nd' },
 };
 
+/** Cada cuánto se actualiza el panel derecho mientras no hay tiempo real (SignalR llega en el Avance 2). */
+const REFRESCO_MS = 15_000;
+
 /**
- * Estado de la pantalla Admisión (P3): escaneo de tarjetas BLE, contadores, listas de
- * pendientes y "Deshacer" durante 30 s. Las operaciones se hacen sobre ClinicaStore,
- * por eso una entrega aparece al instante en el gemelo y en el feed.
+ * Estado de la pantalla Admisión (P3) contra la API real: escanear (F-06, F-08), deshacer (RN-04),
+ * desinfectar (F-09), extraviar (F-10) y el resumen. Las reglas las aplica el backend; aquí solo
+ * se muestran sus respuestas.
  */
 @Injectable()
 export class AdmisionStore {
-  private clinica = inject(ClinicaStore);
-  private auth = inject(AuthService);
+  private http = inject(HttpClient);
   private toast = inject(ToastService);
 
   readonly modo = signal<ModoAdmision>('auto');
   readonly resultado = signal<ResultadoEscaneo | null>(null);
-  /** Operación que aún se puede deshacer (null cuando pasan los 30 s). */
-  readonly deshacible = signal<EstadoPrevio | null>(null);
-  private temporizador: ReturnType<typeof setTimeout> | null = null;
+  readonly ocupado = signal(false);
+  /** Entrega que aún se puede deshacer (null cuando pasan los 30 s). */
+  readonly deshacible = signal<{ atencionId: number; hasta: number } | null>(null);
+  private resumen = signal<ResumenApi | null>(null);
+  private tarjetas = signal<TarjetaApi[]>([]);
+  private temporizadorDeshacer: ReturnType<typeof setTimeout> | null = null;
 
-  private conEstado = (estado: EstadoTarjeta) => this.clinica.tarjetas().filter(t => t.estado === estado);
+  constructor() {
+    this.cargar();
+    const intervalo = setInterval(() => this.cargar(), REFRESCO_MS);
+    inject(DestroyRef).onDestroy(() => {
+      clearInterval(intervalo);
+      if (this.temporizadorDeshacer) clearTimeout(this.temporizadorDeshacer);
+    });
+  }
 
-  readonly contadores = computed(() => ({
-    disponibles: this.conEstado('Disponible').length,
-    enUso: this.conEstado('En uso').length,
-    porDesinfectar: this.conEstado('Por desinfectar').length,
-    sinDevolver: this.conEstado('Sin devolver').length,
-  }));
-
-  readonly porDesinfectar = computed(() =>
-    this.conEstado('Por desinfectar').map(t => ({ id: t.id, desde: t.desde ? hhmm(t.desde) : '—' })));
-
-  readonly pendientes = computed(() => {
-    const ahora = this.clinica.ahora();
-    return this.conEstado('Sin devolver').map(t => ({
-      id: t.id, atencionId: t.atencionId ?? '',
-      sinLecturas: duracion(t.desde ? minutos(ahora - t.desde) : null),
-    }));
+  readonly contadores = computed(() => {
+    const c = this.resumen()?.contadores ?? {};
+    return {
+      disponibles: c['DISPONIBLE'] ?? 0,
+      enUso: c['EN_USO'] ?? 0,
+      porDesinfectar: c['POR_DESINFECTAR'] ?? 0,
+      sinDevolver: c['SIN_DEVOLVER'] ?? 0,
+    };
   });
 
-  readonly operaciones = computed(() => this.clinica.operaciones().slice(0, 7).map(o => ({
-    ...o, hora: hhmm(o.t), tono: TONO_OPERACION[o.tipo],
+  readonly porDesinfectar = computed(() => (this.resumen()?.porDesinfectar ?? []).map(t => ({
+    id: t.tarjetaId, codigo: t.codigo, desde: t.desde ? hhmm(Date.parse(t.desde)) : '—',
   })));
 
-  /** Tarjetas de ejemplo para la caja "Ayuda de demo". En uso: primero las de pacientes que llevan más tiempo. */
-  readonly ayuda = computed(() => ({
-    disponibles: this.conEstado('Disponible').slice(0, 8).map(t => t.id),
-    enUso: this.conEstado('En uso').sort((a, b) => (a.desde ?? 0) - (b.desde ?? 0)).slice(0, 8).map(t => t.id),
-    porDesinfectar: this.conEstado('Por desinfectar').map(t => t.id),
-  }));
+  readonly pendientes = computed(() => (this.resumen()?.sinDevolver ?? []).map(t => ({
+    id: t.tarjetaId, codigo: t.codigo, atencion: t.atencionCodigo ?? '—',
+    sinLecturas: t.desde ? duracion(minutos(Date.now() - Date.parse(t.desde))) : '—',
+  })));
+
+  readonly operaciones = computed(() => (this.resumen()?.ultimasOperaciones ?? []).slice(0, 7).map(o => ({
+    hora: hhmm(Date.parse(o.fecha)),
+    tipo: OPERACIONES[o.tipo]?.texto ?? o.tipo,
+    tono: OPERACIONES[o.tipo]?.tono ?? '',
+    tarjeta: o.tarjeta, atencion: o.atencion, totalMin: o.totalMin,
+  })));
+
+  /** Tarjetas de ejemplo para la caja "Ayuda de demo". En uso: primero las que llevan más tiempo. */
+  readonly ayuda = computed(() => {
+    const de = (estado: string) => this.tarjetas().filter(t => t.estado === estado);
+    return {
+      disponibles: de('DISPONIBLE').slice(0, 8).map(t => t.codigo),
+      enUso: de('EN_USO').sort((a, b) => (a.desde ?? '').localeCompare(b.desde ?? '')).slice(0, 8).map(t => t.codigo),
+      porDesinfectar: de('POR_DESINFECTAR').map(t => t.codigo),
+      sinDevolver: de('SIN_DEVOLVER').map(t => t.codigo),
+    };
+  });
 
   alternarModo(modo: Exclude<ModoAdmision, 'auto'>): void {
     this.modo.update(actual => (actual === modo ? 'auto' : modo));
   }
 
-  /** Acepta "T-07", "t7", "T 7" o solo "7". Devuelve true si la operación salió bien. */
-  escanear(texto: string): boolean {
-    const codigo = normalizarCodigo(texto);
-    if (!codigo) return false;
-    const r = this.procesar(codigo);
-    this.resultado.set(r);
-    return r.tipo !== 'error';
+  /** Recarga el panel derecho y la lista de tarjetas. */
+  async cargar(): Promise<void> {
+    try {
+      const [resumen, tarjetas] = await Promise.all([
+        firstValueFrom(this.http.get<ResumenApi>(`${API}/admision/resumen`)),
+        firstValueFrom(this.http.get<TarjetaApi[]>(`${API}/tarjetas`)),
+      ]);
+      this.resumen.set(resumen);
+      this.tarjetas.set(tarjetas);
+    } catch {
+      /* el error de sesión lo maneja el interceptor; el panel conserva lo último que se cargó */
+    }
   }
 
-  private procesar(codigo: string): ResultadoEscaneo {
-    const quien = this.auth.actor();
-    const t = this.clinica.tarjeta(codigo);
-    const modo = this.modo();
+  /** Devuelve true si la operación salió bien (para el sonido de éxito). */
+  async escanear(texto: string): Promise<boolean> {
+    const codigoQr = texto.trim();
+    if (!codigoQr || this.ocupado()) return false;
+    this.ocupado.set(true);
+    try {
+      const r = await firstValueFrom(this.http.post<EscaneoApi>(`${API}/admision/escaneos`, { codigoQr, modo: MODO_API[this.modo()] }));
+      this.resultado.set(this.resultadoDe(r));
+      this.recordarDeshacer(r);
+      return true;
+    } catch (e) {
+      const p = problemaDe(e);
+      this.resultado.set(this.errorDe(p.codigo, mensajeDe(p), p.datos));
+      return false;
+    } finally {
+      this.ocupado.set(false);
+      await this.cargar();
+    }
+  }
 
-    if (!t) {
-      return { tipo: 'error', titulo: `Tarjeta ${codigo} no registrada`, texto: 'Pide al Administrador que la registre en Dispositivos.' };
+  async deshacer(): Promise<void> {
+    const pendiente = this.deshacible();
+    if (!pendiente) return;
+    try {
+      const t = await firstValueFrom(this.http.post<TarjetaApi>(`${API}/admision/atenciones/${pendiente.atencionId}/deshacer`, {}));
+      this.resultado.set({ tipo: 'info', titulo: 'Entrega deshecha', texto: `La atención quedó anulada y ${t.codigo} está disponible otra vez.` });
+    } catch (e) {
+      this.resultado.set({ tipo: 'error', titulo: 'No se pudo deshacer', texto: mensajeDe(problemaDe(e)) });
     }
-    if (t.estado === 'Baja') {
-      return { tipo: 'error', titulo: `La tarjeta ${t.id} está dada de baja`, texto: 'Use otra tarjeta disponible.' };
+    this.olvidarDeshacer();
+    await this.cargar();
+  }
+
+  async marcarDesinfectada(tarjetaId: number, codigo: string): Promise<void> {
+    try {
+      await firstValueFrom(this.http.post(`${API}/tarjetas/${tarjetaId}/desinfectar`, {}));
+      this.resultado.set({ tipo: 'ok', titulo: `${codigo} desinfectada`, texto: 'Ya está disponible para entregar.' });
+      this.toast.mostrar(`${codigo} disponible`);
+    } catch (e) {
+      this.toast.mostrar(mensajeDe(problemaDe(e)), 'bad');
     }
-    if (t.estado === 'Por desinfectar') {
+    await this.cargar();
+  }
+
+  async marcarExtraviada(tarjetaId: number, codigo: string): Promise<void> {
+    try {
+      await firstValueFrom(this.http.post(`${API}/tarjetas/${tarjetaId}/extraviar`, {}));
+      this.toast.mostrar(`${codigo} marcada como extraviada`, 'warn');
+    } catch (e) {
+      this.toast.mostrar(mensajeDe(problemaDe(e)), 'bad');
+    }
+    await this.cargar();
+  }
+
+  private resultadoDe(r: EscaneoApi): ResultadoEscaneo {
+    const a = r.atencion;
+    switch (r.operacion) {
+      case 'ENTREGA':
+        return {
+          tipo: 'ok', antetitulo: `Tarjeta ${r.tarjeta.codigo} entregada · ${hhmm(Date.parse(a!.inicioEn))}`, grande: a!.codigo,
+          texto: 'Lea el código en voz alta al paciente. El recorrido y el tiempo de espera ya empezaron.',
+        };
+      case 'DEVOLUCION':
+        return {
+          tipo: 'ok', antetitulo: `Tarjeta ${r.tarjeta.codigo} recibida · recorrido terminado`, grande: a!.codigo,
+          tiempos: { espera: duracion(a!.esperaMin), consulta: duracion(a!.consultaMin), total: duracion(a!.totalMin) },
+          texto: 'La tarjeta pasó a «Por desinfectar». Espera y consulta se medirán con los nodos (Avance 2).',
+        };
+      default:
+        return { tipo: 'info', titulo: `Tarjeta ${r.tarjeta.codigo} recuperada`, texto: 'Pasa a «Por desinfectar». Desinféctela antes de volver a entregarla.' };
+    }
+  }
+
+  /** Mensajes del prototipo para cada código de error de la API. */
+  private errorDe(codigo: string, mensaje: string, datos?: Record<string, unknown>): ResultadoEscaneo {
+    if (codigo === 'RN03_POR_DESINFECTAR') {
+      const codigoTarjeta = String(datos?.['tarjeta'] ?? '');
+      const desde = datos?.['desde'] ? ` se devolvió a las ${hhmm(Date.parse(String(datos['desde'])))}` : '';
       return {
-        tipo: 'error', titulo: 'Esta tarjeta aún no está desinfectada', desinfectar: t.id,
-        texto: `${t.id} se devolvió a las ${t.desde ? hhmm(t.desde) : '—'}. Desinféctela con alcohol al 70% antes de entregarla.`,
+        tipo: 'error', titulo: 'Esta tarjeta aún no está desinfectada',
+        texto: `${codigoTarjeta}${desde}. Desinféctela con alcohol al 70% antes de entregarla.`,
+        desinfectar: { id: Number(datos?.['tarjetaId']), codigo: codigoTarjeta },
       };
     }
-    if (t.estado === 'Sin devolver' || t.estado === 'Extraviada') {
-      this.recordar({ tarjeta: t });
-      this.clinica.recuperarTarjeta(t.id, quien);
-      return { tipo: 'info', titulo: `Tarjeta ${t.id} recuperada`, texto: 'Pasa a «Por desinfectar». Desinféctela antes de volver a entregarla.' };
-    }
-    if (t.estado === 'Disponible') {
-      if (modo === 'recibir') {
-        return { tipo: 'error', titulo: `${t.id} no está en uso`, texto: 'Esta tarjeta está disponible: no hay nada que recibir. Para entregarla, vuelva al modo automático.' };
-      }
-      const a = this.clinica.entregarTarjeta(t.id, quien);
-      this.recordar({ tarjeta: t, atencionCreadaId: a.id });
-      return {
-        tipo: 'ok', antetitulo: `Tarjeta ${t.id} entregada · ${hhmm(a.inicio)}`, grande: a.id,
-        texto: 'Lea el código en voz alta al paciente. El recorrido y el tiempo de espera ya empezaron.',
-      };
-    }
-    // En uso
-    if (modo === 'entregar') {
-      return { tipo: 'error', titulo: `${t.id} ya está en uso (${t.atencionId})`, texto: 'Para entregarla primero hay que recibirla. Vuelva al modo automático.' };
-    }
-    const antes = this.clinica.atenciones().find(a => a.id === t.atencionId);
-    const a = this.clinica.recibirTarjeta(t.id, quien);
-    if (!a) return { tipo: 'error', titulo: `No se pudo recibir ${t.id}`, texto: 'La tarjeta no tiene una atención abierta.' };
-    this.recordar({ tarjeta: t, atencion: antes });
-    const ahora = this.clinica.ahora();
-    return {
-      tipo: 'ok', antetitulo: `Tarjeta ${t.id} recibida · recorrido terminado`, grande: a.id,
-      tiempos: { espera: duracion(espera(a)), consulta: duracion(consulta(a, ahora)), total: duracion(total(a, ahora)) },
-      texto: 'La tarjeta pasó a «Por desinfectar».',
-    };
+    return { tipo: 'error', titulo: mensaje, texto: codigo === 'SIN_CONEXION' ? '' : 'Revise el código e intente de nuevo.' };
   }
 
-  marcarDesinfectada(tarjetaId: string): void {
-    this.clinica.marcarDesinfectada(tarjetaId, this.auth.actor());
-    this.resultado.set({ tipo: 'ok', titulo: `${tarjetaId} desinfectada`, texto: 'Ya está disponible para entregar.' });
-    this.toast.mostrar(`${tarjetaId} disponible`);
+  /** RN-04: el botón Deshacer vive los 30 s que dice la API (deshacerHasta). */
+  private recordarDeshacer(r: EscaneoApi): void {
+    this.olvidarDeshacer();
+    if (r.operacion !== 'ENTREGA' || !r.deshacerHasta || !r.atencion) return;
+    const hasta = Date.parse(r.deshacerHasta);
+    this.deshacible.set({ atencionId: r.atencion.id, hasta });
+    this.temporizadorDeshacer = setTimeout(() => this.deshacible.set(null), Math.max(0, hasta - Date.now()));
   }
 
-  marcarExtraviada(tarjetaId: string): void {
-    this.clinica.marcarExtraviada(tarjetaId, this.auth.actor());
-    this.toast.mostrar(`${tarjetaId} marcada como extraviada`, 'warn');
-  }
-
-  deshacer(): void {
-    const previo = this.deshacible();
-    if (!previo) return;
-    this.clinica.revertir(previo, this.auth.actor());
-    this.olvidar();
-    this.resultado.set({ tipo: 'info', titulo: 'Operación deshecha', texto: 'Todo volvió al estado anterior.' });
-  }
-
-  /** Guarda cómo estaba todo para poder deshacer durante 30 s. */
-  private recordar(previo: EstadoPrevio): void {
-    this.olvidar();
-    this.deshacible.set(previo);
-    this.temporizador = setTimeout(() => this.deshacible.set(null), DESHACER_MS);
-  }
-
-  private olvidar(): void {
-    if (this.temporizador) clearTimeout(this.temporizador);
+  private olvidarDeshacer(): void {
+    if (this.temporizadorDeshacer) clearTimeout(this.temporizadorDeshacer);
     this.deshacible.set(null);
   }
-}
-
-/** "7", "t7", "T 7" o "T-07" → "T-07". Otros textos se devuelven en mayúsculas tal cual. */
-export function normalizarCodigo(texto: string): string {
-  const limpio = texto.trim().toUpperCase();
-  const m = limpio.match(/^T?\s*-?\s*(\d{1,3})$/);
-  return m ? `T-${pad2(+m[1])}` : limpio;
 }

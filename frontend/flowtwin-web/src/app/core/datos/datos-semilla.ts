@@ -9,7 +9,7 @@ import { HORA_APERTURA, LLEGADAS_POR_HORA, PACIENTES_POR_PESO, PISO_PILOTO, ZONA
 import { Alerta, Atencion, EntradaAuditoria, Nodo, Operacion, Tarjeta } from './modelos';
 import { crearRuta, recorrer } from './recorrido';
 
-export interface EstadoInicial {
+export interface EstadoInicial { 
   ahora: number;
   siguienteId: number;
   tarjetas: Tarjeta[];

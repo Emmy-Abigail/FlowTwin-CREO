@@ -1,6 +1,40 @@
-@FlowTwin.Api_HostAddress = http://localhost:5193
+# Peticiones de prueba. En VS Code, con la extensión REST Client, aparece "Send Request" encima de cada una.
+# Primero ejecuta el login y copia el accessToken de la respuesta en @token.
 
-GET {{FlowTwin.Api_HostAddress}}/weatherforecast/
-Accept: application/json
+@api = http://localhost:5080/api/v1
+@token = pega-aqui-el-accessToken
 
-###
+### Salud
+GET {{api}}/salud
+
+### F-01 · Iniciar sesión como Operador
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{ "correo": "operador@creo.pe", "clave": "demo123" }
+
+### Quién soy
+GET {{api}}/auth/yo
+Authorization: Bearer {{token}}
+
+### Resumen de Admisión
+GET {{api}}/admision/resumen
+Authorization: Bearer {{token}}
+
+### F-06 · Entregar la T-02 (o devolverla, si ya está en uso)
+POST {{api}}/admision/escaneos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "codigoQr": "T-02", "modo": "AUTO" }
+
+### Caso de error: T-11 está por desinfectar
+POST {{api}}/admision/escaneos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "codigoQr": "11" }
+
+### Tarjetas
+GET {{api}}/tarjetas
+Authorization: Bearer {{token}}
