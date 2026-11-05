@@ -32,6 +32,8 @@ export class LoginPage {
   protected mayusculas = signal(false);
   protected enviando = signal(false);
   protected mostrarAyuda = signal(false);
+  /** Sacude el formulario un instante cuando el servidor rechaza el ingreso (se apaga si se pide menos movimiento). */
+  protected sacudir = signal(false);
 
   /** Un campo muestra su error si ya se salió de él o si se intentó enviar. */
   private tocadoCorreo = signal(false);
@@ -92,6 +94,7 @@ export class LoginPage {
     }
     this.errorServidor.set(r.error);
     this.errorServidorCampo.set(r.campos);
+    this.sacudir.set(true);
     // La contraseña se vacía por seguridad; no se le dice «escribe tu contraseña» por algo que no hizo mal
     this.clave.set('');
     this.tocadoClave.set(false);
