@@ -1,62 +1,106 @@
-.login { display: grid; grid-template-columns: 1fr 1fr; min-height: 100vh; }
-.login-l {
-  background: var(--negro); color: #fff; padding: 48px 56px;
-  display: flex; flex-direction: column; justify-content: space-between; gap: 32px;
+/* Login en dos mitades: la oscura da personalidad (una sola ilustración), la blanca tiene el formulario.
+   Animaciones sutiles; _base.scss las apaga todas si el sistema pide reducir el movimiento. */
+.login { min-height: 100dvh; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+
+/* ---------- Mitad oscura ---------- */
+.presentacion {
+  position: relative; overflow: hidden; background: var(--negro); color: #F7F4EF;
+  padding: clamp(28px, 3vw, 48px) clamp(28px, 4vw, 64px);
+  /* Dos franjas: la etiqueta arriba (a la altura del logo de la derecha) y el mensaje en el centro,
+     frente al formulario. Sin ilustración: el mensaje y sus íconos bastan. */
+  display: grid; grid-template-rows: auto minmax(0, 1fr); row-gap: 24px;
+  animation: aparecer .6s ease-out both;
 }
-.sub-logo { color: #BDB5B7; margin-top: 4px; }
-.pitch { display: flex; flex-direction: column; gap: 14px; max-width: 460px; }
-.eyebrow { color: var(--amarillo); font-weight: 700; display: flex; align-items: center; gap: 8px; }
-.eyebrow::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--amarillo); }
-.login-l h1 { font-size: 44px; line-height: 1.1; font-weight: 900; color: #fff; }
-.login-l p { color: #BDB5B7; margin: 0; font-size: 16px; }
-.login-l small { color: #8C8486; }
-.login-r { display: flex; align-items: center; justify-content: center; padding: 48px 24px; }
-.login-box { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 16px; }
-.login-box h1 { font-size: 24px; }
-.login-box .sub { color: var(--gris); margin: -8px 0 4px; }
-.login-l small { display: flex; align-items: center; gap: 6px; }
-.puntos { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
-.puntos li { display: flex; align-items: center; gap: 10px; color: #E4DFE0; font-size: 14px; }
-.puntos app-icono { color: var(--amarillo); }
-
-.login-box header { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
-.login-box .sub { margin: 0; }
-
-/* Campo con ícono a la izquierda (y botón de ver contraseña a la derecha) */
-.con-icono { position: relative; display: flex; align-items: center; }
-.con-icono > app-icono { position: absolute; left: 12px; color: var(--gris); pointer-events: none; }
-.con-icono .inp { width: 100%; padding-left: 38px; }
-.con-icono .inp#lg-pass { padding-right: 44px; }
-.ver {
-  position: absolute; right: 4px; width: 36px; height: 36px; border: 0; border-radius: 8px;
-  background: none; color: var(--gris); cursor: pointer; display: grid; place-items: center;
+.etiqueta {
+  min-height: clamp(40px, 3.6vw, 52px); display: flex; align-items: center;   /* mismo alto que el logo */
+  font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--amarillo);
 }
-.ver:hover { color: var(--negro); background: rgba(0, 0, 0, .05); }
-.ver:focus-visible { outline: 2px solid var(--amarillo); outline-offset: 1px; }
-.inp[aria-invalid="true"] { border-color: var(--alta); }
+.mensaje { align-self: center; max-width: 560px; display: flex; flex-direction: column; gap: clamp(14px, 2vh, 20px); padding-bottom: clamp(28px, 6vh, 72px); }
+.frase {
+  margin: 0; font-family: var(--f-disp); font-weight: 900; font-size: clamp(32px, 3.2vw, 50px);
+  line-height: 1.06; letter-spacing: -.02em; text-wrap: balance;
+}
+.detalle { margin: 0; font-size: clamp(15px, 1.15vw, 18px); line-height: 1.5; color: #CFC7BF; max-width: 480px; }
+.puntos { list-style: none; margin: clamp(8px, 2vh, 20px) 0 0; padding: 0; display: flex; flex-direction: column; gap: clamp(14px, 2.2vh, 22px); }
+.puntos li { display: flex; align-items: center; gap: 16px; }
+.puntos .icono {
+  flex: none; width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center;
+  background: var(--negro-2); color: var(--amarillo); border: 1px solid var(--negro-3);
+}
+.puntos li > span:last-child { display: flex; flex-direction: column; gap: 2px; font-size: clamp(14px, 1vw, 15px); color: #BDB5B0; }
+.puntos b { font-size: clamp(15px, 1.15vw, 17px); color: #F7F4EF; }
 
-.mayus { min-height: 16px; display: flex; align-items: center; gap: 5px; color: #9A6700; font-size: 12px; font-weight: 600; }
+/* ---------- Mitad blanca ---------- */
+.acceso {
+  background: var(--fondo); padding: clamp(24px, 3vw, 48px) clamp(24px, 4vw, 72px);
+  display: flex; flex-direction: column; align-items: center; gap: 24px;
+}
+.logo-flowtwin { align-self: flex-start; height: clamp(40px, 3.6vw, 52px); width: auto; animation: aparecer .5s ease-out both; }
+.formulario {
+  flex: 1; justify-content: center; width: 100%; max-width: 400px;
+  display: flex; flex-direction: column; gap: clamp(12px, 1.8vh, 16px);
+  animation: subir .5s .1s ease-out both;
+}
+.formulario.sacudir { animation: sacudir .4s ease-in-out; }
+.titulo { display: flex; flex-direction: column; gap: 6px; margin-bottom: 4px; }
+.titulo h1 { font-size: clamp(26px, 2.2vw, 32px); font-weight: 900; line-height: 1.1; }
+.titulo p { margin: 0; color: var(--gris); }
+
+.campo { display: flex; flex-direction: column; gap: 6px; }
+.campo label { font-size: 14px; font-weight: 700; }
+.entrada {
+  display: flex; align-items: center; gap: 10px; height: 50px; padding: 0 6px 0 14px;
+  border-radius: 12px; border: 1.5px solid transparent; background: var(--campo); color: var(--gris);
+  transition: border-color .15s, background .15s, box-shadow .15s;
+}
+.entrada:focus-within { border-color: var(--tinta); background: var(--fondo); box-shadow: 0 0 0 4px rgba(245, 177, 30, .25); }
+.entrada input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: transparent; font-size: 16px; color: var(--tinta); }
+.entrada input::placeholder { color: var(--gris-2); }
+.con-error .entrada { border-color: var(--error-borde); background: var(--fondo); }
+.ver { width: 38px; height: 38px; border: 0; border-radius: 9px; background: none; color: var(--gris); display: grid; place-items: center; flex: none; }
+.ver:hover { color: var(--tinta); background: var(--fondo-2); }
+.msg-error, .msg-mayus { display: flex; align-items: flex-start; gap: 6px; font-size: 14px; font-weight: 600; animation: aparecer .2s ease-out; }
+.msg-error { color: var(--error); }
+.msg-mayus { color: var(--ambar-t); }
+.msg-error app-icono, .msg-mayus app-icono { margin-top: 2px; flex: none; }
 
 .aviso-err {
-  display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 10px;
-  background: #FDECEC; border: 1px solid #F3C2C2; color: var(--alta); font-size: 14px; font-weight: 600;
+  display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 12px;
+  background: var(--durazno); color: var(--error); font-size: 15px; font-weight: 600; animation: aparecer .25s ease-out;
 }
 .aviso-err app-icono { flex: none; margin-top: 1px; }
 
-.fila { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: -4px; }
-.check { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
-.check input { width: 16px; height: 16px; accent-color: var(--negro); }
-
-.spin {
-  width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent;
-  animation: girar .7s linear infinite;
+.ingresar {
+  height: 52px; margin-top: 4px; border: 0; border-radius: 12px; background: var(--rojo); color: #fff;
+  font-size: 17px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  transition: background .15s, transform .15s;
 }
-@keyframes girar { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .spin { animation-duration: 2s; } }
+.ingresar:hover { background: var(--rojo-osc); }
+.ingresar:hover app-icono { transform: translateX(3px); }
+.ingresar app-icono { transition: transform .15s; }
+.ingresar:active { transform: scale(.99); }
+.ingresar[aria-busy="true"] { cursor: progress; }
 
-@media (max-width: 860px) {
-  .login { grid-template-columns: 1fr; }
-  .login-l { padding: 32px 20px; }
-  .puntos { display: none; }
-  .login-l h1 { font-size: 32px; }
+.fila { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; font-size: 14px; }
+.check { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.check input { width: 18px; height: 18px; accent-color: var(--tinta); }
+.enlace { border: 0; background: none; padding: 0; color: var(--rojo); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.ayuda { margin: 0; padding: 12px 14px; border-radius: 12px; background: var(--amarillo-suave); color: var(--ambar-t); font-size: 14px; animation: aparecer .2s ease-out; }
+
+.pie { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 16px; font-size: 13px; color: var(--gris-2); }
+.pie span { display: flex; align-items: center; gap: 8px; }
+.logo-creo { height: 30px; width: auto; }
+
+.spin { width: 18px; height: 18px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: girar .7s linear infinite; }
+
+/* ---------- Animaciones ---------- */
+@keyframes aparecer { from { opacity: 0; } to { opacity: 1; } }
+@keyframes subir { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes sacudir { 0%, 100% { transform: none; } 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+@keyframes girar { to { transform: rotate(360deg); } }
+
+/* En pantallas angostas la mitad oscura se oculta: el formulario es lo esencial */
+@media (max-width: 960px) {
+  .login { grid-template-columns: minmax(0, 1fr); }
+  .presentacion { display: none; }
 }

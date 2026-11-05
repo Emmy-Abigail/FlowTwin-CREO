@@ -39,3 +39,15 @@ export function mensajeDe(p: Problema): string {
   const detalles = p.errores ? Object.values(p.errores).flat() : [];
   return detalles.length ? detalles.join(' ') : p.titulo;
 }
+
+/**
+ * Errores de validación del servidor por campo, con el nombre del campo en minúscula inicial
+ * ("Correo" → "correo"), como lo usan los formularios. Solo el primer mensaje de cada campo.
+ */
+export function erroresPorCampo(p: Problema): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(p.errores ?? {})
+      .filter(([, mensajes]) => mensajes.length > 0)
+      .map(([campo, mensajes]) => [campo.charAt(0).toLowerCase() + campo.slice(1), mensajes[0]]),
+  );
+}
