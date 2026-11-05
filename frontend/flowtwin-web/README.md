@@ -1,7 +1,7 @@
 # CREO FlowTwin · frontend (flowtwin-web)
 
 Gemelo digital del flujo de pacientes de la Clínica CREO+. Angular 22 (standalone, Signals, SCSS) y Three.js.
-**Todos los datos son simulados en el navegador**: aún no hay backend.
+Login, usuarios y Admisión usan la API real (`backend/`). El Gemelo y el Historial siguen simulados hasta el Avance 2.
 
 ## Cómo correrlo
 
@@ -11,8 +11,12 @@ npm install         # solo la primera vez
 npx ng serve        # abre http://localhost:4200
 ```
 
-Usuarios demo (contraseña `demo123`): `operador@creo.pe`, `gerencia@creo.pe`, `admin@creo.pe`
-y `nuevo@creo.pe` (primer ingreso: obliga a cambiar la contraseña).
+Necesita la API corriendo en http://localhost:5080 (ver `backend/README.md`): `ng serve` le reenvía
+todo lo que empieza con `/api` mediante `proxy.conf.json`.
+
+En desarrollo, la API siembra usuarios de prueba (contraseña `demo123`): `operador@creo.pe`,
+`gerencia@creo.pe` y `admin@creo.pe`. El login no tiene accesos rápidos: se escribe el correo y la
+contraseña igual que en producción.
 
 ## Estructura
 

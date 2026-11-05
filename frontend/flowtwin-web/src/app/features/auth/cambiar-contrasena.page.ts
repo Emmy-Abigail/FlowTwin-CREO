@@ -30,6 +30,7 @@ import { IconoComponent } from '../../shared/componentes/icono.component';
         <label for="cp-c">Confirmar nueva contraseña</label>
         <input class="inp" id="cp-c" name="confirmacion" type="password" required [ngModel]="confirmacion()" (ngModelChange)="confirmacion.set($event)">
       </div>
+      <p class="hint sin-margen">Tampoco puede contener tu correo ni tu nombre, ni repetir tus 3 últimas contraseñas.</p>
       <div class="checks">
         @for (r of requisitos(); track r.texto) {
           <span [class.ok]="r.ok">
@@ -39,7 +40,7 @@ import { IconoComponent } from '../../shared/componentes/icono.component';
       </div>
       @if (error()) { <div class="err">{{ error() }}</div> }
       <div class="toolbar">
-        <button appBoton="primario" type="submit">Guardar contraseña</button>
+        <button appBoton="primario" type="submit" [disabled]="guardando()">{{ guardando() ? 'Guardando…' : 'Guardar contraseña' }}</button>
         @if (!primerIngreso()) { <a appBoton="borde" [routerLink]="auth.rutaInicio()">Cancelar</a> }
       </div>
     </form>
@@ -49,6 +50,7 @@ import { IconoComponent } from '../../shared/componentes/icono.component';
     .checks { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; }
     .checks span { display: flex; gap: 6px; align-items: center; color: var(--gris); }
     .checks span.ok { color: #1E6E4A; }
+    .sin-margen { margin: 0; }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -62,10 +64,14 @@ export class CambiarContrasenaPage {
   protected confirmacion = signal('');
   protected error = signal('');
   protected requisitos = computed(() => cumpleRequisitos(this.nueva()));
-  protected primerIngreso = computed(() => this.auth.usuario()?.estado === 'Primer ingreso');
+  protected primerIngreso = computed(() => this.auth.usuario()?.debeCambiarContrasena === true);
+  protected guardando = signal(false);
 
-  protected guardar(): void {
-    const error = this.auth.cambiarClave(this.actual(), this.nueva(), this.confirmacion());
+  protected async guardar(): Promise<void> {
+    if (this.guardando()) return;
+    this.guardando.set(true);
+    const error = await this.auth.cambiarClave(this.actual(), this.nueva(), this.confirmacion());
+    this.guardando.set(false);
     if (error) {
       this.error.set(error);
       return;

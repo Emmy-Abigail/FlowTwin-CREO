@@ -8,40 +8,79 @@
       <span class="eyebrow">CREO FlowTwin</span>
       <h1>Gemelo digital del flujo de pacientes</h1>
       <p>Ocupación, esperas y recorridos en tiempo real, con identificadores anónimos.</p>
+      <ul class="puntos">
+        <li><app-icono nombre="layers" [tamano]="16" /> Plano 3D del piso con la ocupación de cada zona</li>
+        <li><app-icono nombre="card" [tamano]="16" /> Admisión con tarjetas BLE, sin datos personales</li>
+        <li><app-icono nombre="chart" [tamano]="16" /> Tiempos de espera y atención por paciente</li>
+      </ul>
     </div>
-    <small>Clínica CREO+ · Sede Principal</small>
+    <small><app-icono nombre="escudo" [tamano]="14" /> Acceso solo para personal autorizado de Clínica CREO+</small>
   </section>
 
   <section class="login-r">
-    <form class="login-box" autocomplete="off" (ngSubmit)="ingresar()">
-      <h1>Iniciar sesión</h1>
-      <p class="sub">Ingresa con tu correo institucional.</p>
+    <form class="login-box" novalidate (ngSubmit)="ingresar()">
+      <header>
+        <h1>Iniciar sesión</h1>
+        <p class="sub">Ingresa con tu correo institucional.</p>
+      </header>
+
+      @if (error()) {
+        <div class="aviso-err" role="alert" aria-live="assertive">
+          <app-icono nombre="alert" [tamano]="18" />
+          <span>{{ error() }}</span>
+        </div>
+      }
 
       <div class="field">
         <label for="lg-mail">Correo</label>
-        <input class="inp" id="lg-mail" name="correo" type="email" placeholder="nombre@creo.pe" required
-               [ngModel]="correo()" (ngModelChange)="correo.set($event)">
+        <div class="con-icono">
+          <app-icono nombre="mail" [tamano]="16" />
+          <input class="inp" id="lg-mail" name="correo" type="email" inputmode="email"
+                 autocomplete="username" autocapitalize="none" spellcheck="false"
+                 placeholder="nombre@creo.pe" required #campoCorreo
+                 [attr.aria-invalid]="!!error()"
+                 [ngModel]="correo()" (ngModelChange)="escribir('correo', $event)">
+        </div>
       </div>
+
       <div class="field">
         <label for="lg-pass">Contraseña</label>
-        <input class="inp" id="lg-pass" name="clave" type="password" required
-               [ngModel]="clave()" (ngModelChange)="clave.set($event)">
+        <div class="con-icono">
+          <app-icono nombre="lock" [tamano]="16" />
+          <input class="inp" id="lg-pass" name="clave" [type]="verClave() ? 'text' : 'password'"
+                 autocomplete="current-password" required #campoClave
+                 [attr.aria-invalid]="!!error()" aria-describedby="lg-mayus"
+                 [ngModel]="clave()" (ngModelChange)="escribir('clave', $event)"
+                 (keyup)="revisarMayusculas($event)" (keydown)="revisarMayusculas($event)"
+                 (blur)="mayusculas.set(false)">
+          <button class="ver" type="button" (click)="verClave.set(!verClave())"
+                  [attr.aria-label]="verClave() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                  [attr.aria-pressed]="verClave()">
+            <app-icono [nombre]="verClave() ? 'ojoNo' : 'ojo'" [tamano]="18" />
+          </button>
+        </div>
+        <span id="lg-mayus" class="mayus" aria-live="polite">
+          @if (mayusculas()) { <app-icono nombre="alert" [tamano]="13" /> Bloq Mayús está activado }
+        </span>
       </div>
-      @if (error()) { <div class="err" role="alert">{{ error() }}</div> }
 
-      <button appBoton="primario" [bloque]="true" type="submit"><app-icono nombre="inn" [tamano]="16" /> Ingresar</button>
-      <button class="link" type="button" (click)="mostrarAyuda.set(true)">¿Olvidaste tu contraseña?</button>
+      <div class="fila">
+        <label class="check">
+          <input type="checkbox" name="recordar" [ngModel]="recordar()" (ngModelChange)="recordar.set($event)">
+          Recordar mi correo
+        </label>
+        <button class="link" type="button" [attr.aria-expanded]="mostrarAyuda()"
+                (click)="mostrarAyuda.set(!mostrarAyuda())">¿Olvidaste tu contraseña?</button>
+      </div>
       @if (mostrarAyuda()) {
-        <div class="helpbox">Pide al Administrador que restablezca tu contraseña. Él te entregará una contraseña temporal.</div>
+        <div class="helpbox">Pide al Administrador que restablezca tu contraseña. Te entregará una contraseña temporal para ingresar.</div>
       }
 
-      <div class="demo-acc">
-        <span class="lbl-up">Acceso rápido de demo</span>
-        @for (d of accesosDemo; track d.correo) {
-          <button appBoton="oscuro" [bloque]="true" type="button" (click)="entrar(d.correo)">Entrar como {{ d.rol }}</button>
-        }
-        <span class="hint">También puedes usar cualquier correo de demo con la contraseña «demo123». Prueba nuevo&#64;creo.pe para ver el primer ingreso.</span>
-      </div>
+      <button appBoton="primario" [bloque]="true" type="submit" [disabled]="enviando() || !completo()"
+              [attr.aria-busy]="enviando()">
+        @if (enviando()) { <span class="spin" aria-hidden="true"></span> Ingresando… }
+        @else { <app-icono nombre="inn" [tamano]="16" /> Ingresar }
+      </button>
     </form>
   </section>
 </div>

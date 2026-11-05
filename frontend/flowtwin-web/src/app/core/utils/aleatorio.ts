@@ -5,7 +5,7 @@
 export class Aleatorio {
   constructor(private semilla: number) {}
 
-  /** Número entre 0 y 1. */
+  /** Número entre 0 y 1. */ 
   siguiente(): number {
     this.semilla = (this.semilla * 16807) % 2147483647;
     return (this.semilla - 1) / 2147483646;
