@@ -11,22 +11,49 @@ namespace FlowTwin.Api.Infraestructura;
 
 /// <summary>
 /// Datos de DEMOSTRACIÓN, solo en desarrollo (BaseDatos:SembrarDemo = true). Los mismos usuarios del
-/// prototipo (contraseña demo123) y las 15 tarjetas del piloto, con dos casos para probar Admisión:
-/// T-11 por desinfectar y T-14 sin devolver. Producción solo tiene los datos de la migración.
+/// prototipo (contraseña demo123), las 15 tarjetas del piloto, con dos casos para probar Admisión
+/// (T-11 por desinfectar y T-14 sin devolver), y 3 nodos con claves conocidas para el simulador.
+/// Producción solo tiene los datos de la migración. Cada bloque se siembra solo si falta, así una
+/// base de desarrollo existente recibe lo nuevo sin duplicar lo anterior.
 /// </summary>
 public static class SemillaDesarrollo
 {
     public const string ClaveDemo = "demo123";
 
+    /// <summary>Clave de desarrollo de un nodo: «nk_dev_N-01». Nunca se usa fuera de desarrollo.</summary>
+    public static string ClaveNodoDemo(string codigo) => $"{ClaveNodo.Prefijo}dev_{codigo}";
+
     public static async Task SembrarAsync(IServiceProvider servicios, CancellationToken ct = default)
     {
         using var scope = servicios.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FlowTwinDbContext>();
-        var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher<Usuario>>();
-        var zona = scope.ServiceProvider.GetRequiredService<ZonaHoraria>();
-        var reloj = scope.ServiceProvider.GetRequiredService<IReloj>();
+        if (!await db.Usuarios.IgnoreQueryFilters().AnyAsync(u => u.Id != UsuarioSistema.Id, ct))
+            await UsuariosYTarjetasAsync(scope.ServiceProvider, db, ct);
+        if (!await db.Nodos.IgnoreQueryFilters().AnyAsync(ct))
+            await NodosAsync(db, ct);
+    }
 
-        if (await db.Usuarios.IgnoreQueryFilters().AnyAsync(u => u.Id != UsuarioSistema.Id, ct)) return;
+    /// <summary>Los 3 nodos del prototipo, en sus zonas, con MAC de prueba (02:… = dirección local, no de fábrica).</summary>
+    private static async Task NodosAsync(FlowTwinDbContext db, CancellationToken ct)
+    {
+        Nodo N(int n, int zonaId, decimal x, decimal y)
+        {
+            var nodo = new Nodo { Codigo = $"N-{n:D2}", Mac = $"02:00:00:00:00:{n:D2}", ZonaId = zonaId, PosX = x, PosY = y };
+            nodo.ClaveApiHash = ClaveNodo.Hash(ClaveNodoDemo(nodo.Codigo));
+            return nodo;
+        }
+        var nodos = new[] { N(1, 1, 36.0m, 11.2m), N(2, 3, 22.2m, 17.6m), N(3, 7, 5.9m, 17.7m) };
+        db.Nodos.AddRange(nodos);
+        await db.SaveChangesAsync(ct);
+        db.EventosNodo.AddRange(nodos.Select(n => new EventoNodo { NodoId = n.Id, EstadoNodoId = n.EstadoNodoId, Detalle = "Registrado" }));
+        await db.SaveChangesAsync(ct);
+    }
+
+    private static async Task UsuariosYTarjetasAsync(IServiceProvider sp, FlowTwinDbContext db, CancellationToken ct)
+    {
+        var hasher = sp.GetRequiredService<IPasswordHasher<Usuario>>();
+        var zona = sp.GetRequiredService<ZonaHoraria>();
+        var reloj = sp.GetRequiredService<IReloj>();
 
         // ---- Usuarios del prototipo
         Usuario U(string correo, string nombres, string apellidos, Rol rol, bool debeCambiar = false, bool activo = true)
