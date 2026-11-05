@@ -79,7 +79,7 @@ public static class SemillaDesarrollo
         var tarjetas = Enumerable.Range(1, 15).Select(n => new Tarjeta
         {
             Codigo = $"T-{n:D2}", CodigoQr = $"CREO-T{n:D2}", SedeId = 1,
-            UuidBle = $"f7826da6-4fa2-4e98-8024-bc5b71e0893e-{n:D4}",
+            UuidBle = EmisorBle.Identificador(major: 1, minor: n),
         }).ToList();
         db.Tarjetas.AddRange(tarjetas);
         await db.SaveChangesAsync(ct);

@@ -93,6 +93,14 @@ var ingestaPorMinuto = builder.Configuration.GetValue("LimitePeticiones:IngestaP
 builder.Services.AddRateLimiter(o =>
 {
     o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    // Retry-After (estándar HTTP) le dice al cliente cuántos segundos esperar: el ESP32 lo usa
+    // en vez de adivinar (docs/contrato-integracion-nodos.md)
+    o.OnRejected = (contexto, _) =>
+    {
+        var segundos = contexto.Lease.TryGetMetadata(MetadataName.RetryAfter, out var espera) ? (int)Math.Ceiling(espera.TotalSeconds) : 60;
+        contexto.HttpContext.Response.Headers.RetryAfter = segundos.ToString();
+        return ValueTask.CompletedTask;
+    };
     o.AddPolicy("auth", http => RateLimitPartition.GetFixedWindowLimiter(
         http.Connection.RemoteIpAddress?.ToString() ?? "desconocida",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = porMinuto, Window = TimeSpan.FromMinutes(1) }));
