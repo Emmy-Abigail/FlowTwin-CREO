@@ -1,31 +1,49 @@
-/* Login limpio: una tarjeta centrada sobre blanco, con ilustraciones de línea a los costados. */
-.login {
-  min-height: 100dvh; display: flex;
-  padding: clamp(12px, 2.4vw, 36px); background: var(--fondo-2);
-}
-.lienzo {
-  flex: 1; position: relative; overflow: hidden; border-radius: 24px; background: var(--fondo);
-  padding: clamp(18px, 2.6vw, 40px); display: flex; flex-direction: column;
-}
-.marcas { display: flex; justify-content: space-between; align-items: center; gap: 20px; position: relative; z-index: 1; }
-.logo-flowtwin { height: clamp(40px, 4vw, 54px); width: auto; }
-.logo-creo { height: clamp(32px, 3.2vw, 44px); width: auto; }
+/* Login en dos mitades: la oscura da personalidad (una sola ilustración), la blanca tiene el formulario.
+   Animaciones sutiles; _base.scss las apaga todas si el sistema pide reducir el movimiento. */
+.login { min-height: 100dvh; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 
-.ilustracion { position: absolute; bottom: 64px; width: clamp(220px, 23vw, 330px); height: auto; }
-.ilustracion.izq { left: clamp(8px, 4vw, 70px); }
-.ilustracion.der { right: clamp(8px, 4vw, 70px); width: clamp(200px, 20vw, 290px); }
-.trazo { stroke: var(--tinta); stroke-width: 1.6; stroke-linejoin: round; }
-.trazo.fino { stroke-width: 1.4; }
-/* En pantallas angostas las ilustraciones chocarían con la tarjeta: se ocultan */
-@media (max-width: 1080px) { .ilustracion { display: none; } }
-
-.centro { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; z-index: 1; padding: 12px 0; }
-.tarjeta {
-  width: 100%; max-width: 410px; background: var(--fondo); border-radius: 20px; padding: clamp(24px, 3.2vh, 34px) 32px;
-  box-shadow: var(--sombra-flotante); display: flex; flex-direction: column; gap: clamp(12px, 1.8vh, 16px);
+/* ---------- Mitad oscura ---------- */
+.presentacion {
+  position: relative; overflow: hidden; background: var(--negro); color: #F7F4EF;
+  padding: clamp(28px, 3vw, 48px) clamp(28px, 4vw, 64px);
+  /* Dos franjas: la etiqueta arriba (a la altura del logo de la derecha) y el mensaje en el centro,
+     frente al formulario. Sin ilustración: el mensaje y sus íconos bastan. */
+  display: grid; grid-template-rows: auto minmax(0, 1fr); row-gap: 24px;
+  animation: aparecer .6s ease-out both;
 }
-.titulo { display: flex; flex-direction: column; gap: 6px; }
-.titulo h1 { font-size: 26px; font-weight: 900; line-height: 1.15; }
+.etiqueta {
+  min-height: clamp(40px, 3.6vw, 52px); display: flex; align-items: center;   /* mismo alto que el logo */
+  font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--amarillo);
+}
+.mensaje { align-self: center; max-width: 560px; display: flex; flex-direction: column; gap: clamp(14px, 2vh, 20px); padding-bottom: clamp(28px, 6vh, 72px); }
+.frase {
+  margin: 0; font-family: var(--f-disp); font-weight: 900; font-size: clamp(32px, 3.2vw, 50px);
+  line-height: 1.06; letter-spacing: -.02em; text-wrap: balance;
+}
+.detalle { margin: 0; font-size: clamp(15px, 1.15vw, 18px); line-height: 1.5; color: #CFC7BF; max-width: 480px; }
+.puntos { list-style: none; margin: clamp(8px, 2vh, 20px) 0 0; padding: 0; display: flex; flex-direction: column; gap: clamp(14px, 2.2vh, 22px); }
+.puntos li { display: flex; align-items: center; gap: 16px; }
+.puntos .icono {
+  flex: none; width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center;
+  background: var(--negro-2); color: var(--amarillo); border: 1px solid var(--negro-3);
+}
+.puntos li > span:last-child { display: flex; flex-direction: column; gap: 2px; font-size: clamp(14px, 1vw, 15px); color: #BDB5B0; }
+.puntos b { font-size: clamp(15px, 1.15vw, 17px); color: #F7F4EF; }
+
+/* ---------- Mitad blanca ---------- */
+.acceso {
+  background: var(--fondo); padding: clamp(24px, 3vw, 48px) clamp(24px, 4vw, 72px);
+  display: flex; flex-direction: column; align-items: center; gap: 24px;
+}
+.logo-flowtwin { align-self: flex-start; height: clamp(40px, 3.6vw, 52px); width: auto; animation: aparecer .5s ease-out both; }
+.formulario {
+  flex: 1; justify-content: center; width: 100%; max-width: 400px;
+  display: flex; flex-direction: column; gap: clamp(12px, 1.8vh, 16px);
+  animation: subir .5s .1s ease-out both;
+}
+.formulario.sacudir { animation: sacudir .4s ease-in-out; }
+.titulo { display: flex; flex-direction: column; gap: 6px; margin-bottom: 4px; }
+.titulo h1 { font-size: clamp(26px, 2.2vw, 32px); font-weight: 900; line-height: 1.1; }
 .titulo p { margin: 0; color: var(--gris); }
 
 .campo { display: flex; flex-direction: column; gap: 6px; }
@@ -33,46 +51,56 @@
 .entrada {
   display: flex; align-items: center; gap: 10px; height: 50px; padding: 0 6px 0 14px;
   border-radius: 12px; border: 1.5px solid transparent; background: var(--campo); color: var(--gris);
-  transition: border-color .15s, background .15s;
+  transition: border-color .15s, background .15s, box-shadow .15s;
 }
-.entrada:focus-within { border-color: var(--tinta); background: var(--fondo); }
+.entrada:focus-within { border-color: var(--tinta); background: var(--fondo); box-shadow: 0 0 0 4px rgba(245, 177, 30, .25); }
 .entrada input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: transparent; font-size: 16px; color: var(--tinta); }
 .entrada input::placeholder { color: var(--gris-2); }
 .con-error .entrada { border-color: var(--error-borde); background: var(--fondo); }
-.ver {
-  width: 38px; height: 38px; border: 0; border-radius: 9px; background: none; color: var(--gris);
-  display: grid; place-items: center; flex: none;
-}
+.ver { width: 38px; height: 38px; border: 0; border-radius: 9px; background: none; color: var(--gris); display: grid; place-items: center; flex: none; }
 .ver:hover { color: var(--tinta); background: var(--fondo-2); }
-.msg-error, .msg-mayus { display: flex; align-items: flex-start; gap: 6px; font-size: 14px; font-weight: 600; }
+.msg-error, .msg-mayus { display: flex; align-items: flex-start; gap: 6px; font-size: 14px; font-weight: 600; animation: aparecer .2s ease-out; }
 .msg-error { color: var(--error); }
 .msg-mayus { color: var(--ambar-t); }
 .msg-error app-icono, .msg-mayus app-icono { margin-top: 2px; flex: none; }
 
 .aviso-err {
   display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 12px;
-  background: var(--durazno); color: var(--error); font-size: 15px; font-weight: 600;
+  background: var(--durazno); color: var(--error); font-size: 15px; font-weight: 600; animation: aparecer .25s ease-out;
 }
 .aviso-err app-icono { flex: none; margin-top: 1px; }
 
 .ingresar {
   height: 52px; margin-top: 4px; border: 0; border-radius: 12px; background: var(--rojo); color: #fff;
   font-size: 17px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 10px;
-  transition: background .15s;
+  transition: background .15s, transform .15s;
 }
 .ingresar:hover { background: var(--rojo-osc); }
+.ingresar:hover app-icono { transform: translateX(3px); }
+.ingresar app-icono { transition: transform .15s; }
+.ingresar:active { transform: scale(.99); }
 .ingresar[aria-busy="true"] { cursor: progress; }
 
 .fila { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; font-size: 14px; }
 .check { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
 .check input { width: 18px; height: 18px; accent-color: var(--tinta); }
 .enlace { border: 0; background: none; padding: 0; color: var(--rojo); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
-.ayuda { margin: 0; padding: 12px 14px; border-radius: 12px; background: var(--amarillo-suave); color: var(--ambar-t); font-size: 14px; }
+.ayuda { margin: 0; padding: 12px 14px; border-radius: 12px; background: var(--amarillo-suave); color: var(--ambar-t); font-size: 14px; animation: aparecer .2s ease-out; }
 
-.pie { position: relative; z-index: 1; align-self: center; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--gris-2); }
+.pie { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 16px; font-size: 13px; color: var(--gris-2); }
+.pie span { display: flex; align-items: center; gap: 8px; }
+.logo-creo { height: 30px; width: auto; }
 
-.spin {
-  width: 18px; height: 18px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent;
-  animation: girar .7s linear infinite;
-}
+.spin { width: 18px; height: 18px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: girar .7s linear infinite; }
+
+/* ---------- Animaciones ---------- */
+@keyframes aparecer { from { opacity: 0; } to { opacity: 1; } }
+@keyframes subir { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes sacudir { 0%, 100% { transform: none; } 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
 @keyframes girar { to { transform: rotate(360deg); } }
+
+/* En pantallas angostas la mitad oscura se oculta: el formulario es lo esencial */
+@media (max-width: 960px) {
+  .login { grid-template-columns: minmax(0, 1fr); }
+  .presentacion { display: none; }
+}

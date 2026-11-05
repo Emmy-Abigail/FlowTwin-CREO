@@ -1,106 +1,102 @@
 <div class="login">
-  <div class="lienzo">
-    <header class="marcas">
-      <img src="marca/flowtwin-logo.png" alt="FlowTwin, gemelo digital de flujo hospitalario" class="logo-flowtwin">
+  <!-- Mitad oscura: la personalidad del sistema. Etiqueta arriba, mensaje en el centro (frente al formulario). -->
+  <aside class="presentacion" aria-hidden="true">
+    <span class="etiqueta">Clínica Renal y Oncológica CREO+</span>
+    <div class="mensaje">
+      <p class="frase">Gemelo digital del flujo de pacientes</p>
+      <p class="detalle">Ocupación, esperas y recorridos en tiempo real, con identificadores anónimos.</p>
+      <ul class="puntos">
+        <li>
+          <span class="icono"><app-icono nombre="layers" [tamano]="22" /></span>
+          <span><b>Cada piso, en vivo y en 3D</b>Qué zona se está llenando, en el momento.</span>
+        </li>
+        <li>
+          <span class="icono"><app-icono nombre="card" [tamano]="22" /></span>
+          <span><b>Recorridos anónimos</b>Cada paciente es un código, sin datos personales.</span>
+        </li>
+        <li>
+          <span class="icono"><app-icono nombre="chart" [tamano]="22" /></span>
+          <span><b>Esperas y atención medidas</b>Datos reales para decidir mejor.</span>
+        </li>
+      </ul>
+    </div>
+  </aside>
+
+  <!-- Mitad blanca: el formulario. El logo de FlowTwin aparece una sola vez. -->
+  <main class="acceso">
+    <img src="marca/flowtwin-logo.png" alt="FlowTwin, gemelo digital de flujo hospitalario" class="logo-flowtwin">
+
+    <form class="formulario" novalidate (ngSubmit)="ingresar()" [attr.aria-busy]="enviando()"
+          [class.sacudir]="sacudir()" (animationend)="sacudir.set(false)">
+      <div class="titulo">
+        <h1>Bienvenido</h1>
+        <p>Ingresa con tu correo institucional de CREO+.</p>
+      </div>
+
+      @if (errorServidor()) {
+        <div class="aviso-err" role="alert">
+          <app-icono nombre="alert" [tamano]="18" />
+          <span>{{ errorServidor() }}</span>
+        </div>
+      }
+
+      <div class="campo" [class.con-error]="mensajeCorreo()">
+        <label for="lg-mail">Correo</label>
+        <div class="entrada">
+          <app-icono nombre="mail" [tamano]="18" />
+          <input id="lg-mail" name="correo" type="email" inputmode="email" #campoCorreo
+                 autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="nombre@creo.pe"
+                 [attr.aria-invalid]="!!mensajeCorreo()" [attr.aria-describedby]="mensajeCorreo() ? 'lg-mail-error' : null"
+                 [ngModel]="correo()" (ngModelChange)="escribir('correo', $event)" (blur)="salir('correo')">
+        </div>
+        @if (mensajeCorreo(); as m) {
+          <span id="lg-mail-error" class="msg-error"><app-icono nombre="alert" [tamano]="15" />{{ m }}</span>
+        }
+      </div>
+
+      <div class="campo" [class.con-error]="mensajeClave()">
+        <label for="lg-pass">Contraseña</label>
+        <div class="entrada">
+          <app-icono nombre="lock" [tamano]="18" />
+          <input id="lg-pass" name="clave" [type]="verClave() ? 'text' : 'password'" #campoClave
+                 autocomplete="current-password" placeholder="Tu contraseña"
+                 [attr.aria-invalid]="!!mensajeClave()"
+                 [attr.aria-describedby]="mensajeClave() ? 'lg-pass-error' : (mayusculas() ? 'lg-mayus' : null)"
+                 [ngModel]="clave()" (ngModelChange)="escribir('clave', $event)"
+                 (keyup)="revisarMayusculas($event)" (keydown)="revisarMayusculas($event)" (blur)="salir('clave')">
+          <button class="ver" type="button" (click)="verClave.set(!verClave())"
+                  [attr.aria-label]="verClave() ? 'Ocultar contraseña' : 'Mostrar contraseña'" [attr.aria-pressed]="verClave()">
+            <app-icono [nombre]="verClave() ? 'ojoNo' : 'ojo'" [tamano]="19" />
+          </button>
+        </div>
+        @if (mensajeClave(); as m) {
+          <span id="lg-pass-error" class="msg-error"><app-icono nombre="alert" [tamano]="15" />{{ m }}</span>
+        } @else if (mayusculas()) {
+          <span id="lg-mayus" class="msg-mayus" aria-live="polite"><app-icono nombre="alert" [tamano]="14" />Bloq Mayús está activado</span>
+        }
+      </div>
+
+      <button class="ingresar" type="submit" [attr.aria-busy]="enviando()">
+        @if (enviando()) { <span class="spin" aria-hidden="true"></span> Ingresando… }
+        @else { Ingresar <app-icono nombre="inn" [tamano]="18" /> }
+      </button>
+
+      <div class="fila">
+        <label class="check">
+          <input type="checkbox" name="recordar" [ngModel]="recordar()" (ngModelChange)="recordar.set($event)">
+          Recordar mi correo
+        </label>
+        <button class="enlace" type="button" [attr.aria-expanded]="mostrarAyuda()" aria-controls="lg-ayuda"
+                (click)="mostrarAyuda.set(!mostrarAyuda())">¿Olvidaste tu contraseña?</button>
+      </div>
+      @if (mostrarAyuda()) {
+        <p id="lg-ayuda" class="ayuda">Pide al Administrador que restablezca tu contraseña. Te dará una temporal para ingresar.</p>
+      }
+    </form>
+
+    <footer class="pie">
+      <span><app-icono nombre="escudo" [tamano]="15" />Acceso solo para personal autorizado</span>
       <img src="marca/creo-logo.png" alt="Clínica CREO+" class="logo-creo">
-    </header>
-
-    <!-- Ilustraciones de línea: bloques como las zonas del gemelo y una sala de espera. Solo decoran. -->
-    <svg class="ilustracion izq" viewBox="0 0 330 300" aria-hidden="true">
-      <line x1="0" y1="282" x2="330" y2="282" class="trazo" />
-      <path d="M40 210 L110 175 L180 210 L110 245 Z" fill="#FFF5DB" class="trazo" />
-      <path d="M40 210 L40 250 L110 282 L110 245 Z" fill="#FFFFFF" class="trazo" />
-      <path d="M180 210 L180 250 L110 282 L110 245 Z" fill="#F5B11E" fill-opacity=".55" class="trazo" />
-      <path d="M150 140 L220 105 L290 140 L220 175 Z" fill="#FBEAF0" class="trazo" />
-      <path d="M150 140 L150 205 L220 240 L220 175 Z" fill="#FFFFFF" class="trazo" />
-      <path d="M290 140 L290 205 L220 240 L220 175 Z" fill="#A60437" fill-opacity=".18" class="trazo" />
-      <g transform="translate(205 118)" fill="#A60437"><rect x="10" y="0" width="7" height="22" rx="3.5" /><rect x="2.5" y="7.5" width="22" height="7" rx="3.5" /></g>
-      <path d="M60 120 C80 70, 150 40, 210 70" fill="none" class="trazo fino" stroke-dasharray="5 6" />
-      <circle cx="60" cy="120" r="7" fill="#F5B11E" class="trazo fino" />
-      <circle cx="210" cy="70" r="7" fill="#A60437" class="trazo fino" />
-    </svg>
-    <svg class="ilustracion der" viewBox="0 0 290 230" aria-hidden="true">
-      <line x1="0" y1="212" x2="290" y2="212" class="trazo" />
-      <rect x="150" y="40" width="70" height="56" rx="8" fill="#FFF5DB" class="trazo" />
-      <g transform="translate(172 55)" fill="#A60437"><rect x="9" y="0" width="8" height="26" rx="4" /><rect x="0" y="9" width="26" height="8" rx="4" /></g>
-      <g fill="#FFFFFF" class="trazo">
-        <path d="M30 150 h52 v20 h-52 z" /><path d="M34 120 h44 v30 h-44 z" />
-        <path d="M96 150 h52 v20 h-52 z" /><path d="M100 120 h44 v30 h-44 z" fill="#FBEAF0" />
-        <path d="M162 150 h52 v20 h-52 z" /><path d="M166 120 h44 v30 h-44 z" />
-      </g>
-      <path d="M24 170 h196 M40 170 v42 M206 170 v42" fill="none" class="trazo" />
-      <path d="M244 212 c-6-40 10-70 26-80 c4 22 0 56-14 80" fill="#E4F4EC" class="trazo" />
-    </svg>
-
-    <main class="centro">
-      <form class="tarjeta" novalidate (ngSubmit)="ingresar()" [attr.aria-busy]="enviando()">
-        <div class="titulo">
-          <h1>Bienvenido a FlowTwin</h1>
-          <p>Ingresa con tu correo institucional de CREO+.</p>
-        </div>
-
-        @if (errorServidor()) {
-          <div class="aviso-err" role="alert">
-            <app-icono nombre="alert" [tamano]="18" />
-            <span>{{ errorServidor() }}</span>
-          </div>
-        }
-
-        <div class="campo" [class.con-error]="mensajeCorreo()">
-          <label for="lg-mail">Correo</label>
-          <div class="entrada">
-            <app-icono nombre="mail" [tamano]="18" />
-            <input id="lg-mail" name="correo" type="email" inputmode="email" #campoCorreo
-                   autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="nombre@creo.pe"
-                   [attr.aria-invalid]="!!mensajeCorreo()" [attr.aria-describedby]="mensajeCorreo() ? 'lg-mail-error' : null"
-                   [ngModel]="correo()" (ngModelChange)="escribir('correo', $event)" (blur)="salir('correo')">
-          </div>
-          @if (mensajeCorreo(); as m) {
-            <span id="lg-mail-error" class="msg-error"><app-icono nombre="alert" [tamano]="15" />{{ m }}</span>
-          }
-        </div>
-
-        <div class="campo" [class.con-error]="mensajeClave()">
-          <label for="lg-pass">Contraseña</label>
-          <div class="entrada">
-            <app-icono nombre="lock" [tamano]="18" />
-            <input id="lg-pass" name="clave" [type]="verClave() ? 'text' : 'password'" #campoClave
-                   autocomplete="current-password" placeholder="Tu contraseña"
-                   [attr.aria-invalid]="!!mensajeClave()"
-                   [attr.aria-describedby]="mensajeClave() ? 'lg-pass-error' : (mayusculas() ? 'lg-mayus' : null)"
-                   [ngModel]="clave()" (ngModelChange)="escribir('clave', $event)"
-                   (keyup)="revisarMayusculas($event)" (keydown)="revisarMayusculas($event)" (blur)="salir('clave')">
-            <button class="ver" type="button" (click)="verClave.set(!verClave())"
-                    [attr.aria-label]="verClave() ? 'Ocultar contraseña' : 'Mostrar contraseña'" [attr.aria-pressed]="verClave()">
-              <app-icono [nombre]="verClave() ? 'ojoNo' : 'ojo'" [tamano]="19" />
-            </button>
-          </div>
-          @if (mensajeClave(); as m) {
-            <span id="lg-pass-error" class="msg-error"><app-icono nombre="alert" [tamano]="15" />{{ m }}</span>
-          } @else if (mayusculas()) {
-            <span id="lg-mayus" class="msg-mayus" aria-live="polite"><app-icono nombre="alert" [tamano]="14" />Bloq Mayús está activado</span>
-          }
-        </div>
-
-        <button class="ingresar" type="submit" [attr.aria-busy]="enviando()">
-          @if (enviando()) { <span class="spin" aria-hidden="true"></span> Ingresando… }
-          @else { Ingresar }
-        </button>
-
-        <div class="fila">
-          <label class="check">
-            <input type="checkbox" name="recordar" [ngModel]="recordar()" (ngModelChange)="recordar.set($event)">
-            Recordar mi correo
-          </label>
-          <button class="enlace" type="button" [attr.aria-expanded]="mostrarAyuda()" aria-controls="lg-ayuda"
-                  (click)="mostrarAyuda.set(!mostrarAyuda())">¿Olvidaste tu contraseña?</button>
-        </div>
-        @if (mostrarAyuda()) {
-          <p id="lg-ayuda" class="ayuda">Pide al Administrador que restablezca tu contraseña. Te dará una temporal para ingresar.</p>
-        }
-      </form>
-    </main>
-
-    <footer class="pie"><app-icono nombre="escudo" [tamano]="15" />Acceso solo para personal autorizado de Clínica CREO+</footer>
-  </div>
+    </footer>
+  </main>
 </div>
