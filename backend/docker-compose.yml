@@ -26,4 +26,4 @@ services:
     restart: unless-stopped #se levanta sola
 
 volumes:
-  flowtwin-sqldata:
+  flowtwin-sqldata: #declara el volumen con la configuración por defecto
