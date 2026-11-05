@@ -97,5 +97,8 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
 
+      - name: Pruebas unitarias
+        run: npx ng test --watch=false
+
       - name: Compilar en modo producción
         run: npx ng build --configuration production
