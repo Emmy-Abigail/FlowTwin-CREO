@@ -10,6 +10,7 @@ namespace FlowTwin.Atenciones.Application;
 public interface IAtencionesDb : IUnidadDeTrabajo
 {
     DbSet<Atencion> Atenciones { get; }
+    DbSet<LecturaBle> LecturasBle { get; }
 }
 
 /// <summary>Modo del escaneo. AUTO deduce entrega o devolución por el estado de la tarjeta.</summary>
