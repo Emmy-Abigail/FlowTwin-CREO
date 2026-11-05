@@ -28,6 +28,8 @@ public class ContenedorTests(ApiFixture api)
     [InlineData(typeof(PurgaLecturasServicio))]
     [InlineData(typeof(IPresenciaDispositivos))]
     [InlineData(typeof(ProcesadorPresencia))]
+    [InlineData(typeof(FlowTwin.Monitoreo.Application.EstadoPisoServicio))]
+    [InlineData(typeof(FlowTwin.Atenciones.Contracts.IAtencionesEnCurso))]
     public async Task Cada_servicio_se_construye_sin_ciclos(Type servicio)
     {
         using var scope = api.Fabrica.Services.CreateScope();

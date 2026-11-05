@@ -76,3 +76,20 @@ public sealed class ApiFixture : IAsyncLifetime
 
 [CollectionDefinition("Api")]
 public sealed class ColeccionApi : ICollectionFixture<ApiFixture>;
+
+/// <summary>
+/// Qué tarjeta de la semilla usa cada prueba. Todas comparten la misma base, así que dos pruebas que
+/// usan la misma tarjeta se arruinan entre sí según el orden en que corran. Elegir aquí, nunca a mano
+/// dentro de la prueba. Libres: T-01 a T-04, T-13 y T-15. Reservadas por la semilla: T-11 (por
+/// desinfectar) y T-14 (sin devolver).
+/// </summary>
+public static class TarjetasDePrueba
+{
+    public const string CicloCompleto = "T-05";      // AdmisionTests: entrega, devolución y desinfección
+    public const string Deshacer = "6";              // AdmisionTests: T-06, escrita como número (el escáner la normaliza)
+    public const string SinPermiso = "T-07";         // AdmisionTests: Gerencia no puede entregar
+    public const string EstadoPiso = "T-08";         // EstadoPisoTests
+    public const string Presencia = "T-09";          // PresenciaTests (emisor minor 9)
+    public const string HubEnVivo = "T-10";          // GemeloHubTests
+    public const int SinAtencion = 12;               // PresenciaTests: emisor de una tarjeta Disponible (RN-12)
+}

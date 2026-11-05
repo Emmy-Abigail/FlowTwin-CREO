@@ -16,8 +16,14 @@ public interface IAutenticacionNodos
     Task<NodoAutenticado> AutenticarAsync(string? clave, string? mac, CancellationToken ct = default);
 }
 
-/// <summary>Un nodo activo y la zona que cubre, con su ajuste de calibración (ADR-20).</summary>
-public sealed record NodoZona(int Id, int ZonaId, short AjusteRssiDb);
+/// <summary>
+/// Un nodo que no está de baja: la zona que cubre, su ajuste de calibración (ADR-20) y su estado
+/// (EN_LINEA o SIN_SENAL). Una zona sin ningún nodo En línea no tiene datos confiables.
+/// </summary>
+public sealed record NodoZona(int Id, string Codigo, int ZonaId, short AjusteRssiDb, string Estado, DateTime? UltimoLatidoEn)
+{
+    public bool EnLinea => Estado == "EN_LINEA";
+}
 
 /// <summary>Lo que el motor de presencia (Atenciones) necesita saber de los dispositivos.</summary>
 public interface IPresenciaDispositivos

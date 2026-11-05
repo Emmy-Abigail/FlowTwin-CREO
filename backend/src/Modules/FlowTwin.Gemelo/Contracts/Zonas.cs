@@ -3,9 +3,21 @@ namespace FlowTwin.Gemelo.Contracts;
 /// <summary>Lo que otro módulo necesita saber de una zona.</summary>
 public sealed record ZonaInfo(int Id, string Nombre, int PisoId);
 
+/// <summary>Un piso publicado y la sede a la que pertenece.</summary>
+public sealed record PisoInfo(int Id, string Nombre, int SedeId);
+
+/// <summary>Una zona publicada con lo que hace falta para su semáforo. Tipo: INGRESO, ESPERA, SERVICIO, TRANSITO o SALIDA.</summary>
+public sealed record ZonaSemaforo(int Id, string Nombre, string Tipo, short? Aforo, byte? UmbralMediaPct, byte? UmbralAltaPct);
+
 /// <summary>Consultas de zonas para otros módulos (por ejemplo, Dispositivos al registrar un nodo, RN-19).</summary>
 public interface IZonasConsultas
 {
+    /// <summary>El piso si existe y está publicado; null si no.</summary>
+    Task<PisoInfo?> PisoAsync(int pisoId, CancellationToken ct = default);
+
+    /// <summary>Las zonas publicadas del piso (las que están en borrador no se ven en el gemelo, RN-15).</summary>
+    Task<IReadOnlyList<ZonaSemaforo>> DelPisoAsync(int pisoId, CancellationToken ct = default);
+
     /// <summary>La zona activa con ese Id, o null si no existe o está dada de baja.</summary>
     Task<ZonaInfo?> ZonaAsync(int zonaId, CancellationToken ct = default);
 

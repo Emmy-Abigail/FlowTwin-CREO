@@ -40,7 +40,7 @@ public sealed class GemeloServicio(IGemeloDb db, IUsuarioActual usuario, IUbicac
     /// <summary>GET /sedes: sedes y pisos publicados que el usuario puede ver (Admin ve todos, RN-24).</summary>
     public async Task<List<SedeDto>> SedesVisiblesAsync(CancellationToken ct)
     {
-        var esAdmin = usuario.Rol == "ADMIN";
+        var esAdmin = usuario.EsAdmin();
         var pisos = await db.Pisos
             .Where(p => p.Publicado && (esAdmin || usuario.Pisos.Contains(p.Id)))
             .OrderBy(p => p.Nivel).ToListAsync(ct);
@@ -58,7 +58,7 @@ public sealed class GemeloServicio(IGemeloDb db, IUsuarioActual usuario, IUbicac
     {
         var piso = await db.Pisos.SingleOrDefaultAsync(p => p.Id == pisoId && p.Publicado, ct)
             ?? throw new NoEncontradoException($"No existe el piso {pisoId} o aún no está publicado.");
-        if (usuario.Rol != "ADMIN" && !usuario.Pisos.Contains(pisoId))
+        if (!usuario.PuedeVerPiso(pisoId))
             throw new SinPermisoException("No tienes asignado este piso.");
 
         var zonas = await db.Zonas
@@ -95,7 +95,7 @@ public sealed class GemeloServicio(IGemeloDb db, IUsuarioActual usuario, IUbicac
     }
 
     public async Task<IReadOnlyList<int>?> SedesDelUsuarioAsync(CancellationToken ct = default) =>
-        usuario.Rol == "ADMIN" ? null : await SedesDePisosAsync(usuario.Pisos, ct);
+        usuario.EsAdmin() ? null : await SedesDePisosAsync(usuario.Pisos, ct);
 
     public async Task<char> PrefijoAtencionAsync(int sedeId, CancellationToken ct = default) =>
         await db.Sedes.Where(s => s.Id == sedeId).Select(s => s.PrefijoAtencion).SingleAsync(ct);
