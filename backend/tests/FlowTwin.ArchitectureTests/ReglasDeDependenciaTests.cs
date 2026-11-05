@@ -44,6 +44,20 @@ public class ReglasDeDependenciaTests
             $"El dominio de {modulo} depende de EF Core o ASP.NET: {string.Join(", ", resultado.FailingTypeNames ?? [])}");
     }
 
+    /// <summary>
+    /// El simulador es una caja negra que solo habla HTTP, como el firmware de los ESP32. Si usara clases
+    /// del backend, dejaría de probar el contrato real (docs/contrato-integracion-nodos.md).
+    /// </summary>
+    [Fact]
+    public void El_simulador_no_depende_del_backend()
+    {
+        var resultado = Types.InAssembly(Assembly.Load("FlowTwin.Simulador"))
+            .ShouldNot().HaveDependencyOnAny([.. Modulos.Select(m => $"FlowTwin.{m}"), "FlowTwin.SharedKernel", "FlowTwin.Persistence", "FlowTwin.Api"])
+            .GetResult();
+
+        Assert.True(resultado.IsSuccessful, $"El simulador usa el backend: {string.Join(", ", resultado.FailingTypeNames ?? [])}");
+    }
+
     [Fact]
     public void El_SharedKernel_no_depende_de_ningun_modulo()
     {

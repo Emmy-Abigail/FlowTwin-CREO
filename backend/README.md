@@ -52,6 +52,20 @@ Por ahora está **apagado**: `Contrasenas:ExigirCambioPrimerIngreso = false` en 
 Al ponerlo en `true`, quien entra con una contraseña temporal debe cambiarla antes de usar el sistema.
 Las pruebas de integración verifican la regla encendida y apagada.
 
+## Simulador de nodos
+
+Hace de recepción y de los 3 ESP32 de desarrollo: entrega tarjetas, mueve pacientes por Admisión → Sala
+de espera → Módulo 2 y envía lecturas y latidos por la API, igual que el firmware real. Con la API
+corriendo, en otra terminal:
+
+```bash
+dotnet run --project tools/FlowTwin.Simulador                                  # día normal (escenarios/piloto.json)
+dotnet run --project tools/FlowTwin.Simulador -- --escenario escenarios/demo.json   # tiempos cortos para una demo
+```
+
+`Ctrl+C` lo detiene y devuelve las tarjetas de los pacientes simulados. Los tiempos, nodos y ruido de la
+señal se cambian en `tools/FlowTwin.Simulador/escenarios/*.json`.
+
 ## Pruebas
 
 ```bash

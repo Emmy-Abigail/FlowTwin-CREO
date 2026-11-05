@@ -1,0 +1,25 @@
+{
+  // Modo Piloto del documento: un día normal del Piso 1 con los 3 nodos de desarrollo.
+  // Tiempos en minutos: cada paciente toma un valor al azar entre Min y Max.
+  "api": "http://localhost:5080",
+  "correoOperador": "operador@creo.pe",
+  "claveOperador": "demo123",
+  "pisoId": 1,
+  "uuidClinica": "b14c70f2-314c-41eb-b11a-93fa9c7ace90",
+  "sede": 1,
+  "llegadaCada": { "min": 4, "max": 8 },
+  "enAdmision": { "min": 2, "max": 4 },
+  "espera": { "min": 10, "max": 40 },
+  "consulta": { "min": 8, "max": 20 },
+  "zonaAdmision": 1,
+  "zonaEspera": 3,
+  "zonaConsulta": 7,
+  "maxPacientes": 12,
+  "ruidoDb": 4,
+  "semilla": null,
+  "nodos": [
+    { "codigo": "N-01", "mac": "02:00:00:00:00:01", "clave": "nk_dev_N-01" },
+    { "codigo": "N-02", "mac": "02:00:00:00:00:02", "clave": "nk_dev_N-02" },
+    { "codigo": "N-03", "mac": "02:00:00:00:00:03", "clave": "nk_dev_N-03" }
+  ]
+}
