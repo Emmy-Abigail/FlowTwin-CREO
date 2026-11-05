@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace FlowTwin.Persistence.Configuraciones;
 
-/// <summary>Esquema gem. Zona, ElementoPlano y PublicacionPiso llegan en el Avance 2.</summary>
+/// <summary>Esquema gem. ElementoPlano y PublicacionPiso llegan en los siguientes pasos del Avance 2.</summary>
 public sealed class SedeConfig : IEntityTypeConfiguration<Sede>
 {
     public void Configure(EntityTypeBuilder<Sede> b)
@@ -52,6 +52,59 @@ public sealed class PisoConfig : IEntityTypeConfiguration<Piso>
             EstadoRegistro = true, FechaRegistro = Semilla.Fecha, UsuarioRegistroId = UsuarioSistema.Id,
         });
     }
+}
+
+public sealed class ZonaConfig : IEntityTypeConfiguration<Zona>
+{
+    public void Configure(EntityTypeBuilder<Zona> b)
+    {
+        // Los tipos con aforo, en SQL, salen del mismo enum que usa el dominio: no hay números mágicos
+        var conAforo = string.Join(", ", Enum.GetValues<TipoZona>().Where(t => t.TieneAforo()).Select(t => (int)t));
+        var sinAforo = string.Join(", ", Enum.GetValues<TipoZona>().Where(t => !t.TieneAforo()).Select(t => (int)t));
+
+        b.ToTable("Zona", "gem", t =>
+        {
+            t.HasCheckConstraint("CK_Zona_Posicion", "[X] >= 0 AND [Y] >= 0");
+            t.HasCheckConstraint("CK_Zona_Tamano", "[AnchoM] > 0 AND [FondoM] > 0");
+            t.HasCheckConstraint("CK_Zona_Geometria", "[Geometria] IS NULL OR ISJSON([Geometria]) = 1");
+            // RN-13 también en la base: la protege aunque alguien inserte filas por fuera de la API
+            t.HasCheckConstraint("CK_Zona_AforoRN13",
+                $"([TipoZonaId] IN ({conAforo}) AND [Aforo] >= 1 AND [UmbralMediaPct] > 0 " +
+                "AND [UmbralMediaPct] <= [UmbralAltaPct] AND [UmbralAltaPct] <= 100) " +
+                $"OR ([TipoZonaId] IN ({sinAforo}) AND [Aforo] IS NULL AND [UmbralMediaPct] IS NULL AND [UmbralAltaPct] IS NULL)");
+        });
+        b.Property(z => z.Nombre).HasMaxLength(80).IsRequired();
+        b.HasIndex(z => new { z.PisoId, z.Nombre }).IsUnique().HasFilter("[EstadoRegistro] = 1");
+        b.Property(z => z.X).HasPrecision(6, 2);
+        b.Property(z => z.Y).HasPrecision(6, 2);
+        b.Property(z => z.AnchoM).HasPrecision(6, 2);
+        b.Property(z => z.FondoM).HasPrecision(6, 2);
+        b.HasOne<Piso>().WithMany().HasForeignKey(z => z.PisoId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<Catalogo<TipoZona>>().WithMany().HasForeignKey(z => z.TipoZonaId).OnDelete(DeleteBehavior.Restrict);
+
+        // Las 8 zonas del Piso 1 medidas sobre la lámina A-07 (antes en public/pisos/geometria-piso1.json).
+        // El Hall es Tránsito: sin aforo ni umbrales (RN-13).
+        b.HasData(
+            ZonaPiso1(1, TipoZona.Ingreso, "Admisión y caja", 35.0m, 8.7m, 2.1m, 5.1m, 6),
+            ZonaPiso1(2, TipoZona.Transito, "Hall principal", 28.5m, 10.2m, 6.2m, 4.8m, null),
+            ZonaPiso1(3, TipoZona.Espera, "Sala de espera", 19.3m, 15.0m, 5.7m, 5.3m, 24),
+            ZonaPiso1(4, TipoZona.Servicio, "Triaje", 25.2m, 13.9m, 3.1m, 4.8m, 3),
+            ZonaPiso1(5, TipoZona.Servicio, "Tópico de enfermería", 11.2m, 11.9m, 3.1m, 4.7m, 3),
+            ZonaPiso1(6, TipoZona.Servicio, "Tópico urgencia", 9.8m, 16.9m, 5.0m, 3.7m, 4),
+            ZonaPiso1(7, TipoZona.Servicio, "Módulo 2 (consultorio)", 2.2m, 15.1m, 7.4m, 5.2m, 6),
+            ZonaPiso1(8, TipoZona.Servicio, "Observación", 16.6m, 13.9m, 3.2m, 6.5m, 4));
+    }
+
+    /// <summary>Umbrales 60 % y 85 % para todas por ahora: pendiente de validar con la dirección médica.</summary>
+    private static object ZonaPiso1(int id, TipoZona tipo, string nombre, decimal x, decimal y, decimal ancho, decimal fondo, short? aforo) => new
+    {
+        Id = id, PisoId = 1, TipoZonaId = tipo, Nombre = nombre, X = x, Y = y, AnchoM = ancho, FondoM = fondo,
+        Aforo = aforo,
+        UmbralMediaPct = aforo is null ? null : (byte?)60,
+        UmbralAltaPct = aforo is null ? null : (byte?)85,
+        EnBorrador = false,
+        EstadoRegistro = true, FechaRegistro = Semilla.Fecha, UsuarioRegistroId = UsuarioSistema.Id,
+    };
 }
 
 /// <summary>Esquema dis. Nodo y EventoNodo llegan en el Avance 2.</summary>

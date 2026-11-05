@@ -466,6 +466,248 @@ namespace FlowTwin.Persistence.Migraciones
                         });
                 });
 
+            modelBuilder.Entity("FlowTwin.Gemelo.Domain.Zona", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<short?>("Aforo")
+                        .HasColumnType("smallint");
+
+                    b.Property<decimal>("AnchoM")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("decimal(6,2)");
+
+                    b.Property<bool>("EnBorrador")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("EstadoRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<DateTime?>("FechaActualizacion")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<decimal>("FondoM")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("decimal(6,2)");
+
+                    b.Property<string>("Geometria")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<int>("PisoId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TipoZonaId")
+                        .HasColumnType("int");
+
+                    b.Property<byte?>("UmbralAltaPct")
+                        .HasColumnType("tinyint");
+
+                    b.Property<byte?>("UmbralMediaPct")
+                        .HasColumnType("tinyint");
+
+                    b.Property<int?>("UsuarioActualizacionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UsuarioRegistroId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
+                    b.Property<byte[]>("Version")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<decimal>("X")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("decimal(6,2)");
+
+                    b.Property<decimal>("Y")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("decimal(6,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TipoZonaId");
+
+                    b.HasIndex("PisoId", "Nombre")
+                        .IsUnique()
+                        .HasFilter("[EstadoRegistro] = 1");
+
+                    b.ToTable("Zona", "gem", t =>
+                        {
+                            t.HasCheckConstraint("CK_Zona_AforoRN13", "([TipoZonaId] IN (1, 2, 3) AND [Aforo] >= 1 AND [UmbralMediaPct] > 0 AND [UmbralMediaPct] <= [UmbralAltaPct] AND [UmbralAltaPct] <= 100) OR ([TipoZonaId] IN (4, 5) AND [Aforo] IS NULL AND [UmbralMediaPct] IS NULL AND [UmbralAltaPct] IS NULL)");
+
+                            t.HasCheckConstraint("CK_Zona_Geometria", "[Geometria] IS NULL OR ISJSON([Geometria]) = 1");
+
+                            t.HasCheckConstraint("CK_Zona_Posicion", "[X] >= 0 AND [Y] >= 0");
+
+                            t.HasCheckConstraint("CK_Zona_Tamano", "[AnchoM] > 0 AND [FondoM] > 0");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Aforo = (short)6,
+                            AnchoM = 2.1m,
+                            EnBorrador = false,
+                            EstadoRegistro = true,
+                            FechaRegistro = new DateTime(2026, 10, 27, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FondoM = 5.1m,
+                            Nombre = "Admisión y caja",
+                            PisoId = 1,
+                            TipoZonaId = 1,
+                            UmbralAltaPct = (byte)85,
+                            UmbralMediaPct = (byte)60,
+                            UsuarioRegistroId = 1,
+                            X = 35.0m,
+                            Y = 8.7m
+                        },
+                        new
+                        {
+                            Id = 2,
+                            AnchoM = 6.2m,
+                            EnBorrador = false,
+                            EstadoRegistro = true,
+                            FechaRegistro = new DateTime(2026, 10, 27, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FondoM = 4.8m,
+                            Nombre = "Hall principal",
+                            PisoId = 1,
+                            TipoZonaId = 4,
+                            UsuarioRegistroId = 1,
+                            X = 28.5m,
+                            Y = 10.2m
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Aforo = (short)24,
+                            AnchoM = 5.7m,
+                            EnBorrador = false,
+                            EstadoRegistro = true,
+                            FechaRegistro = new DateTime(2026, 10, 27, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FondoM = 5.3m,
+                            Nombre = "Sala de espera",
+                            PisoId = 1,
+                            TipoZonaId = 2,
+                            UmbralAltaPct = (byte)85,
+                            UmbralMediaPct = (byte)60,
+                            UsuarioRegistroId = 1,
+                            X = 19.3m,
+                            Y = 15.0m
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Aforo = (short)3,
+                            AnchoM = 3.1m,
+                            EnBorrador = false,
+                            EstadoRegistro = true,
+                            FechaRegistro = new DateTime(2026, 10, 27, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FondoM = 4.8m,
+                            Nombre = "Triaje",
+                            PisoId = 1,
+                            TipoZonaId = 3,
+                            UmbralAltaPct = (byte)85,
+                            UmbralMediaPct = (byte)60,
+                            UsuarioRegistroId = 1,
+                            X = 25.2m,
+                            Y = 13.9m
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Aforo = (short)3,
+                            AnchoM = 3.1m,
+                            EnBorrador = false,
+                            EstadoRegistro = true,
+                            FechaRegistro = new DateTime(2026, 10, 27, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FondoM = 4.7m,
+                            Nombre = "Tópico de enfermería",
+                            PisoId = 1,
+                            TipoZonaId = 3,
+                            UmbralAltaPct = (byte)85,
+                            UmbralMediaPct = (byte)60,
+                            UsuarioRegistroId = 1,
+                            X = 11.2m,
+                            Y = 11.9m
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Aforo = (short)4,
+                            AnchoM = 5.0m,
+                            EnBorrador = false,
+                            EstadoRegistro = true,
+                            FechaRegistro = new DateTime(2026, 10, 27, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FondoM = 3.7m,
+                            Nombre = "Tópico urgencia",
+                            PisoId = 1,
+                            TipoZonaId = 3,
+                            UmbralAltaPct = (byte)85,
+                            UmbralMediaPct = (byte)60,
+                            UsuarioRegistroId = 1,
+                            X = 9.8m,
+                            Y = 16.9m
+                        },
+                        new
+                        {
+                            Id = 7,
+                            Aforo = (short)6,
+                            AnchoM = 7.4m,
+                            EnBorrador = false,
+                            EstadoRegistro = true,
+                            FechaRegistro = new DateTime(2026, 10, 27, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FondoM = 5.2m,
+                            Nombre = "Módulo 2 (consultorio)",
+                            PisoId = 1,
+                            TipoZonaId = 3,
+                            UmbralAltaPct = (byte)85,
+                            UmbralMediaPct = (byte)60,
+                            UsuarioRegistroId = 1,
+                            X = 2.2m,
+                            Y = 15.1m
+                        },
+                        new
+                        {
+                            Id = 8,
+                            Aforo = (short)4,
+                            AnchoM = 3.2m,
+                            EnBorrador = false,
+                            EstadoRegistro = true,
+                            FechaRegistro = new DateTime(2026, 10, 27, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FondoM = 6.5m,
+                            Nombre = "Observación",
+                            PisoId = 1,
+                            TipoZonaId = 3,
+                            UmbralAltaPct = (byte)85,
+                            UmbralMediaPct = (byte)60,
+                            UsuarioRegistroId = 1,
+                            X = 16.6m,
+                            Y = 13.9m
+                        });
+                });
+
             modelBuilder.Entity("FlowTwin.Identidad.Domain.HistorialContrasena", b =>
                 {
                     b.Property<int>("Id")
@@ -1740,6 +1982,21 @@ namespace FlowTwin.Persistence.Migraciones
                     b.HasOne("FlowTwin.Gemelo.Domain.Sede", null)
                         .WithMany()
                         .HasForeignKey("SedeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("FlowTwin.Gemelo.Domain.Zona", b =>
+                {
+                    b.HasOne("FlowTwin.Gemelo.Domain.Piso", null)
+                        .WithMany()
+                        .HasForeignKey("PisoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FlowTwin.SharedKernel.Catalogo<FlowTwin.Gemelo.Domain.TipoZona>", null)
+                        .WithMany()
+                        .HasForeignKey("TipoZonaId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

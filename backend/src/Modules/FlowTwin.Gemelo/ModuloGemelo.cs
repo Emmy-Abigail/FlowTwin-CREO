@@ -21,5 +21,9 @@ public static class ModuloGemelo
         var sedes = app.MapGroup("/api/v1/sedes").WithTags("Gemelo").RequireAuthorization();
         sedes.MapGet("/", async (GemeloServicio s, CancellationToken ct) => Results.Ok(await s.SedesVisiblesAsync(ct)))
             .WithSummary("Sedes y pisos publicados visibles para el usuario");
+
+        var pisos = app.MapGroup("/api/v1/pisos").WithTags("Gemelo").RequireAuthorization();
+        pisos.MapGet("/{id:int}/geometria", async (int id, GemeloServicio s, CancellationToken ct) => Results.Ok(await s.GeometriaAsync(id, ct)))
+            .WithSummary("Geometría publicada del piso para las vistas 2D y 3D (F-11)");
     }
 }
