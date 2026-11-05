@@ -20,6 +20,10 @@ public static class ModuloAtenciones
         services.AddScoped<PurgaLecturasServicio>();
         services.AddSingleton<RegistroSecuencias>();
         services.AddHostedService<PurgaLecturas>();
+        services.Configure<OpcionesPresencia>(config.GetSection("Presencia"));
+        services.AddSingleton<EstadoPresencia>();
+        services.AddScoped<ProcesadorPresencia>();
+        services.AddHostedService<MotorPresenciaEnSegundoPlano>();
         services.AddValidatorsFromAssemblyContaining<EscaneoValidador>(ServiceLifetime.Singleton);
         return services;
     }

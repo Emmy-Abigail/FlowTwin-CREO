@@ -15,3 +15,16 @@ public interface IAutenticacionNodos
     /// </summary>
     Task<NodoAutenticado> AutenticarAsync(string? clave, string? mac, CancellationToken ct = default);
 }
+
+/// <summary>Un nodo activo y la zona que cubre, con su ajuste de calibración (ADR-20).</summary>
+public sealed record NodoZona(int Id, int ZonaId, short AjusteRssiDb);
+
+/// <summary>Lo que el motor de presencia (Atenciones) necesita saber de los dispositivos.</summary>
+public interface IPresenciaDispositivos
+{
+    /// <summary>Nodos que no están de baja, con su zona.</summary>
+    Task<IReadOnlyList<NodoZona>> NodosAsync(CancellationToken ct = default);
+
+    /// <summary>Identificador BLE (en minúsculas) de cada tarjeta pedida: TarjetaId → uuidBle.</summary>
+    Task<IReadOnlyDictionary<int, string>> UuidsDeTarjetasAsync(IReadOnlyCollection<int> tarjetaIds, CancellationToken ct = default);
+}

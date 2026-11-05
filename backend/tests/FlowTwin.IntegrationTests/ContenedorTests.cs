@@ -26,6 +26,8 @@ public class ContenedorTests(ApiFixture api)
     [InlineData(typeof(IngestaNodosServicio))]
     [InlineData(typeof(IngestaServicio))]
     [InlineData(typeof(PurgaLecturasServicio))]
+    [InlineData(typeof(IPresenciaDispositivos))]
+    [InlineData(typeof(ProcesadorPresencia))]
     public async Task Cada_servicio_se_construye_sin_ciclos(Type servicio)
     {
         using var scope = api.Fabrica.Services.CreateScope();
