@@ -37,5 +37,9 @@ public interface ITarjetasAdmision
     /// <summary>Tarjetas de esas sedes (todas si sedeIds es null) con el momento de su último cambio.</summary>
     Task<List<TarjetaInfo>> ListarAsync(IReadOnlyCollection<int>? sedeIds, CancellationToken ct = default);
 
-    Task<List<MovimientoInfo>> UltimosMovimientosAsync(IReadOnlyCollection<int>? sedeIds, int cantidad, CancellationToken ct = default);
+    /// <summary>
+    /// Las últimas operaciones de mostrador con tarjetas (entregar, recibir, desinfectar…). Excluye el
+    /// alta de la tarjeta en el inventario: es tarea del Administrador, no una operación de Admisión.
+    /// </summary>
+    Task<List<MovimientoInfo>> UltimasOperacionesAsync(IReadOnlyCollection<int>? sedeIds, int cantidad, CancellationToken ct = default);
 }

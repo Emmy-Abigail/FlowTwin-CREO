@@ -50,11 +50,12 @@ public sealed class TarjetasServicio(IDispositivosDb db, ISedesConsultas sedes, 
         return [.. filas.Select(f => new TarjetaInfo(f.Id, f.Codigo, f.SedeId, f.EstadoTarjetaId, f.Desde))];
     }
 
-    public async Task<List<MovimientoInfo>> UltimosMovimientosAsync(IReadOnlyCollection<int>? sedeIds, int cantidad, CancellationToken ct = default)
+    public async Task<List<MovimientoInfo>> UltimasOperacionesAsync(IReadOnlyCollection<int>? sedeIds, int cantidad, CancellationToken ct = default)
     {
         return await db.MovimientosTarjeta
             .Join(db.Tarjetas, m => m.TarjetaId, t => t.Id, (m, t) => new { m, t })
             .Where(x => sedeIds == null || sedeIds.Contains(x.t.SedeId))
+            .Where(x => x.m.EstadoAnteriorId != null)   // el alta (sin estado anterior) no es una operación
             .OrderByDescending(x => x.m.Id).Take(cantidad)
             .Select(x => new MovimientoInfo(x.m.FechaRegistro, x.t.Id, x.t.Codigo, x.m.EstadoAnteriorId, x.m.EstadoNuevoId, x.m.AtencionId))
             .ToListAsync(ct);
