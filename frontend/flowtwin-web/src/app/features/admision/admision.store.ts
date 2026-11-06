@@ -30,7 +30,7 @@ const OPERACIONES: Record<string, { texto: string; tono: string }> = {
   REGISTRADA: { texto: 'Registrada', tono: 'gris' },
 };
 /** Cuántas operaciones caben sin scroll debajo de la confirmación. */
-const OPERACIONES_VISIBLES = 5;
+const OPERACIONES_VISIBLES = 6;
 
 /** Cada cuánto se actualiza el monitoreo: lo cambian también otros operadores y el cierre automático. */
 const REFRESCO_MS = 15_000;
@@ -79,19 +79,16 @@ export class AdmisionStore {
   });
 
   /**
-   * Tarjetas que piden una acción del operador, en una sola lista: las devueltas sin desinfectar
-   * (para volver a entregarlas) y las que no volvieron (para buscarlas o darlas por extraviadas).
+   * Lo que pide una acción del operador, por grupos (nunca un bloque por tarjeta): las devueltas sin
+   * desinfectar y las que no volvieron. De la más antigua a la más reciente: la que más espera, primero.
    */
-  readonly requierenAtencion = computed(() => [
-    ...(this.resumen()?.porDesinfectar ?? []).map(t => ({
-      id: t.tarjetaId, codigo: t.codigo, tipo: 'desinfectar' as const,
-      detalle: `Devuelta a las ${t.desde ? hhmm(Date.parse(t.desde)) : '—'} · alcohol al 70\u00a0%`,
-    })),
-    ...(this.resumen()?.sinDevolver ?? []).map(t => ({
-      id: t.tarjetaId, codigo: t.codigo, tipo: 'sinDevolver' as const,
-      detalle: `${t.atencionCodigo ?? '—'} · sin lecturas desde las ${t.desde ? hhmm(Date.parse(t.desde)) : '—'}`,
-    })),
-  ]);
+  readonly porDesinfectar = computed(() => ordenarPorAntiguedad((this.resumen()?.porDesinfectar ?? []).map(t => ({
+    id: t.tarjetaId, codigo: t.codigo, desde: t.desde ? Date.parse(t.desde) : null,
+  }))));
+
+  readonly sinDevolver = computed(() => ordenarPorAntiguedad((this.resumen()?.sinDevolver ?? []).map(t => ({
+    id: t.tarjetaId, codigo: t.codigo, desde: t.desde ? Date.parse(t.desde) : null, atencion: t.atencionCodigo ?? '—',
+  }))));
 
   readonly operaciones = computed(() => (this.resumen()?.ultimasOperaciones ?? []).slice(0, OPERACIONES_VISIBLES).map(o => ({
     fecha: Date.parse(o.fecha),
@@ -175,25 +172,35 @@ export class AdmisionStore {
     await this.cargar();
   }
 
-  async marcarDesinfectada(tarjetaId: number, codigo: string): Promise<void> {
+  /** F-09 por tandas: todas o ninguna (el servidor lo garantiza en una transacción). */
+  async desinfectar(tarjetas: { id: number; codigo: string }[]): Promise<void> {
     try {
-      await firstValueFrom(this.http.post(`${API}/tarjetas/${tarjetaId}/desinfectar`, {}));
-      this.confirmacion.set({ tipo: 'desinfectada', titulo: `${codigo} desinfectada`, detalle: 'Ya se puede entregar.' });
-      // Si era la tarjeta que se estaba por registrar, su vista previa ya no vale: se vuelve a consultar
+      await firstValueFrom(this.http.post(`${API}/tarjetas/desinfectar`, { tarjetaIds: tarjetas.map(t => t.id) }));
+      this.confirmacion.set({
+        tipo: 'desinfectada',
+        titulo: tarjetas.length === 1 ? `${tarjetas[0].codigo} desinfectada` : `${tarjetas.length} tarjetas desinfectadas`,
+        detalle: tarjetas.length === 1 ? 'Ya se puede entregar.' : 'Ya se pueden entregar.',
+      });
+      // Si estaba la tarjeta que se iba a registrar, su vista previa ya no vale: se vuelve a consultar
       const v = this.vistaPrevia();
-      if (v?.aviso.desinfectar?.id === tarjetaId) await this.previsualizar(v.texto);
+      if (v?.aviso.desinfectar && tarjetas.some(t => t.id === v.aviso.desinfectar!.id)) await this.previsualizar(v.texto);
     } catch (e) {
-      this.confirmacion.set({ tipo: 'error', titulo: `No se pudo desinfectar ${codigo}`, detalle: mensajeDe(problemaDe(e)) });
+      this.confirmacion.set({ tipo: 'error', titulo: 'No se desinfectó ninguna', detalle: mensajeDe(problemaDe(e)) });
     }
     await this.cargar();
   }
 
-  async marcarExtraviada(tarjetaId: number, codigo: string): Promise<void> {
+  /** F-10 por tandas. */
+  async extraviar(tarjetas: { id: number; codigo: string }[]): Promise<void> {
     try {
-      await firstValueFrom(this.http.post(`${API}/tarjetas/${tarjetaId}/extraviar`, {}));
-      this.confirmacion.set({ tipo: 'extraviada', titulo: `${codigo} marcada como extraviada`, detalle: 'Si aparece, escanéala y pasará a desinfección.' });
+      await firstValueFrom(this.http.post(`${API}/tarjetas/extraviar`, { tarjetaIds: tarjetas.map(t => t.id) }));
+      this.confirmacion.set({
+        tipo: 'extraviada',
+        titulo: tarjetas.length === 1 ? `${tarjetas[0].codigo} marcada como extraviada` : `${tarjetas.length} tarjetas marcadas como extraviadas`,
+        detalle: 'Si aparece, escanéala y pasará a desinfección.',
+      });
     } catch (e) {
-      this.confirmacion.set({ tipo: 'error', titulo: `No se pudo marcar ${codigo}`, detalle: mensajeDe(problemaDe(e)) });
+      this.confirmacion.set({ tipo: 'error', titulo: 'No se marcó ninguna', detalle: mensajeDe(problemaDe(e)) });
     }
     await this.cargar();
   }
@@ -211,4 +218,9 @@ export class AdmisionStore {
     if (this.temporizadorDeshacer) clearTimeout(this.temporizadorDeshacer);
     this.deshacible.set(null);
   }
+}
+
+/** La que lleva más tiempo esperando, primero; las sin fecha, al final. */
+function ordenarPorAntiguedad<T extends { desde: number | null }>(lista: T[]): T[] {
+  return [...lista].sort((a, b) => (a.desde ?? Infinity) - (b.desde ?? Infinity));
 }

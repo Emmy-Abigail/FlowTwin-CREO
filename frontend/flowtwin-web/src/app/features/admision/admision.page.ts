@@ -1,9 +1,15 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { fechaLarga } from '../../core/utils/tiempo';
 import { BotonDirective } from '../../shared/componentes/boton.directive';
+import { IconoComponent } from '../../shared/componentes/icono.component';
 import { ModalComponent } from '../../shared/componentes/modal.component';
 import { AdmisionStore } from './admision.store';
 import { Pregunta, haceCuanto } from './presentacion-admision';
+import { SeleccionTarjetasComponent, TarjetaSeleccionable } from './seleccion-tarjetas.component';
+
+/** Un modal de tanda abierto: qué se hace y con qué tarjetas. */
+interface Tanda { tipo: 'desinfectar' | 'extraviar'; tarjetas: TarjetaSeleccionable[]; }
 
 /** Pausa al escribir a mano antes de consultar la vista previa (el lector, en cambio, termina con Enter). */
 const ESPERA_ESCRITURA_MS = 400;
@@ -16,7 +22,7 @@ const ESPERA_ESCRITURA_MS = 400;
  */
 @Component({
   selector: 'app-admision',
-  imports: [FormsModule, BotonDirective, ModalComponent],
+  imports: [FormsModule, BotonDirective, IconoComponent, ModalComponent, SeleccionTarjetasComponent],
   templateUrl: './admision.page.html',
   styleUrl: './admision.page.scss',
   providers: [AdmisionStore],
@@ -28,9 +34,10 @@ export class AdmisionPage {
   protected codigo = signal('');
   /** Modales (R3, R4, R5). Mientras uno está abierto, el lector no escribe en la pantalla de atrás. */
   protected confirmarRegistro = signal<Pregunta | null>(null);
-  protected confirmarDesinfeccion = signal<{ id: number; codigo: string } | null>(null);
-  protected confirmarExtraviada = signal<{ id: number; codigo: string } | null>(null);
-  private hayModal = computed(() => !!(this.confirmarRegistro() || this.confirmarDesinfeccion() || this.confirmarExtraviada()));
+  protected tanda = signal<Tanda | null>(null);
+  private hayModal = computed(() => !!(this.confirmarRegistro() || this.tanda()));
+  protected readonly accionDesinfectar = (n: number) => n === 1 ? 'Marcar 1 como desinfectada' : `Marcar ${n} como desinfectadas`;
+  protected readonly accionExtraviar = (n: number) => n === 1 ? 'Marcar 1 como extraviada' : `Marcar ${n} como extraviadas`;
   private campo = viewChild.required<ElementRef<HTMLInputElement>>('campo');
   private boton = viewChild.required<ElementRef<HTMLButtonElement>>('botonRegistrar');
   private temporizadorEscritura: ReturnType<typeof setTimeout> | null = null;
@@ -52,8 +59,10 @@ export class AdmisionPage {
     });
   }
 
-  protected hace(fecha: number): string {
-    return haceCuanto(fecha, this.ahora());
+  protected hoy = computed(() => fechaLarga(this.ahora()));
+
+  protected hace(fecha: number | null): string {
+    return fecha === null ? '—' : haceCuanto(fecha, this.ahora());
   }
 
   /** Cambió el texto: es otra lectura (R8). Si se escribe a mano, se consulta al hacer una pausa. */
@@ -127,29 +136,39 @@ export class AdmisionPage {
     campo.focus();
   }
 
-  /** R4 */
-  protected async desinfectar(): Promise<void> {
-    const tarjeta = this.confirmarDesinfeccion();
-    this.confirmarDesinfeccion.set(null);
-    if (tarjeta) await this.store.marcarDesinfectada(tarjeta.id, tarjeta.codigo);
+  /** R4: desinfectar por tandas. Sin argumento, todas las que esperan; con una, solo esa (desde el aviso). */
+  protected abrirDesinfeccion(una?: { id: number; codigo: string }): void {
+    const lista = una ? this.store.porDesinfectar().filter(t => t.id === una.id) : this.store.porDesinfectar();
+    const tarjetas = (lista.length ? lista : una ? [{ ...una, desde: null }] : [])
+      .map(t => ({ id: t.id, codigo: t.codigo, detalle: t.desde === null ? '' : `devuelta ${this.hace(t.desde)}` }));
+    this.tanda.set({ tipo: 'desinfectar', tarjetas });
+  }
+
+  /** R5: revisar las que no volvieron y marcar las extraviadas. */
+  protected abrirRevision(): void {
+    this.tanda.set({
+      tipo: 'extraviar',
+      tarjetas: this.store.sinDevolver().map(t => ({ id: t.id, codigo: t.codigo, detalle: `${t.atencion} · sin señal ${this.hace(t.desde)}` })),
+    });
+  }
+
+  protected async confirmarTanda(ids: number[]): Promise<void> {
+    const t = this.tanda();
+    this.tanda.set(null);
+    if (!t) return;
+    const elegidas = t.tarjetas.filter(x => ids.includes(x.id));
+    if (t.tipo === 'desinfectar') await this.store.desinfectar(elegidas);
+    else await this.store.extraviar(elegidas);
     this.enfocar();
   }
 
-  protected cerrarModal(modal: { set(v: null): void }): void {
-    modal.set(null);
+  protected cerrarTanda(): void {
+    this.tanda.set(null);
     this.enfocar();
   }
 
   protected async deshacer(): Promise<void> {
     await this.store.deshacer();
-    this.enfocar();
-  }
-
-  /** R5 */
-  protected async extraviar(): Promise<void> {
-    const tarjeta = this.confirmarExtraviada();
-    this.confirmarExtraviada.set(null);
-    if (tarjeta) await this.store.marcarExtraviada(tarjeta.id, tarjeta.codigo);
     this.enfocar();
   }
 
