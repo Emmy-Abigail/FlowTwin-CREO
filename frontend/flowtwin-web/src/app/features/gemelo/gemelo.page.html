@@ -1,9 +1,13 @@
 <div class="page-head">
   <div>
     <h1>Gemelo en vivo</h1>
-    <p>Pase el cursor o haga clic sobre una zona para ver su detalle.</p>
+    @if (modo.simulacion()) { <p>Pase el cursor o haga clic sobre una zona para ver su detalle.</p> }
   </div>
+  <app-selector-piso />
 </div>
+
+<!-- Solo datos reales (ADR-22): fuera de la simulación no se muestran pacientes inventados -->
+@if (modo.simulacion()) {
 
 <!-- 4 KPI -->
 @let k = store.kpis();
@@ -120,4 +124,12 @@
       }
     </div>
   </app-modal>
+}
+} @else {
+  <app-estado-vacio titulo="El gemelo se está conectando a los datos reales"
+                    texto="Esta pantalla mostrará la ocupación real de cada zona cuando reciba los datos de los nodos. Es el siguiente paso del desarrollo.">
+    @if (modo.puedeSimular()) {
+      <p class="hint">Para ver cómo se verá, usa <b>Simulación</b> en el menú lateral.</p>
+    }
+  </app-estado-vacio>
 }

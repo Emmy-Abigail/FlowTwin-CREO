@@ -24,6 +24,10 @@ export const primerIngresoGuard: CanActivateChildFn = (_ruta, estado) => {
     : true;
 };
 
+/** «Crea tu contraseña» es solo para el primer ingreso; después la contraseña se cambia en «Mi cuenta». */
+export const soloPrimerIngresoGuard: CanActivateFn = () =>
+  inject(AuthService).usuario()?.debeCambiarContrasena === true ? true : inject(Router).parseUrl('/cuenta');
+
 /** Solo deja pasar a los roles indicados; el resto ve "No tienes permiso". */
 export function rolGuard(roles: readonly Rol[]): CanActivateFn {
   return () => (inject(AuthService).puede(roles) ? true : inject(Router).parseUrl('/sin-permiso'));

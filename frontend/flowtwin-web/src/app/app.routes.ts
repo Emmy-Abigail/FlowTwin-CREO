@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { autenticadoGuard, inicioGuard, invitadoGuard, primerIngresoGuard, rolGuard } from './core/auth/guards';
+import { autenticadoGuard, inicioGuard, invitadoGuard, primerIngresoGuard, rolGuard, soloPrimerIngresoGuard } from './core/auth/guards';
 import { PERMISOS } from './core/auth/permisos';
 
 /** Página temporal para las pantallas de la Fase B. */
@@ -78,8 +78,16 @@ export const routes: Routes = [
         loadComponent: proximamente,
       },
       {
+        path: 'cuenta',
+        title: 'Mi cuenta · CREO FlowTwin',
+        data: { titulo: 'Mi cuenta' },
+        loadComponent: () => import('./features/cuenta/cuenta.page').then(m => m.CuentaPage),
+      },
+      {
+        // Solo para el primer ingreso; el resto de veces la contraseña se cambia en «Mi cuenta»
         path: 'cambiar-contrasena',
-        data: { titulo: 'Cambiar contraseña' },
+        canActivate: [soloPrimerIngresoGuard],
+        data: { titulo: 'Crea tu contraseña' },
         loadComponent: () => import('./features/auth/cambiar-contrasena.page').then(m => m.CambiarContrasenaPage),
       },
       {

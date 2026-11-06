@@ -4,11 +4,14 @@
     <p>{{ auth.soloLectura() ? 'Solo lectura. ' : '' }}Evolución de la ocupación y detalle de cada atención.</p>
   </div>
   <div class="toolbar">
+    <app-selector-piso />
     <button appBoton="borde" type="button" (click)="exportarCsv()"><app-icono nombre="dl" [tamano]="16" /> Exportar CSV</button>
     <button appBoton="borde" type="button" (click)="exportarPdf()"><app-icono nombre="dl" [tamano]="16" /> Exportar PDF</button>
   </div>
 </div>
 
+<!-- Solo datos reales (ADR-22): fuera de la simulación no se muestran atenciones inventadas -->
+@if (modo.simulacion()) {
 <!-- Filtros -->
 <div class="card pad filters">
   <div class="field">
@@ -97,4 +100,12 @@
     <span class="hint">En el sistema real el PDF lo genera el backend y se descarga. En esta demo solo se registra la acción en la auditoría.</span>
     <div pie><button appBoton="primario" type="button" (click)="pdfGenerado.set(null)">Entendido</button></div>
   </app-modal>
+}
+} @else {
+  <app-estado-vacio titulo="El historial se llenará con atenciones reales"
+                    texto="Aquí aparecerán los tiempos de espera y de atención de los pacientes reales, por hora y por día. Se conecta en un paso siguiente del desarrollo.">
+    @if (modo.puedeSimular()) {
+      <p class="hint">Para ver cómo se verá, usa <b>Simulación</b> en el menú lateral.</p>
+    }
+  </app-estado-vacio>
 }

@@ -2,7 +2,10 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
+import { ModoDatosService } from '../../core/datos/modo-datos.service';
 import { ToastService } from '../../core/ui/toast.service';
+import { EstadoVacioComponent } from '../../shared/componentes/estado-vacio.component';
+import { SelectorPisoComponent } from '../../shared/componentes/selector-piso.component';
 import { BotonDirective } from '../../shared/componentes/boton.directive';
 import { IconoComponent } from '../../shared/componentes/icono.component';
 import { KpiComponent } from '../../shared/componentes/kpi.component';
@@ -15,7 +18,7 @@ import { MapaCalorComponent } from './mapa-calor.component';
 /** P5 · Historial y reportes. Gerencia lo ve en solo lectura (puede exportar). */
 @Component({
   selector: 'app-historial',
-  imports: [FormsModule, BotonDirective, IconoComponent, KpiComponent, ModalComponent, TablaComponent, AforoChartComponent, MapaCalorComponent],
+  imports: [FormsModule, BotonDirective, IconoComponent, KpiComponent, ModalComponent, TablaComponent, AforoChartComponent, MapaCalorComponent, EstadoVacioComponent, SelectorPisoComponent],
   templateUrl: './historial.page.html',
   styleUrl: './historial.page.scss',
   providers: [HistorialStore],
@@ -24,6 +27,7 @@ import { MapaCalorComponent } from './mapa-calor.component';
 export class HistorialPage {
   protected store = inject(HistorialStore);
   protected auth = inject(AuthService);
+  protected modo = inject(ModoDatosService);
   private router = inject(Router);
   private toast = inject(ToastService);
 
