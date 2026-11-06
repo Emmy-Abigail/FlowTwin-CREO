@@ -119,6 +119,54 @@ public class AdmisionTests(ApiFixture api)
         Assert.Equal("TARJETA_NO_REGISTRADA", (await Json(r)).GetProperty("codigo").GetString());
     }
 
+    private static async Task<int> IdDeAsync(HttpClient c, string codigo) =>
+        (await Json(await c.GetAsync($"/api/v1/admision/vista-previa?qr={codigo}"))).GetProperty("tarjetaId").GetInt32();
+
+    [Fact]
+    public async Task Desinfectar_por_tandas_cambia_todas_y_deja_su_auditoria()
+    {
+        var operador = await api.ClienteDeAsync("operador@creo.pe");
+        await DejarPorDesinfectarAsync(operador, TarjetasDePrueba.TandaA);
+        await DejarPorDesinfectarAsync(operador, TarjetasDePrueba.TandaB);
+        int[] ids = [await IdDeAsync(operador, TarjetasDePrueba.TandaA), await IdDeAsync(operador, TarjetasDePrueba.TandaB)];
+
+        var r = await operador.PostAsJsonAsync("/api/v1/tarjetas/desinfectar", new { tarjetaIds = ids });
+
+        Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+        Assert.All((await Json(r)).EnumerateArray(), t => Assert.Equal("DISPONIBLE", t.GetProperty("estado").GetString()));
+        var auditadas = await api.EnBaseAsync(db => db.Auditoria
+            .CountAsync(a => a.AccionAuditoriaId == AccionAuditoria.Desinfectar
+                && (a.EntidadId == TarjetasDePrueba.TandaA || a.EntidadId == TarjetasDePrueba.TandaB)));
+        Assert.True(auditadas >= 2);
+    }
+
+    [Fact]
+    public async Task Una_tanda_con_una_tarjeta_que_no_corresponde_no_cambia_ninguna()
+    {
+        var operador = await api.ClienteDeAsync("operador@creo.pe");
+        await DejarPorDesinfectarAsync(operador, TarjetasDePrueba.TandaPendiente);
+        int[] ids = [await IdDeAsync(operador, TarjetasDePrueba.TandaPendiente), await IdDeAsync(operador, TarjetasDePrueba.TandaDisponible)];
+
+        var r = await operador.PostAsJsonAsync("/api/v1/tarjetas/desinfectar", new { tarjetaIds = ids });
+
+        Assert.Equal(HttpStatusCode.Conflict, r.StatusCode);
+        Assert.Contains(TarjetasDePrueba.TandaDisponible, (await Json(r)).GetProperty("title").GetString());
+        // Todas o ninguna: la que sí estaba por desinfectar sigue igual
+        var previa = await Json(await operador.GetAsync($"/api/v1/admision/vista-previa?qr={TarjetasDePrueba.TandaPendiente}"));
+        Assert.Equal("POR_DESINFECTAR", previa.GetProperty("estado").GetString());
+    }
+
+    [Fact]
+    public async Task Una_tanda_vacia_se_rechaza_con_mensaje_claro()
+    {
+        var operador = await api.ClienteDeAsync("operador@creo.pe");
+
+        var r = await operador.PostAsJsonAsync("/api/v1/tarjetas/desinfectar", new { tarjetaIds = Array.Empty<int>() });
+
+        Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode);
+        Assert.Contains("Marca al menos una tarjeta.", (await r.Content.ReadAsStringAsync()));
+    }
+
     [Fact]
     public async Task Deshacer_la_entrega_anula_la_atencion_y_libera_la_tarjeta()
     {

@@ -1,12 +1,19 @@
-<h1>Admisión</h1>
+<header class="cabecera">
+  <div>
+    <h1>Admisión</h1>
+    <p>Entrega y recepción de tarjetas de la sede.</p>
+  </div>
+  <span class="hoy"><app-icono nombre="calendario" [tamano]="18" />{{ hoy() }}</span>
+</header>
 
 <div class="adm">
+  <!-- Izquierda: lo que el operador hace y lo que acaba de pasar -->
   <div class="principal">
-    <!-- Leer la tarjeta, ver qué va a pasar y registrar (R1) -->
     <form class="card escaneo" (ngSubmit)="pedirRegistro()" novalidate>
       <label for="scan">Escanea la tarjeta</label>
       <div class="fila-escaneo">
         <div class="entrada grande" [class.con-error]="store.vistaPrevia()?.aviso?.tono === 'rojo'">
+          <app-icono nombre="scan" [tamano]="22" />
           <input #campo id="scan" name="codigo" autocomplete="off" spellcheck="false" aria-describedby="scan-aviso"
                  [ngModel]="codigo()" (ngModelChange)="escribir($event)" (keydown.enter)="enterEnCampo($event)">
         </div>
@@ -15,6 +22,7 @@
         </button>
       </div>
 
+      <!-- R1/R2: qué va a pasar con la tarjeta leída, o qué lo impide -->
       <div id="scan-aviso" class="debajo" aria-live="polite">
         @if (store.consultando()) {
           <span class="nota">Consultando la tarjeta…</span>
@@ -24,10 +32,10 @@
             <span><b>{{ v.aviso.titulo }}</b> {{ v.aviso.texto }}</span>
           </span>
           @if (v.aviso.desinfectar; as d) {
-            <button class="enlace" type="button" (click)="confirmarDesinfeccion.set(d)">Marcar desinfectada</button>
+            <button class="enlace" type="button" (click)="abrirDesinfeccion(d)">Marcar desinfectada</button>
           }
         } @else {
-          <span class="nota">El sistema sabe si es entrega o devolución por el estado de la tarjeta.</span>
+          <span class="nota"><app-icono nombre="info" [tamano]="16" />El sistema sabe si es entrega o devolución por el estado de la tarjeta.</span>
         }
       </div>
     </form>
@@ -35,18 +43,18 @@
     <!-- Lo que se acaba de registrar: una línea (R8: desaparece al leer otra tarjeta) -->
     @if (store.confirmacion(); as c) {
       <div class="confirmacion" [class]="'confirmacion ' + c.tipo" role="status">
-        <span class="punto" aria-hidden="true"></span>
+        <span class="sello" aria-hidden="true"><app-icono [nombre]="c.tipo === 'error' ? 'alert' : 'check'" [tamano]="16" /></span>
         <p class="texto"><b>{{ c.titulo }}</b>@if (c.detalle) { <span>· {{ c.detalle }}</span> }</p>
         @if (segundosDeshacer(); as s) {
           <button class="secundario" type="button" (click)="deshacer()">Deshacer entrega · {{ s }} s</button>
         } @else if (c.desinfectar; as d) {
-          <button class="secundario" type="button" (click)="confirmarDesinfeccion.set(d)">Marcar desinfectada</button>
+          <button class="secundario" type="button" (click)="abrirDesinfeccion(d)">Marcar desinfectada</button>
         }
       </div>
     }
 
     <section class="operaciones" aria-labelledby="t-ops">
-      <h2 id="t-ops" class="rotulo">Últimas operaciones</h2>
+      <h2 id="t-ops" class="rotulo"><app-icono nombre="reloj" [tamano]="15" />Últimas operaciones</h2>
       <ul>
         @for (o of store.operaciones(); track $index) {
           <li>
@@ -62,10 +70,11 @@
     </section>
   </div>
 
+  <!-- Derecha: cómo están las tarjetas y lo que pide una acción (agrupado, nunca una lista infinita) -->
   <aside class="lado">
     @let c = store.contadores();
     <section aria-labelledby="t-tarjetas">
-      <h2 id="t-tarjetas">Tarjetas de la sede · {{ c.total }}</h2>
+      <h2 id="t-tarjetas">Tarjetas de la sede <small>· {{ c.total }}</small></h2>
       <div class="barra" role="img" [attr.aria-label]="c.estados[0].n + ' disponibles, ' + c.estados[1].n + ' en uso, ' + c.estados[2].n + ' por desinfectar, ' + c.estados[3].n + ' sin devolver'">
         @for (e of c.estados; track e.clave) {
           @if (e.n) { <span [class]="e.tono" [style.flex-grow]="e.n"></span> }
@@ -78,23 +87,49 @@
       </div>
     </section>
 
-    @if (store.requierenAtencion().length) {
-      <section aria-labelledby="t-accion">
-        <h2 id="t-accion">Requieren tu acción · {{ store.requierenAtencion().length }}</h2>
-        <ul class="acciones">
-          @for (t of store.requierenAtencion(); track t.id) {
-            <li [class]="t.tipo === 'desinfectar' ? 'ambar' : 'rojo'">
-              <div><b>{{ t.codigo }} {{ t.tipo === 'desinfectar' ? 'por desinfectar' : 'sin devolver' }}</b><small>{{ t.detalle }}</small></div>
-              @if (t.tipo === 'desinfectar') {
-                <button type="button" (click)="confirmarDesinfeccion.set(t)">Desinfectada</button>
-              } @else {
-                <button type="button" class="peligro" (click)="confirmarExtraviada.set(t)">Extraviada</button>
-              }
+    <section aria-labelledby="t-accion">
+      <h2 id="t-accion">Requieren tu acción</h2>
+      @let pd = store.porDesinfectar();
+      @let sd = store.sinDevolver();
+      @if (pd.length || sd.length) {
+        <ul class="grupos">
+          @if (pd.length) {
+            <li class="ambar">
+              <span class="sello" aria-hidden="true"><app-icono nombre="gota" [tamano]="20" /></span>
+              <div class="que">
+                <b>Por desinfectar · {{ pd.length }}</b>
+                <span class="codigos">
+                  @for (t of pd.slice(0, 3); track t.id) { <code>{{ t.codigo }}</code> }
+                  @if (pd.length > 3) { <em>+{{ pd.length - 3 }} más</em> }
+                </span>
+                <small>{{ pd.length === 1 ? 'Se devolvió' : 'La más antigua se devolvió' }} {{ hace(pd[0].desde) }}</small>
+              </div>
+              <button type="button" (click)="abrirDesinfeccion()">Desinfectar…</button>
+            </li>
+          }
+          @if (sd.length) {
+            <li class="rojo">
+              <span class="sello" aria-hidden="true"><app-icono nombre="search" [tamano]="20" /></span>
+              <div class="que">
+                <b>Sin devolver · {{ sd.length }}</b>
+                <span class="codigos">
+                  @for (t of sd.slice(0, 3); track t.id) { <code>{{ t.codigo }}</code> }
+                  @if (sd.length > 3) { <em>+{{ sd.length - 3 }} más</em> }
+                </span>
+                <small>{{ sd.length === 1 ? sd[0].atencion + ' · sin señal' : 'La más antigua, sin señal' }} {{ hace(sd[0].desde) }}</small>
+              </div>
+              <button type="button" class="peligro" (click)="abrirRevision()">Revisar…</button>
             </li>
           }
         </ul>
-      </section>
-    }
+      } @else {
+        <div class="al-dia">
+          <span class="sello" aria-hidden="true"><app-icono nombre="check" [tamano]="20" /></span>
+          <div><b>Todo al día</b><span>No hay tarjetas por desinfectar ni sin devolver.</span></div>
+        </div>
+        <p class="nota"><app-icono nombre="info" [tamano]="16" />Las devueltas aparecerán aquí para desinfectarlas por tandas.</p>
+      }
+    </section>
   </aside>
 </div>
 
@@ -109,24 +144,15 @@
   </app-modal>
 }
 
-<!-- R4 · Desinfectar es una declaración sanitaria auditada -->
-@if (confirmarDesinfeccion(); as t) {
-  <app-modal [titulo]="'¿' + t.codigo + ' ya está desinfectada?'" (cerrar)="cerrarModal(confirmarDesinfeccion)">
-    <p class="sin-margen">Confirma que la limpiaste con alcohol al 70&nbsp;%. Quedará registrado a tu nombre y la tarjeta volverá a «Disponibles».</p>
-    <div pie>
-      <button appBoton="borde" type="button" (click)="cerrarModal(confirmarDesinfeccion)">Cancelar</button>
-      <button appBoton="oscuro" type="button" (click)="desinfectar()">Sí, está desinfectada</button>
-    </div>
-  </app-modal>
-}
-
-<!-- R5 · Extraviar saca la tarjeta del inventario -->
-@if (confirmarExtraviada(); as t) {
-  <app-modal [titulo]="'¿Marcar ' + t.codigo + ' como extraviada?'" (cerrar)="cerrarModal(confirmarExtraviada)">
-    <p class="sin-margen">Saldrá de las tarjetas disponibles. Si aparece, escanéala y pasará a desinfección.</p>
-    <div pie>
-      <button appBoton="borde" type="button" (click)="cerrarModal(confirmarExtraviada)">Cancelar</button>
-      <button appBoton="oscuro" type="button" (click)="extraviar()">Marcar extraviada</button>
-    </div>
-  </app-modal>
+<!-- R4 · Desinfectar (todas marcadas: es la tarea de siempre) · R5 · Extraviar (ninguna: decisión explícita) -->
+@if (tanda(); as t) {
+  @if (t.tipo === 'desinfectar') {
+    <app-seleccion-tarjetas titulo="Desinfectar tarjetas" [tarjetas]="t.tarjetas" [accion]="accionDesinfectar"
+      texto="Marca las que ya limpiaste con alcohol al 70&nbsp;%. Quedará registrado a tu nombre y volverán a «Disponibles»."
+      (confirmar)="confirmarTanda($event)" (cancelar)="cerrarTanda()" />
+  } @else {
+    <app-seleccion-tarjetas titulo="Tarjetas sin devolver" [tarjetas]="t.tarjetas" [accion]="accionExtraviar" [marcadasAlInicio]="false"
+      texto="Marca las que no aparecieron para darlas por extraviadas. Si alguna aparece después, escanéala y pasará a desinfección."
+      (confirmar)="confirmarTanda($event)" (cancelar)="cerrarTanda()" />
+  }
 }

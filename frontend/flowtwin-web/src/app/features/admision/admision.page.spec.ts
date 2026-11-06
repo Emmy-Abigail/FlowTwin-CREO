@@ -19,6 +19,7 @@ describe('AdmisionPage', () => {
     sinDevolver: [{ tarjetaId: 14, codigo: 'T-14', desde: '2026-11-06T13:47:00Z', atencionCodigo: 'A-0128' }],
     ultimasOperaciones: [],
   };
+  let RESUMEN_ACTUAL: typeof RESUMEN = RESUMEN;
   const hace = (min: number) => new Date(Date.now() - min * 60_000).toISOString();
   const PREVIA = (operacion: string, desde = hace(30)) => ({ tarjetaId: 7, tarjeta: 'T-07', estado: 'X', desde, operacion, codigo: null, mensaje: null });
   const ENTREGA = {
@@ -29,7 +30,7 @@ describe('AdmisionPage', () => {
 
   async function estable() {
     await fixture.whenStable();
-    http.match('/api/v1/admision/resumen').forEach(r => r.flush(RESUMEN));
+    http.match('/api/v1/admision/resumen').forEach(r => r.flush(RESUMEN_ACTUAL));
     await new Promise(r => setTimeout(r));   // deja que las respuestas lleguen al store antes de mirar
     await fixture.whenStable();
   }
@@ -51,6 +52,7 @@ describe('AdmisionPage', () => {
   }
 
   beforeEach(async () => {
+    RESUMEN_ACTUAL = RESUMEN;
     await TestBed.configureTestingModule({
       imports: [AdmisionPage],
       providers: [provideHttpClient(), provideHttpClientTesting()],
@@ -121,21 +123,23 @@ describe('AdmisionPage', () => {
     expect(campo().value).toBe('T-07');
   });
 
-  it('R4 · marcar desinfectada pide confirmación antes de llamar al servidor', async () => {
-    await clic(boton('Desinfectada'));
-    expect(modal()?.textContent).toContain('¿T-11 ya está desinfectada?');
-    http.expectNone('/api/v1/tarjetas/11/desinfectar');
+  it('R4 · desinfectar abre la tanda con todas marcadas y las envía juntas', async () => {
+    await clic(boton('Desinfectar…'));
+    expect(modal()?.textContent).toContain('Desinfectar tarjetas');
+    http.expectNone('/api/v1/tarjetas/desinfectar');
 
-    boton('Sí, está desinfectada').click();
+    boton('Marcar 1 como desinfectada').click();
     await fixture.whenStable();
-    http.expectOne('/api/v1/tarjetas/11/desinfectar');
+    expect(http.expectOne('/api/v1/tarjetas/desinfectar').request.body).toEqual({ tarjetaIds: [11] });
   });
 
-  it('R5 · marcar extraviada pide confirmación', async () => {
-    await clic(boton('Extraviada'));
+  it('R5 · revisar las sin devolver empieza sin ninguna marcada: extraviar es una decisión explícita', async () => {
+    await clic(boton('Revisar…'));
+    expect(modal()?.textContent).toContain('Tarjetas sin devolver');
 
-    expect(modal()?.textContent).toContain('¿Marcar T-14 como extraviada?');
-    http.expectNone('/api/v1/tarjetas/14/extraviar');
+    await clic(boton('Marcar 0 como extraviadas'));
+    expect(modal()?.textContent).toContain('Marca al menos una tarjeta.');
+    http.expectNone('/api/v1/tarjetas/extraviar');
   });
 
   it('R6 · deshacer no pide confirmación: llama directo al servidor', async () => {
@@ -178,9 +182,18 @@ describe('AdmisionPage', () => {
     expect(http.match('/api/v1/admision/escaneos').length).toBe(1);
   });
 
-  it('a la derecha: tarjetas de la sede con su total y lo que requiere tu acción', () => {
+  it('a la derecha: la barra de tarjetas y lo que requiere acción, agrupado (una fila por tipo)', () => {
     expect(pagina().textContent).toContain('Tarjetas de la sede · 15');
-    expect(pagina().textContent).toContain('Requieren tu acción · 2');
-    expect(pagina().textContent).toContain('A-0128 · sin lecturas desde las');
+    expect(pagina().querySelectorAll('.grupos li').length).toBe(2);
+    expect(pagina().textContent).toContain('Por desinfectar · 1');
+    expect(pagina().textContent).toContain('Sin devolver · 1');
+  });
+
+  it('sin pendientes dice «Todo al día» en vez de dejar un hueco', async () => {
+    RESUMEN_ACTUAL = { ...RESUMEN, porDesinfectar: [], sinDevolver: [] };
+    fixture = TestBed.createComponent(AdmisionPage);
+    await estable();
+
+    expect(pagina().textContent).toContain('Todo al día');
   });
 });
