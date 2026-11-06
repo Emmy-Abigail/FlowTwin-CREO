@@ -10,11 +10,12 @@ using Microsoft.EntityFrameworkCore;
 namespace FlowTwin.Api.Infraestructura;
 
 /// <summary>
-/// Datos de DEMOSTRACIÓN, solo en desarrollo (BaseDatos:SembrarDemo = true). Los mismos usuarios del
-/// prototipo (contraseña demo123), las 15 tarjetas del piloto, con dos casos para probar Admisión
-/// (T-11 por desinfectar y T-14 sin devolver), y 3 nodos con claves conocidas para el simulador.
-/// Producción solo tiene los datos de la migración. Cada bloque se siembra solo si falta, así una
-/// base de desarrollo existente recibe lo nuevo sin duplicar lo anterior.
+/// Datos de DESARROLLO, solo con BaseDatos:SembrarDemo = true. Solo lo que existe físicamente: los
+/// usuarios de prueba (contraseña demo123), las 15 tarjetas del piloto (todas Disponibles) y 3 nodos con
+/// claves conocidas para el simulador. NUNCA historia inventada (atenciones, movimientos, lecturas):
+/// todo lo que muestran las pantallas debe haber ocurrido de verdad. Los casos que necesita una
+/// prueba los prepara la prueba con el flujo real. Producción solo tiene los datos de la migración.
+/// Cada bloque se siembra solo si falta, así una base existente no se duplica.
 /// </summary>
 public static class SemillaDesarrollo
 {
@@ -52,7 +53,6 @@ public static class SemillaDesarrollo
     private static async Task UsuariosYTarjetasAsync(IServiceProvider sp, FlowTwinDbContext db, CancellationToken ct)
     {
         var hasher = sp.GetRequiredService<IPasswordHasher<Usuario>>();
-        var zona = sp.GetRequiredService<ZonaHoraria>();
         var reloj = sp.GetRequiredService<IReloj>();
 
         // ---- Usuarios del prototipo
@@ -87,23 +87,6 @@ public static class SemillaDesarrollo
         {
             TarjetaId = t.Id, EstadoNuevoId = EstadoTarjeta.Disponible, Observacion = "Registrada",
         }));
-        await db.SaveChangesAsync(ct);
-
-        // ---- Dos atenciones de ayer para los casos de error de Admisión
-        var ayer = reloj.AhoraUtc.AddDays(-1);
-        await CasoAsync(db, tarjetas[10], "A-0001", zona.FechaLocal(ayer), ayer, MotivoCierreAtencion.Devuelta, EstadoTarjeta.PorDesinfectar, ct);
-        await CasoAsync(db, tarjetas[13], "A-0002", zona.FechaLocal(ayer), ayer.AddMinutes(20), MotivoCierreAtencion.SinLecturas, EstadoTarjeta.SinDevolver, ct);
-    }
-
-    private static async Task CasoAsync(FlowTwinDbContext db, Tarjeta tarjeta, string codigo, DateOnly fecha, DateTime inicio,
-        MotivoCierreAtencion motivo, EstadoTarjeta estadoFinal, CancellationToken ct)
-    {
-        var atencion = Atencion.Abrir(codigo, fecha, tarjeta.SedeId, tarjeta.Id, inicio);
-        db.Atenciones.Add(atencion);
-        await db.SaveChangesAsync(ct);
-        db.MovimientosTarjeta.Add(tarjeta.CambiarA(EstadoTarjeta.EnUso, atencion.Id));
-        atencion.Cerrar(motivo, inicio.AddMinutes(40));
-        db.MovimientosTarjeta.Add(tarjeta.CambiarA(estadoFinal, atencion.Id));
         await db.SaveChangesAsync(ct);
     }
 }

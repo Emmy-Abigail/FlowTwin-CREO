@@ -16,6 +16,18 @@ public class AdmisionTests(ApiFixture api)
     private static Task<HttpResponseMessage> Escanear(HttpClient c, string codigo, string modo = "AUTO") =>
         c.PostAsJsonAsync("/api/v1/admision/escaneos", new { codigoQr = codigo, modo });
 
+    /// <summary>
+    /// Deja la tarjeta «por desinfectar» como en la vida real: se entrega y se devuelve. Si otra prueba
+    /// ya la dejó así, no hace nada (las pruebas comparten la base y corren en cualquier orden).
+    /// </summary>
+    private static async Task DejarPorDesinfectarAsync(HttpClient operador, string codigo)
+    {
+        var previa = await Json(await operador.GetAsync($"/api/v1/admision/vista-previa?qr={codigo}"));
+        if (previa.GetProperty("estado").GetString() == "POR_DESINFECTAR") return;
+        if (previa.GetProperty("estado").GetString() == "DISPONIBLE") (await Escanear(operador, codigo)).EnsureSuccessStatusCode();
+        (await Escanear(operador, codigo)).EnsureSuccessStatusCode();
+    }
+
     [Fact]
     public async Task Entrega_devolucion_y_desinfeccion_completan_el_ciclo_de_la_tarjeta()
     {
@@ -52,6 +64,62 @@ public class AdmisionTests(ApiFixture api)
     }
 
     [Fact]
+    public async Task El_resumen_no_muestra_el_alta_de_tarjetas_como_operacion()
+    {
+        var operador = await api.ClienteDeAsync("operador@creo.pe");
+
+        var resumen = await Json(await operador.GetAsync("/api/v1/admision/resumen"));
+
+        // La semilla da de alta 15 tarjetas: eso es inventario, no actividad del mostrador
+        Assert.DoesNotContain(resumen.GetProperty("ultimasOperaciones").EnumerateArray(),
+            o => o.GetProperty("tipo").GetString() == "REGISTRADA");
+    }
+
+    [Fact]
+    public async Task Vista_previa_dice_que_pasaria_sin_registrar_nada()
+    {
+        var operador = await api.ClienteDeAsync("operador@creo.pe");
+
+        // Por el contenido del QR impreso en la tarjeta, igual que el lector
+        var previa = await Json(await operador.GetAsync("/api/v1/admision/vista-previa?qr=CREO-T13"));
+        Assert.Equal("T-13", previa.GetProperty("tarjeta").GetString());
+        Assert.Equal("ENTREGA", previa.GetProperty("operacion").GetString());
+        Assert.Equal(JsonValueKind.String, previa.GetProperty("desde").ValueKind);   // desde cuándo está disponible
+
+        // Mirar no cambia nada: la tarjeta sigue disponible y no nació ninguna atención
+        var (estado, atenciones) = await api.EnBaseAsync(async db =>
+        {
+            var t = await db.Tarjetas.SingleAsync(x => x.Codigo == TarjetasDePrueba.VistaPrevia);
+            return (t.EstadoTarjetaId, await db.Atenciones.CountAsync(a => a.TarjetaId == t.Id));
+        });
+        Assert.Equal(EstadoTarjeta.Disponible, estado);
+        Assert.Equal(0, atenciones);
+    }
+
+    [Fact]
+    public async Task Vista_previa_avisa_la_regla_que_impediria_el_registro()
+    {
+        var operador = await api.ClienteDeAsync("operador@creo.pe");
+        await DejarPorDesinfectarAsync(operador, TarjetasDePrueba.PorDesinfectar);
+
+        var previa = await Json(await operador.GetAsync($"/api/v1/admision/vista-previa?qr={TarjetasDePrueba.PorDesinfectar}"));
+
+        Assert.Equal(JsonValueKind.Null, previa.GetProperty("operacion").ValueKind);
+        Assert.Equal("RN03_POR_DESINFECTAR", previa.GetProperty("codigo").GetString());
+    }
+
+    [Fact]
+    public async Task Vista_previa_de_tarjeta_inexistente_responde_404()
+    {
+        var operador = await api.ClienteDeAsync("operador@creo.pe");
+
+        var r = await operador.GetAsync("/api/v1/admision/vista-previa?qr=T-80");
+
+        Assert.Equal(HttpStatusCode.NotFound, r.StatusCode);
+        Assert.Equal("TARJETA_NO_REGISTRADA", (await Json(r)).GetProperty("codigo").GetString());
+    }
+
+    [Fact]
     public async Task Deshacer_la_entrega_anula_la_atencion_y_libera_la_tarjeta()
     {
         var operador = await api.ClienteDeAsync("operador@creo.pe");
@@ -68,8 +136,9 @@ public class AdmisionTests(ApiFixture api)
     public async Task Tarjeta_por_desinfectar_no_se_entrega()
     {
         var operador = await api.ClienteDeAsync("operador@creo.pe");
+        await DejarPorDesinfectarAsync(operador, TarjetasDePrueba.PorDesinfectar);
 
-        var r = await Escanear(operador, "T-11");
+        var r = await Escanear(operador, TarjetasDePrueba.PorDesinfectar);
 
         Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode);
         Assert.Equal("RN03_POR_DESINFECTAR", (await Json(r)).GetProperty("codigo").GetString());
