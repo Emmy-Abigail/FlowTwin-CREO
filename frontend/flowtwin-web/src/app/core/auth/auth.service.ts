@@ -32,6 +32,17 @@ export type ResultadoLogin =
   | { ok: true; destino: string }
   | { ok: false; error: string; campos: Partial<Record<'correo' | 'clave', string>> };
 
+export type ResultadoCambioClave =
+  | { ok: true }
+  | { ok: false; error: string | null; campos: Partial<Record<'actual' | 'nueva' | 'confirmacion', string>> };
+
+/** Reglas de negocio del servidor que pertenecen a un campo concreto del formulario. */
+const CAMPO_POR_CODIGO: Record<string, 'actual' | 'nueva'> = {
+  CONTRASENA_ACTUAL_INCORRECTA: 'actual',
+  POLITICA_CONTRASENA: 'nueva',
+  CONTRASENA_REPETIDA: 'nueva',
+};
+
 /** Código de rol de la API → nombre que usan el menú y los permisos del frontend. */
 const ROLES: Record<string, Rol> = { ADMIN: 'Administrador', OPERADOR: 'Operador', GERENCIA: 'Gerencia' };
 
@@ -107,13 +118,21 @@ export class AuthService {
   }
 
   /** Devuelve un mensaje de error, o null si la contraseña se cambió. */
-  async cambiarClave(actual: string, nueva: string, confirmacion: string): Promise<string | null> {
+  /**
+   * F-02. Si falla, devuelve el error en el campo que corresponde (para mostrarlo debajo de él) o como
+   * mensaje general si no es de un campo (sin conexión, error interno). El código del servidor decide.
+   */
+  async cambiarClave(actual: string, nueva: string, confirmacion: string): Promise<ResultadoCambioClave> {
     try {
       const r = await firstValueFrom(this.http.post<SesionApi>(`${API}/auth/cambiar-contrasena`, { actual, nueva, confirmacion }));
       this.guardar(r);
-      return null;
+      return { ok: true };
     } catch (e) {
-      return mensajeDe(problemaDe(e));
+      const p = problemaDe(e);
+      const campo = CAMPO_POR_CODIGO[p.codigo];
+      if (campo) return { ok: false, error: null, campos: { [campo]: mensajeDe(p) } };
+      const campos = erroresPorCampo(p);
+      return Object.keys(campos).length ? { ok: false, error: null, campos } : { ok: false, error: p.titulo, campos: {} };
     }
   }
 
@@ -150,15 +169,4 @@ export class AuthService {
     this.sesion.set(null);
     if (this.temporizadorInactividad) clearTimeout(this.temporizadorInactividad);
   }
-}
-
-/** Requisitos visibles de la nueva contraseña (sección Seguridad → Contraseñas). La API los vuelve a validar. */
-export function cumpleRequisitos(clave: string): { ok: boolean; texto: string }[] {
-  return [
-    { ok: clave.length >= 8, texto: 'Al menos 8 caracteres' },
-    { ok: /[A-ZÁÉÍÓÚÑ]/.test(clave), texto: 'Una letra mayúscula' },
-    { ok: /[a-záéíóúñ]/.test(clave), texto: 'Una letra minúscula' },
-    { ok: /\d/.test(clave), texto: 'Un número' },
-    { ok: /[^A-Za-zÁÉÍÓÚÑáéíóúñ0-9]/.test(clave), texto: 'Un símbolo (# $ % & * ! ?)' },
-  ];
 }

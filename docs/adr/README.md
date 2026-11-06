@@ -7,3 +7,4 @@ atrás. Los ADR-01 a ADR-20 están en el documento de arquitectura (v2); desde e
 | N.º | Decisión | Estado |
 |---|---|---|
 | [ADR-21](0021-base-de-datos-como-cola-del-motor.md) | La base de datos es la cola del motor de presencia | Aceptada |
+| [ADR-22](0022-simulacion-temporal-en-el-frontend.md) | Simulación en el frontend: temporal, separada y siempre a la vista | Aceptada (temporal) |

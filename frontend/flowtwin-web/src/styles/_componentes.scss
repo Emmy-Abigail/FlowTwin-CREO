@@ -21,6 +21,26 @@
   padding: 10px 12px; font-size: 12.5px; color: #5F4500; display: flex; flex-direction: column; gap: 6px;
 }
 
+/* Campo con validación debajo (login, contraseña…): el patrón visual de todos los formularios nuevos. */
+.campo { display: flex; flex-direction: column; gap: 6px; }
+.campo label { font-size: 14px; font-weight: 700; }
+.entrada {
+  display: flex; align-items: center; gap: 10px; height: 50px; padding: 0 6px 0 14px;
+  border-radius: 12px; border: 1.5px solid transparent; background: var(--campo); color: var(--gris);
+  transition: border-color .15s, background .15s, box-shadow .15s;
+}
+.entrada:focus-within { border-color: var(--tinta); background: var(--fondo); box-shadow: 0 0 0 4px rgba(245, 177, 30, .25); }
+.entrada input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: transparent; font-size: 16px; color: var(--tinta); }
+.entrada input::placeholder { color: var(--gris-2); }
+.con-error .entrada { border-color: var(--error-borde); background: var(--fondo); }
+.ver { width: 38px; height: 38px; border: 0; border-radius: 9px; background: none; color: var(--gris); display: grid; place-items: center; flex: none; }
+.ver:hover { color: var(--tinta); background: var(--fondo-2); }
+.msg-error, .msg-mayus { display: flex; align-items: flex-start; gap: 6px; font-size: 14px; font-weight: 600; animation: aparecer .2s ease-out; }
+.msg-error { color: var(--error); }
+.msg-mayus { color: var(--ambar-t); }
+.msg-error app-icono, .msg-mayus app-icono { margin-top: 2px; flex: none; }
+@keyframes aparecer { from { opacity: 0; } to { opacity: 1; } }
+
 /* ---------- Botones (directiva appBoton) ---------- */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
