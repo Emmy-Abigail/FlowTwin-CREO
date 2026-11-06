@@ -23,6 +23,14 @@ public sealed record TarjetaEstadoDto(int Id, string Codigo, string Estado, stri
 public sealed record AtencionResumenDto(
     long Id, string Codigo, DateTime InicioEn, DateTime? FinEn, int? EsperaMin, int? ConsultaMin, int? TotalMin);
 
+/// <summary>
+/// Vista previa de un escaneo. Operacion: ENTREGA, DEVOLUCION o RECUPERADA si se puede registrar;
+/// si una regla lo impide, Operacion es null y Codigo/Mensaje dicen cuál (los mismos que daría el registro).
+/// Desde: cuándo entró la tarjeta en su estado actual (en una devolución, cuándo se entregó).
+/// </summary>
+public sealed record VistaPreviaDto(
+    int TarjetaId, string Tarjeta, string Estado, DateTime? Desde, string? Operacion, string? Codigo, string? Mensaje);
+
 /// <summary>Operacion: ENTREGA, DEVOLUCION o RECUPERADA.</summary>
 public sealed record EscaneoResultado(string Operacion, TarjetaEstadoDto Tarjeta, AtencionResumenDto? Atencion, DateTime? DeshacerHasta);
 
@@ -61,32 +69,62 @@ public sealed class AdmisionServicio(
     public async Task<EscaneoResultado> EscanearAsync(EscaneoRequest req, CancellationToken ct)
     {
         await validador.ValidarAsync(req, ct);
-        var modo = req.Modo ?? "AUTO";
-        var tarjeta = await tarjetas.BuscarAsync(req.CodigoQr, ct)
+        var tarjeta = await BuscarEnAlcanceAsync(req.CodigoQr, ct);
+        var (operacion, problema) = Decidir(tarjeta, req.Modo ?? "AUTO");
+        if (problema is not null) throw problema;
+        return operacion switch
+        {
+            "ENTREGA" => await EntregarAsync(tarjeta, ct),
+            "DEVOLUCION" => await DevolverAsync(tarjeta, ct),
+            _ => await RecuperarAsync(tarjeta, ct),
+        };
+    }
+
+    /// <summary>
+    /// Qué pasaría al registrar esta tarjeta, sin hacerlo: el operador lo ve antes de pulsar Registrar.
+    /// Usa la misma decisión que <see cref="EscanearAsync"/>, así la vista previa nunca contradice al registro.
+    /// </summary>
+    public async Task<VistaPreviaDto> PrevisualizarAsync(string codigoQr, CancellationToken ct)
+    {
+        await validador.ValidarAsync(new EscaneoRequest(codigoQr), ct);
+        var tarjeta = await BuscarEnAlcanceAsync(codigoQr, ct);
+        var (operacion, problema) = Decidir(tarjeta, "AUTO");
+        return new VistaPreviaDto(tarjeta.Id, tarjeta.Codigo, tarjeta.Estado.Codigo(), tarjeta.Desde, operacion, problema?.Codigo, problema?.Message);
+    }
+
+    private async Task<TarjetaInfo> BuscarEnAlcanceAsync(string codigoQr, CancellationToken ct)
+    {
+        var tarjeta = await tarjetas.BuscarAsync(codigoQr, ct)
             ?? throw new NoEncontradoException(
-                $"Tarjeta {req.CodigoQr.Trim().ToUpperInvariant()} no registrada. Pide al Administrador que la registre.",
+                $"Tarjeta {codigoQr.Trim().ToUpperInvariant()} no registrada. Pide al Administrador que la registre.",
                 "TARJETA_NO_REGISTRADA");
 
         var alcance = await sedes.SedesDelUsuarioAsync(ct);
         if (alcance is not null && !alcance.Contains(tarjeta.SedeId))
             throw new ReglaNegocioException("RN03_TARJETA_DE_OTRA_SEDE", $"La tarjeta {tarjeta.Codigo} pertenece a otra sede.");
-
-        return tarjeta.Estado switch
-        {
-            EstadoTarjeta.Baja => throw new ReglaNegocioException("RN_TARJETA_DE_BAJA",
-                $"La tarjeta {tarjeta.Codigo} está dada de baja. Usa otra tarjeta disponible."),
-            EstadoTarjeta.PorDesinfectar => throw new ReglaNegocioException("RN03_POR_DESINFECTAR",
-                "Esta tarjeta aún no está desinfectada.",
-                new { tarjetaId = tarjeta.Id, tarjeta = tarjeta.Codigo, desde = tarjeta.Desde }),
-            EstadoTarjeta.SinDevolver or EstadoTarjeta.Extraviada => await RecuperarAsync(tarjeta, ct),
-            EstadoTarjeta.Disponible when modo == "DEVOLUCION" => throw new ReglaNegocioException("RN_TARJETA_NO_EN_USO",
-                $"La tarjeta {tarjeta.Codigo} está disponible: no hay nada que recibir."),
-            EstadoTarjeta.Disponible => await EntregarAsync(tarjeta, ct),
-            EstadoTarjeta.EnUso when modo == "ENTREGA" => throw new ReglaNegocioException("RN01_TARJETA_CON_ATENCION_ABIERTA",
-                $"La tarjeta {tarjeta.Codigo} ya está en uso. Para entregarla, primero recíbela."),
-            _ => await DevolverAsync(tarjeta, ct),
-        };
+        return tarjeta;
     }
+
+    /// <summary>
+    /// La regla de Admisión en un solo lugar: por el estado de la tarjeta (y el modo), qué operación
+    /// corresponde (ENTREGA, DEVOLUCION, RECUPERADA) o qué regla lo impide. Pura: no toca la base.
+    /// </summary>
+    internal static (string? Operacion, ReglaNegocioException? Problema) Decidir(TarjetaInfo tarjeta, string modo) =>
+        tarjeta.Estado switch
+        {
+            EstadoTarjeta.Baja => (null, new ReglaNegocioException("RN_TARJETA_DE_BAJA",
+                $"La tarjeta {tarjeta.Codigo} está dada de baja. Usa otra tarjeta disponible.")),
+            EstadoTarjeta.PorDesinfectar => (null, new ReglaNegocioException("RN03_POR_DESINFECTAR",
+                "Esta tarjeta aún no está desinfectada.",
+                new { tarjetaId = tarjeta.Id, tarjeta = tarjeta.Codigo, desde = tarjeta.Desde })),
+            EstadoTarjeta.SinDevolver or EstadoTarjeta.Extraviada => ("RECUPERADA", null),
+            EstadoTarjeta.Disponible when modo == "DEVOLUCION" => (null, new ReglaNegocioException("RN_TARJETA_NO_EN_USO",
+                $"La tarjeta {tarjeta.Codigo} está disponible: no hay nada que recibir.")),
+            EstadoTarjeta.Disponible => ("ENTREGA", null),
+            EstadoTarjeta.EnUso when modo == "ENTREGA" => (null, new ReglaNegocioException("RN01_TARJETA_CON_ATENCION_ABIERTA",
+                $"La tarjeta {tarjeta.Codigo} ya está en uso. Para entregarla, primero recíbela.")),
+            _ => ("DEVOLUCION", null),
+        };
 
     /// <summary>F-06: nace la atención y la tarjeta pasa a En uso, en una sola transacción.</summary>
     private Task<EscaneoResultado> EntregarAsync(TarjetaInfo tarjeta, CancellationToken ct) =>
@@ -170,7 +208,7 @@ public sealed class AdmisionServicio(
             .Select(g => new { TarjetaId = g.Key, Codigo = g.OrderByDescending(a => a.InicioEn).Select(a => a.Codigo).First() })
             .ToDictionaryAsync(x => x.TarjetaId, x => x.Codigo, ct);
 
-        var movimientos = await tarjetas.UltimosMovimientosAsync(alcance, 8, ct);
+        var movimientos = await tarjetas.UltimasOperacionesAsync(alcance, 8, ct);
         var atencionIds = movimientos.Where(m => m.AtencionId is not null).Select(m => m.AtencionId!.Value).Distinct().ToList();
         var atenciones = await db.Atenciones.Where(a => atencionIds.Contains(a.Id)).ToDictionaryAsync(a => a.Id, ct);
         var ahora = reloj.AhoraUtc;

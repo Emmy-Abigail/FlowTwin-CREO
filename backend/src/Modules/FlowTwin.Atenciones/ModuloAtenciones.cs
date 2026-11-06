@@ -39,6 +39,10 @@ public static class ModuloAtenciones
                 Results.Ok(await s.EscanearAsync(req, ct)))
             .WithSummary("Entrega o devolución según el estado de la tarjeta (F-06, F-08)");
 
+        admision.MapGet("/vista-previa", async (string qr, AdmisionServicio s, CancellationToken ct) =>
+                Results.Ok(await s.PrevisualizarAsync(qr, ct)))
+            .WithSummary("Qué pasaría al registrar la tarjeta, sin registrarla");
+
         admision.MapPost("/atenciones/{id:long}/deshacer", async (long id, AdmisionServicio s, CancellationToken ct) =>
                 Results.Ok(await s.DeshacerAsync(id, ct)))
             .WithSummary("Anula una entrega dentro de los 30 s (RN-04)");
