@@ -43,6 +43,16 @@ public static class ModuloDispositivos
             .RequireAuthorization(Politicas.SoloOperador)
             .WithSummary("Por desinfectar → Disponible (F-09)");
 
+        tarjetas.MapPost("/desinfectar", async (TandaTarjetasRequest req, TarjetasServicio s, CancellationToken ct) =>
+                Results.Ok(await s.DesinfectarAsync(req, ct)))
+            .RequireAuthorization(Politicas.SoloOperador)
+            .WithSummary("Varias Por desinfectar → Disponible, todas o ninguna (F-09)");
+
+        tarjetas.MapPost("/extraviar", async (TandaTarjetasRequest req, TarjetasServicio s, CancellationToken ct) =>
+                Results.Ok(await s.ExtraviarAsync(req, ct)))
+            .RequireAuthorization(Politicas.OperadorOAdmin)
+            .WithSummary("Varias Sin devolver → Extraviada, todas o ninguna (F-10)");
+
         tarjetas.MapPost("/{id:int}/extraviar", async (int id, TarjetasServicio s, CancellationToken ct) =>
                 Results.Ok(await s.ExtraviarAsync(id, ct)))
             .RequireAuthorization(Politicas.OperadorOAdmin)

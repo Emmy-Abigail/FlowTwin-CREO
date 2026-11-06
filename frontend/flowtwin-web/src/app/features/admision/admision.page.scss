@@ -1,41 +1,50 @@
-/* Maqueta aprobada (06/11/2026): una caja para escanear, la confirmación compacta, las últimas
-   operaciones y, a la derecha, las tarjetas de la sede y lo que requiere acción. Sin scroll. */
+/* Maqueta aprobada (06/11/2026). Izquierda: escanear, confirmación y últimas operaciones.
+   Derecha: barra de tarjetas y «Requieren tu acción» agrupado. Sin scroll en 1280–1920 px. */
 :host {
-  display: flex; flex-direction: column; gap: 20px; height: 100%; min-height: 0;
+  display: flex; flex-direction: column; gap: clamp(18px, 3vh, 26px); height: 100%; min-height: 0;
   --verde: var(--baja); --azul: #2F7BC0; --ambar: var(--media); --rojo-e: var(--alta);
 }
 
-.adm { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr); }
-.principal { min-height: 0; display: flex; flex-direction: column; gap: 20px; padding-right: clamp(24px, 3vw, 36px); }
+.cabecera { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.cabecera p { margin: 6px 0 0; color: var(--gris); }
+.hoy { display: inline-flex; align-items: center; gap: 8px; color: var(--gris); font-size: 14px; font-weight: 600; }
+
+.adm { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(320px, 1fr); }
+.principal { min-height: 0; display: flex; flex-direction: column; gap: clamp(16px, 3vh, 24px); padding-right: clamp(24px, 3vw, 36px); }
+.lado { min-height: 0; display: flex; flex-direction: column; gap: clamp(20px, 3.5vh, 30px); padding-left: clamp(24px, 3vw, 36px); border-left: 1px solid var(--linea); }
+.lado h2 { font-size: 18px; font-weight: 800; }
+.lado h2 small { font-family: var(--f-body); font-size: 14px; font-weight: 600; color: var(--gris); }
 
 /* ---------- Escanear ---------- */
-.escaneo { padding: 20px 22px; display: flex; flex-direction: column; gap: 10px; }
+.escaneo { padding: 22px 24px; display: flex; flex-direction: column; gap: 12px; }
 .escaneo label { font-size: 15px; font-weight: 700; }
-.fila-escaneo { display: flex; gap: 10px; }
+.fila-escaneo { display: flex; gap: 12px; }
 .entrada.grande { flex: 1; height: 62px; padding: 0 18px; }
 .entrada.grande input { font-family: var(--f-mono); font-size: 24px; font-weight: 600; letter-spacing: .02em; }
 .entrada.con-error { border-color: var(--error-borde); background: var(--fondo); }
-.registrar { flex: none; height: 62px; padding: 0 28px; border: 0; border-radius: 12px; background: var(--rojo); color: #fff; font-size: 16px; font-weight: 700; }
+.registrar { flex: none; height: 62px; padding: 0 30px; border: 0; border-radius: 12px; background: var(--rojo); color: #fff; font-size: 16px; font-weight: 700; }
 .registrar:hover { background: var(--rojo-osc); }
 .registrar:focus-visible { outline: 3px solid var(--amarillo); outline-offset: 2px; }
 .registrar[aria-busy="true"] { opacity: .75; cursor: progress; }
 
 .debajo { min-height: 24px; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
-.nota { color: var(--gris); font-size: 13.5px; }
+.nota { margin: 0; display: inline-flex; align-items: center; gap: 8px; color: var(--gris); font-size: 13.5px; }
 .aviso { display: inline-flex; align-items: baseline; gap: 10px; font-size: 15px; color: var(--gris); }
 .aviso b { color: var(--tinta); margin-right: 4px; }
 .aviso.rojo b { color: var(--error); }
+.aviso .punto { transform: translateY(-1px); }
+.aviso.verde .punto { background: var(--verde); } .aviso.celeste .punto { background: var(--azul); }
+.aviso.ambar .punto { background: var(--ambar); } .aviso.rojo .punto { background: var(--rojo-e); }
 .enlace { border: 0; background: none; padding: 0 2px; font-weight: 700; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; }
 .enlace:hover { color: var(--rojo); }
 
 /* ---------- Confirmación: una línea de color ---------- */
-.confirmacion { flex: none; border-radius: 12px; padding: 10px 10px 10px 18px; min-height: 56px; display: flex; align-items: center; gap: 12px; animation: entrar .25s ease-out; }
+.confirmacion { flex: none; border-radius: 12px; padding: 10px 10px 10px 14px; min-height: 56px; display: flex; align-items: center; gap: 12px; animation: entrar .25s ease-out; }
+.confirmacion .sello { width: 30px; height: 30px; border-radius: 50%; background: #fff; display: grid; place-items: center; flex: none; }
 .confirmacion .texto { flex: 1; min-width: 0; margin: 0; font-size: 15px; }
 .confirmacion .texto b { color: var(--tinta); margin-right: 4px; }
-.confirmacion .punto { background: currentColor; }
-.secundario { flex: none; background: #fff; border: 1px solid var(--linea-2); border-radius: 10px; padding: 8px 12px; font-weight: 700; font-size: 14px; color: var(--tinta); }
+.secundario { flex: none; white-space: nowrap; background: #fff; border: 1px solid var(--linea-2); border-radius: 10px; padding: 8px 12px; font-weight: 700; font-size: 14px; color: var(--tinta); }
 .secundario:hover { border-color: var(--tinta); }
-
 .entrega      { background: var(--menta);  color: var(--menta-t); }
 .devolucion   { background: var(--celeste); color: var(--celeste-t); }
 .recuperada, .desinfectada { background: var(--amarillo-suave); color: var(--ambar-t); }
@@ -44,9 +53,9 @@
 
 /* ---------- Últimas operaciones ---------- */
 .operaciones { min-height: 0; display: flex; flex-direction: column; gap: 4px; }
-.rotulo { font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--gris); }
+.rotulo { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--gris); }
 .operaciones ul { list-style: none; margin: 0; padding: 0; overflow: hidden; }
-.operaciones li { display: grid; grid-template-columns: 52px 104px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 9px 0; font-size: 14px; }
+.operaciones li { display: grid; grid-template-columns: 48px 104px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 9px 0; font-size: 14px; }
 .operaciones li + li { border-top: 1px solid var(--linea); }
 .hora { font-family: var(--f-mono); font-size: 13px; color: var(--gris); }
 .tag { border-radius: 999px; padding: 3px 10px; font-size: 12.5px; font-weight: 700; text-align: center; background: var(--fondo-2); color: var(--gris); }
@@ -59,29 +68,38 @@
 .cuando { color: var(--gris); font-size: 13px; white-space: nowrap; }
 .vacio { display: block !important; color: var(--gris); }
 
-/* ---------- Tarjetas de la sede y acciones ---------- */
-.lado { min-height: 0; display: flex; flex-direction: column; gap: 30px; padding-left: clamp(24px, 3vw, 36px); border-left: 1px solid var(--linea); }
-.lado h2 { font-size: 19px; font-weight: 800; }
-.barra { display: flex; gap: 3px; height: 12px; margin: 12px 0 14px; }
+/* ---------- Tarjetas de la sede ---------- */
+.barra { display: flex; gap: 3px; height: 12px; margin: 14px 0 16px; }
 .barra span { flex-basis: 0; border-radius: 999px; }
-.leyenda { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 18px; font-size: 14px; }
+.leyenda { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 18px; font-size: 14px; }
 .leyenda div { display: flex; align-items: center; gap: 8px; }
-.leyenda b { font-family: var(--f-disp); font-size: 20px; font-weight: 900; }
+.leyenda b { font-family: var(--f-disp); font-size: 22px; font-weight: 900; }
 .punto { flex: none; width: 9px; height: 9px; border-radius: 50%; }
-.verde { background: var(--verde); } .negro { background: var(--negro); } .ambar { background: var(--ambar); } .rojo { background: var(--rojo-e); }
-.aviso.verde, .aviso.celeste, .aviso.ambar, .aviso.rojo, .aviso.gris { background: none; }
-.aviso.verde .punto { background: var(--verde); } .aviso.celeste .punto { background: var(--azul); }
-.aviso.ambar .punto { background: var(--ambar); } .aviso.rojo .punto { background: var(--rojo-e); }
+.barra .verde, .punto.verde { background: var(--verde); }
+.barra .negro, .punto.negro { background: var(--negro); }
+.barra .ambar, .punto.ambar { background: var(--ambar); }
+.barra .rojo, .punto.rojo { background: var(--rojo-e); }
 
-.acciones { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
-.acciones li { border-radius: 12px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.acciones li.ambar { background: var(--amarillo-suave); }
-.acciones li.rojo { background: var(--durazno); }
-.acciones b { display: block; font-size: 15px; }
-.acciones small { font-size: 13px; color: var(--gris); }
-.acciones button { flex: none; background: #fff; border: 1px solid var(--linea-2); border-radius: 10px; padding: 8px 12px; font-weight: 700; font-size: 13.5px; color: var(--tinta); }
-.acciones button.peligro { color: var(--durazno-t); }
-.acciones button:hover { border-color: var(--tinta); }
+/* ---------- Requieren tu acción ---------- */
+.grupos { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.grupos li { border-radius: 14px; padding: 12px 14px; display: flex; align-items: center; gap: 14px; }
+.grupos li.ambar { background: var(--amarillo-suave); color: var(--ambar-t); }
+.grupos li.rojo { background: var(--durazno); color: var(--durazno-t); }
+.grupos .sello, .al-dia .sello { width: 40px; height: 40px; border-radius: 50%; background: #fff; display: grid; place-items: center; flex: none; }
+.grupos .que { flex: 1; min-width: 0; white-space: normal; }
+.grupos b { display: block; font-size: 15px; color: var(--tinta); }
+.grupos small { display: block; font-size: 12.5px; color: var(--gris); }
+.codigos { display: flex; gap: 5px; flex-wrap: wrap; margin: 5px 0 3px; }
+.codigos code { font-family: var(--f-mono); font-size: 12px; font-weight: 600; background: #fff; color: var(--tinta); border-radius: 6px; padding: 1px 6px; }
+.codigos em { font-style: normal; font-size: 12px; font-weight: 700; color: var(--gris); }
+.grupos button { flex: none; background: #fff; border: 1px solid var(--linea-2); border-radius: 10px; padding: 8px 12px; font-weight: 700; font-size: 13.5px; color: var(--tinta); white-space: nowrap; }
+.grupos button.peligro { color: var(--durazno-t); }
+.grupos button:hover { border-color: var(--tinta); }
+
+.al-dia { margin-top: 14px; display: flex; align-items: center; gap: 14px; padding: 14px 16px; border: 1.5px dashed var(--linea-2); border-radius: 14px; font-size: 14px; color: var(--gris); }
+.al-dia .sello { background: var(--menta); color: var(--menta-t); }
+.al-dia b { display: block; color: var(--tinta); font-size: 15px; }
+.al-dia + .nota { margin-top: 12px; }
 .sin-margen { margin: 0; }
 
 @keyframes entrar { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
