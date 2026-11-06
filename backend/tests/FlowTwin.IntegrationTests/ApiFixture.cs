@@ -80,8 +80,8 @@ public sealed class ColeccionApi : ICollectionFixture<ApiFixture>;
 /// <summary>
 /// Qué tarjeta de la semilla usa cada prueba. Todas comparten la misma base, así que dos pruebas que
 /// usan la misma tarjeta se arruinan entre sí según el orden en que corran. Elegir aquí, nunca a mano
-/// dentro de la prueba. Libres: T-01 a T-04, T-13 y T-15. Reservadas por la semilla: T-11 (por
-/// desinfectar) y T-14 (sin devolver).
+/// dentro de la prueba. Libres: T-01 a T-04, T-14 y T-15. La semilla las deja todas Disponibles (sin
+/// historia inventada): si una prueba necesita otro estado, lo prepara con el flujo real.
 /// </summary>
 public static class TarjetasDePrueba
 {
@@ -91,5 +91,7 @@ public static class TarjetasDePrueba
     public const string EstadoPiso = "T-08";         // EstadoPisoTests
     public const string Presencia = "T-09";          // PresenciaTests (emisor minor 9)
     public const string HubEnVivo = "T-10";          // GemeloHubTests
+    public const string VistaPrevia = "T-13";        // AdmisionTests: la vista previa no cambia nada
+    public const string PorDesinfectar = "T-11";     // AdmisionTests: se entrega y se devuelve para dejarla por desinfectar
     public const int SinAtencion = 12;               // PresenciaTests: emisor de una tarjeta Disponible (RN-12)
 }
