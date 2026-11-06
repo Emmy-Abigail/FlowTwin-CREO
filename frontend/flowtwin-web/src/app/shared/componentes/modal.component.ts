@@ -12,7 +12,7 @@ import { IconoComponent } from './icono.component';
   selector: 'app-modal',
   imports: [IconoComponent],
   template: `
-    <div class="scrim" [class.panel]="variante() === 'panel'" (click)="$event.target === $event.currentTarget && cerrar.emit()">
+    <div class="scrim" [class.panel]="variante() === 'panel'" (click)="clicEnFondo($event)">
       <div [class]="variante() === 'panel' ? 'drawer' : 'modal'" role="dialog" aria-modal="true" [attr.aria-label]="titulo()">
         <div class="m-h">
           <div>
@@ -35,6 +35,15 @@ export class ModalComponent {
   readonly antetitulo = input('');
   readonly variante = input<'dialogo' | 'panel'>('dialogo');
   readonly cerrar = output<void>();
+
+  /**
+   * Cierra solo si el clic fue en el fondo oscuro. Es un método que no devuelve nada a propósito: si la
+   * expresión del template devolviera false (clic dentro del modal), Angular cancelaría el clic
+   * (preventDefault) y las casillas o enlaces del contenido dejarían de funcionar.
+   */
+  protected clicEnFondo(e: MouseEvent): void {
+    if (e.target === e.currentTarget) this.cerrar.emit();
+  }
 
   constructor() {
     const host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;

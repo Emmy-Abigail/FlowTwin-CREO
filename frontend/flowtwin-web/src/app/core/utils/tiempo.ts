@@ -18,6 +18,12 @@ export function fechaCorta(t: number): string {
   return `${DIAS[d.getDay()]} ${d.getDate()} ${MESES[d.getMonth()]}`;
 }
 
+/** "Jueves 6 de noviembre": la fecha del día en el encabezado de una pantalla. */
+export function fechaLarga(t: number): string {
+  const texto = new Intl.DateTimeFormat('es-PE', { weekday: 'long', day: 'numeric', month: 'long' }).format(t).replace(',', '');
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
 /** "lun 26" para ejes y etiquetas compactas */
 export function diaCorto(t: number): string {
   const d = new Date(t);
