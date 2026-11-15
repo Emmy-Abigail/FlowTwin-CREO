@@ -1,7 +1,7 @@
 {
   // Demo rápida: el mismo recorrido con tiempos cortos, para ver moverse el gemelo en pocos minutos.
   // La histéresis del motor es de 45 s: por eso ninguna etapa dura menos de 1,5 minutos.
-  "api": "http://localhost:5080",
+  "api": "http://localhost:5090",
   "correoOperador": "operador@creo.pe",
   "claveOperador": "demo123",
   "pisoId": 1,

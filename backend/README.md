@@ -55,16 +55,27 @@ Las pruebas de integración verifican la regla encendida y apagada.
 ## Simulador de nodos
 
 Hace de recepción y de los 3 ESP32 de desarrollo: entrega tarjetas, mueve pacientes por Admisión → Sala
-de espera → Módulo 2 y envía lecturas y latidos por la API, igual que el firmware real. Con la API
-corriendo, en otra terminal:
+de espera → Módulo 2 y envía lecturas y latidos por la API, igual que el firmware real.
+
+Lo que escribe parece real, así que **nunca va a la base de trabajo** (`FlowTwin`, API en el 5080):
+usa su propia API en el puerto 5090 con la base `FlowTwin_Simulador`, que se crea sola la primera vez.
+Cada paso en su terminal:
 
 ```bash
-dotnet run --project tools/FlowTwin.Simulador                                  # día normal (escenarios/piloto.json)
-dotnet run --project tools/FlowTwin.Simulador -- --escenario escenarios/demo.json   # tiempos cortos para una demo
+dotnet run --project src/FlowTwin.Api --launch-profile simulador                 # 1. API del simulador (5090)
+dotnet run --project tools/FlowTwin.Simulador                                  # 2. día normal (escenarios/piloto.json)
+dotnet run --project tools/FlowTwin.Simulador -- --escenario escenarios/demo.json   #    o tiempos cortos para una demo
+cd ../frontend/flowtwin-web && npm run start:simulador                          # 3. verlo en http://127.0.0.1:4300
 ```
 
-`Ctrl+C` lo detiene y devuelve las tarjetas de los pacientes simulados. Los tiempos, nodos y ruido de la
-señal se cambian en `tools/FlowTwin.Simulador/escenarios/*.json`.
+- La pantalla del simulador va en `127.0.0.1` y no en `localhost` a propósito: el navegador separa las
+  cookies por nombre de sitio, no por puerto, y así cada ventana conserva su propia sesión.
+- Si el simulador apunta al 5080 se niega a arrancar; para escribir en la base de trabajo a propósito
+  hay que agregar `--en-base-de-trabajo`.
+- `Ctrl+C` lo detiene y devuelve las tarjetas de los pacientes simulados. Los tiempos, nodos y ruido de la
+  señal se cambian en `tools/FlowTwin.Simulador/escenarios/*.json`.
+- Para volver una base de desarrollo al estado de la semilla (sin atenciones, lecturas ni movimientos):
+  `tools/limpiar-datos-desarrollo.sql` (ver el encabezado del archivo).
 
 ## Pruebas
 
