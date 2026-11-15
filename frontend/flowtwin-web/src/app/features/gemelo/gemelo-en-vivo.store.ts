@@ -12,11 +12,11 @@ import {
 // ---- GET /pisos/{id}/estado y /atendidas-hoy (backend: EstadoPiso, AtendidaHoy)
 interface EstadoApi {
   zonas: { zonaId: number; ocupacion: number; aforo: number | null; nivel: string; pausada: boolean }[];
-  atenciones: { codigo: string; zonaActual: number | null; estado: string; inicioEn: string; esperaMin: number; zonaDesdeEn: string | null }[];
+  atenciones: { id: number; codigo: string; zonaActual: number | null; estado: string; inicioEn: string; esperaMin: number; zonaDesdeEn: string | null }[];
   kpis: { enClinica: number; enEspera: number; esperaPromMin: number | null; consultaPromMin: number | null };
   nodos: { nodoId: number; codigo: string; zonaId: number; estado: string; ultimoLatidoEn: string | null }[];
 }
-interface AtendidaApi { codigo: string; inicioEn: string; finEn: string; motivo: string; esperaMin: number; totalMin: number; }
+interface AtendidaApi { id: number; codigo: string; inicioEn: string; finEn: string; motivo: string; esperaMin: number; totalMin: number; }
 
 /** El reloj de la pantalla: las esperas y los «hace X min» avanzan solos entre mensajes. */
 const TIC_MS = 15_000;
@@ -39,7 +39,7 @@ export class GemeloEnVivoStore implements FuenteGemelo {
   readonly conexion = computed<EstadoConexion>(() => this.hub.estado());
 
   private zonasPorId = signal(new Map<number, ZonaVista>());
-  private abiertas = signal(new Map<string, { zonaId: number | null; estado: string; inicio: number; esperaMin: number; zonaDesde: number | null }>());
+  private abiertas = signal(new Map<string, { id: number; zonaId: number | null; estado: string; inicio: number; esperaMin: number; zonaDesde: number | null }>());
   private atendidas = signal<PacienteVista[]>([]);
   private nodosPorId = signal(new Map<number, NodoVista>());
   private pisoId: number | null = null;
@@ -55,7 +55,7 @@ export class GemeloEnVivoStore implements FuenteGemelo {
     const abiertas = [...this.abiertas()].map(([codigo, a]) => {
       const estado = estadoDeApi(a.estado);
       return {
-        codigo, estado, zonaId: a.zonaId, zonaDesde: a.zonaDesde,
+        clave: String(a.id), codigo, estado, zonaId: a.zonaId, zonaDesde: a.zonaDesde,
         esperaMin: estado === 'esperando' ? Math.max(a.esperaMin, Math.floor((ahora - a.inicio) / 60_000)) : a.esperaMin,
       };
     });
@@ -110,7 +110,7 @@ export class GemeloEnVivoStore implements FuenteGemelo {
       if (pisoId !== this.pisoId) return;
       this.zonasPorId.set(new Map(e.zonas.map(z => [z.zonaId, { zonaId: z.zonaId, personas: z.ocupacion, aforo: z.aforo, nivel: nivelDeApi(z.nivel) }])));
       this.abiertas.set(new Map(e.atenciones.map(a => [a.codigo,
-        { zonaId: a.zonaActual, estado: a.estado, inicio: Date.parse(a.inicioEn), esperaMin: a.esperaMin, zonaDesde: ms(a.zonaDesdeEn) }])));
+        { id: a.id, zonaId: a.zonaActual, estado: a.estado, inicio: Date.parse(a.inicioEn), esperaMin: a.esperaMin, zonaDesde: ms(a.zonaDesdeEn) }])));
       this.kpis.set(e.kpis);
       this.nodosPorId.set(new Map(e.nodos.map(n => [n.nodoId, { codigo: n.codigo, zonaId: n.zonaId, enLinea: n.estado === 'EN_LINEA', ultimoLatido: ms(n.ultimoLatidoEn) }])));
       this.ahora.set(Date.now());
@@ -126,7 +126,7 @@ export class GemeloEnVivoStore implements FuenteGemelo {
       const lista = await firstValueFrom(this.http.get<AtendidaApi[]>(`${API}/pisos/${pisoId}/atendidas-hoy`));
       if (pisoId !== this.pisoId) return;
       this.atendidas.set(lista.map(a => ({
-        codigo: a.codigo, estado: 'finalizado' as const, zonaId: null, zonaDesde: null,
+        clave: String(a.id), codigo: a.codigo, estado: 'finalizado' as const, zonaId: null, zonaDesde: null,
         esperaMin: a.esperaMin, finEn: Date.parse(a.finEn), totalMin: a.totalMin,
       })));
     } catch {
@@ -145,7 +145,7 @@ export class GemeloEnVivoStore implements FuenteGemelo {
         abiertas.delete(m.codigo);
         this.cargarAtendidas();   // devolvió la tarjeta (o se anuló): «Atendidos» cambia
       } else {
-        abiertas.set(m.codigo, { zonaId: m.zonaActual, estado: m.estado, inicio: Date.parse(m.inicioEn), esperaMin: m.esperaMin, zonaDesde: ms(m.zonaDesdeEn) });
+        abiertas.set(m.codigo, { id: m.id, zonaId: m.zonaActual, estado: m.estado, inicio: Date.parse(m.inicioEn), esperaMin: m.esperaMin, zonaDesde: ms(m.zonaDesdeEn) });
       }
       this.abiertas.set(abiertas);
     },

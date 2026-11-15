@@ -17,6 +17,21 @@ public interface IAtencionesEnCurso
 public sealed record AtencionCerrada(
     long Id, string Codigo, int SedeId, DateTime InicioEn, DateTime FinEn, string Motivo, IReadOnlyList<EstadiaInfo> Estadias);
 
+/// <summary>
+/// Una atención cualquiera (abierta, cerrada o anulada) con todo su recorrido, para su detalle (P6).
+/// Motivo: nulo si sigue abierta; si no, DEVUELTA, SIN_LECTURAS, CIERRE_JORNADA o ANULADA.
+/// </summary>
+public sealed record AtencionDetalleInfo(
+    long Id, string Codigo, DateOnly Fecha, int SedeId, int TarjetaId, DateTime InicioEn, DateTime? FinEn, string? Motivo,
+    IReadOnlyList<EstadiaInfo> Estadias);
+
+/// <summary>Lo que el módulo Reportes necesita para el detalle de una atención (P6).</summary>
+public interface IAtencionesConsulta
+{
+    /// <summary>La atención con ese Id y sus estadías en orden, o null si no existe. No revisa permisos.</summary>
+    Task<AtencionDetalleInfo?> PorIdAsync(long id, CancellationToken ct = default);
+}
+
 /// <summary>Lo que Monitoreo necesita para «Atendidos hoy» del gemelo.</summary>
 public interface IAtencionesCerradas
 {

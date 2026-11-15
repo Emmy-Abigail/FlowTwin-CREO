@@ -97,6 +97,9 @@ public sealed class GemeloServicio(IGemeloDb db, IUsuarioActual usuario, IUbicac
     public async Task<IReadOnlyList<int>?> SedesDelUsuarioAsync(CancellationToken ct = default) =>
         usuario.EsAdmin() ? null : await SedesDePisosAsync(usuario.Pisos, ct);
 
+    public async Task<string?> NombreSedeAsync(int sedeId, CancellationToken ct = default) =>
+        await db.Sedes.IgnoreQueryFilters().Where(s => s.Id == sedeId).Select(s => s.Nombre).SingleOrDefaultAsync(ct);
+
     public async Task<char> PrefijoAtencionAsync(int sedeId, CancellationToken ct = default) =>
         await db.Sedes.Where(s => s.Id == sedeId).Select(s => s.PrefijoAtencion).SingleAsync(ct);
 }

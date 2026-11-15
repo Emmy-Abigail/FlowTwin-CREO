@@ -44,8 +44,8 @@ export const routes: Routes = [
       {
         path: 'atencion/:id',
         canActivate: [rolGuard(PERMISOS.atencion)],
-        data: { titulo: 'Detalle de atención', descripcion: 'Línea de tiempo del recorrido del paciente (P6).' },
-        loadComponent: proximamente,
+        data: { titulo: 'Detalle de atención' },
+        loadComponent: () => import('./features/atencion/atencion.page').then(m => m.AtencionPage),
       },
       {
         path: 'seguimiento',

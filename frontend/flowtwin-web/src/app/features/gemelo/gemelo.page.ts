@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { ModoDatosService } from '../../core/datos/modo-datos.service';
 import { PisoActualService } from '../../core/datos/piso-actual.service';
 import { fechaLarga } from '../../core/utils/tiempo';
@@ -38,7 +39,7 @@ const PRESENTACION: Record<EstadoPaciente, { texto: string; tono: string; icono:
  */
 @Component({
   selector: 'app-gemelo',
-  imports: [Render3dComponent, IconoComponent, ModalComponent, EstadoVacioComponent, SelectorPisoComponent],
+  imports: [RouterLink, Render3dComponent, IconoComponent, ModalComponent, EstadoVacioComponent, SelectorPisoComponent],
   templateUrl: './gemelo.page.html',
   styleUrl: './gemelo.page.scss',
   providers: [ConexionGemelo, GemeloEnVivoStore, GemeloSimuladoStore],

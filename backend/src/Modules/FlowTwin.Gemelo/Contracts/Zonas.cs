@@ -6,6 +6,9 @@ public sealed record ZonaInfo(int Id, string Nombre, int PisoId);
 /// <summary>Un piso publicado y la sede a la que pertenece.</summary>
 public sealed record PisoInfo(int Id, string Nombre, int SedeId);
 
+/// <summary>Una zona tal como aparece en el recorrido de una atención. Tipo: como en ZonaSemaforo.</summary>
+public sealed record ZonaRecorrido(int Id, string Nombre, string Tipo, int PisoId);
+
 /// <summary>Una zona publicada con lo que hace falta para su semáforo. Tipo: INGRESO, ESPERA, SERVICIO, TRANSITO o SALIDA.</summary>
 public sealed record ZonaSemaforo(int Id, string Nombre, string Tipo, short? Aforo, byte? UmbralMediaPct, byte? UmbralAltaPct);
 
@@ -22,6 +25,12 @@ public interface IZonasConsultas
     Task<ZonaInfo?> ZonaAsync(int zonaId, CancellationToken ct = default);
 
     Task<IReadOnlyList<ZonaInfo>> ZonasAsync(IReadOnlyCollection<int> zonaIds, CancellationToken ct = default);
+
+    /// <summary>
+    /// Nombre y tipo de esas zonas, INCLUIDAS las dadas de baja: el recorrido de una atención pasada
+    /// debe seguir mostrando la zona por la que pasó, aunque hoy ya no exista.
+    /// </summary>
+    Task<IReadOnlyList<ZonaRecorrido>> ParaRecorridoAsync(IReadOnlyCollection<int> zonaIds, CancellationToken ct = default);
 }
 
 /// <summary>Un nodo tal como se dibuja en el plano (sección "La geometría que recibe el navegador").</summary>

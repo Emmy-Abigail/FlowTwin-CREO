@@ -8,6 +8,7 @@ using FlowTwin.Identidad;
 using FlowTwin.Identidad.Application;
 using FlowTwin.Identidad.Endpoints;
 using FlowTwin.Monitoreo;
+using FlowTwin.Reportes;
 using FlowTwin.Persistence;
 using FlowTwin.SharedKernel;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -67,6 +68,7 @@ builder.Services.AddModuloDispositivos(builder.Configuration);
 builder.Services.AddModuloAtenciones(builder.Configuration);
 builder.Services.AddModuloAuditoria();
 builder.Services.AddModuloMonitoreo();
+builder.Services.AddModuloReportes();
 
 // ---- Autenticación JWT y políticas por rol (sección Seguridad)
 var jwt = builder.Configuration.GetSection("Jwt").Get<OpcionesJwt>() ?? new OpcionesJwt();
@@ -168,6 +170,7 @@ app.MapGemelo();
 app.MapDispositivos();
 app.MapAtenciones();
 app.MapMonitoreo();
+app.MapReportes();
 
 app.Run();
 

@@ -21,6 +21,13 @@ public sealed record TarjetaInfo(int Id, string Codigo, int SedeId, EstadoTarjet
 public sealed record MovimientoInfo(
     DateTime Fecha, int TarjetaId, string TarjetaCodigo, EstadoTarjeta? Anterior, EstadoTarjeta Nuevo, long? AtencionId);
 
+/// <summary>Consultas de solo lectura sobre tarjetas para otros módulos (por ejemplo, el detalle de una atención).</summary>
+public interface ITarjetasConsultas
+{
+    /// <summary>Código de la tarjeta («T-07»), también si ya se dio de baja. null si no existe.</summary>
+    Task<string?> CodigoAsync(int tarjetaId, CancellationToken ct = default);
+}
+
 /// <summary>Lo que Atenciones puede pedirle a Dispositivos sobre las tarjetas.</summary>
 public interface ITarjetasAdmision
 {
