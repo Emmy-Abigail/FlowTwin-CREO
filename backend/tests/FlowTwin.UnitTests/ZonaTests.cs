@@ -31,12 +31,33 @@ public class ZonaTests
     }
 
     [Fact]
-    public void Una_zona_de_espera_sin_aforo_no_es_valida_RN13()
+    public void Una_zona_de_espera_con_el_aforo_por_definir_es_valida_RN13()
     {
         var zona = SalaDeEspera();
         zona.Aforo = null;
+        zona.UmbralMediaPct = null;
+        zona.UmbralAltaPct = null;
+
+        Assert.Empty(zona.Problemas());
+    }
+
+    [Fact]
+    public void Un_aforo_a_medias_no_es_valido_RN13()
+    {
+        var zona = SalaDeEspera();
+        zona.Aforo = null;   // quedan los umbrales sin aforo
 
         Assert.Contains(zona.Problemas(), p => p.Contains("aforo de 1 o más"));
+    }
+
+    [Fact]
+    public void Un_aforo_sin_umbrales_no_es_valido_RN13()
+    {
+        var zona = SalaDeEspera();
+        zona.UmbralMediaPct = null;
+        zona.UmbralAltaPct = null;
+
+        Assert.Contains(zona.Problemas(), p => p.Contains("umbrales de concentración"));
     }
 
     [Fact]
@@ -66,7 +87,7 @@ public class ZonaTests
     [Fact]
     public void Devuelve_todos_los_problemas_juntos_para_el_editor()
     {
-        var zona = new Zona { TipoZonaId = TipoZona.Servicio, Nombre = "", X = -1, AnchoM = 0 };
+        var zona = new Zona { TipoZonaId = TipoZona.Servicio, Nombre = "", X = -1, AnchoM = 0, Aforo = 0 };
 
         Assert.True(zona.Problemas().Count >= 4);   // nombre, posición, tamaño, aforo y umbrales
     }
