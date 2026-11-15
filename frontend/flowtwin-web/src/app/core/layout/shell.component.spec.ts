@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 import { Rol } from '../datos/modelos';
 import { ModoDatosService } from '../datos/modo-datos.service';
@@ -29,7 +29,7 @@ describe('ShellComponent', () => {
     await TestBed.configureTestingModule({
       imports: [ShellComponent],
       providers: [
-        provideRouter([]),
+        provideRouter([{ path: 'admision', children: [] }, { path: 'gemelo', children: [] }]),
         {
           provide: AuthService, useValue: {
             rol, usuario: signal({ id: 1, nombre: 'Ana Torres', correo: 'admin@creo.pe', rol: 'Administrador', pisos: [1], debeCambiarContrasena: false }),
@@ -48,12 +48,25 @@ describe('ShellComponent', () => {
     expect(textoMenu()).toEqual(['Gemelo en vivo', 'Historial y reportes']);
   });
 
-  it('el Operador no tiene el botón de Simulación', async () => {
-    rol.set('Operador');
+  it('sin simulación disponible no aparece el botón', async () => {
     puedeSimular.set(false);
     await crear();
 
     expect(pagina().querySelector('.simulacion')).toBeNull();
+  });
+
+  it('en Admisión la franja aclara que esa pantalla es real', async () => {
+    rol.set('Operador');
+    simulacion.set(true);
+    await crear();
+
+    await TestBed.inject(Router).navigateByUrl('/admision');
+    await fixture.whenStable();
+    expect(pagina().querySelector('.franja-simulacion')?.textContent).toContain('Admisión no se simula');
+
+    await TestBed.inject(Router).navigateByUrl('/gemelo');
+    await fixture.whenStable();
+    expect(pagina().querySelector('.franja-simulacion')?.textContent).toContain('datos ficticios');
   });
 
   it('colapsar el menú deja solo íconos y se recuerda', async () => {
