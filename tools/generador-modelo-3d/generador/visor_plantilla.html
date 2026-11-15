@@ -1,0 +1,62 @@
+<title>Gemelo CREO+ Piso 1</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Plano de obra llevado a visor técnico: lista de ambientes como leyenda de lámina */
+:root{--bg:#e9ecec;--panel:#f7f8f7;--fg:#1f2a2e;--mut:#5c6a6f;--line:#cfd6d6;--accent:#7a1f35;--sans:'IBM Plex Sans',system-ui,sans-serif;--mono:'IBM Plex Mono',ui-monospace,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171c1f;--panel:#20272a;--fg:#e6ebeb;--mut:#9aa8ac;--line:#37424a;--accent:#e58aa0;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#171c1f;--panel:#20272a;--fg:#e6ebeb;--mut:#9aa8ac;--line:#37424a;--accent:#e58aa0;color-scheme:dark}
+html,body{height:100%}body{background:var(--bg);color:var(--fg);font-family:var(--sans)}
+#app{display:grid;grid-template-columns:minmax(0,1fr) 300px;height:100%}
+#stage{position:relative;min-width:0;min-height:0}canvas{display:block;width:100%;height:100%;touch-action:none}
+#tip{position:absolute;pointer-events:none;background:var(--panel);border:1px solid var(--line);padding:6px 9px;font-size:13px;max-width:240px}
+#tip b{font-family:var(--mono);font-weight:500;color:var(--accent);display:block}
+#help{position:absolute;left:max(16px,env(safe-area-inset-left,0px));bottom:12px;font-size:12px;color:var(--mut)}
+aside{background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0;padding-block:16px;padding-left:16px;padding-right:max(16px,env(safe-area-inset-right,0px));gap:12px}
+h1{font-size:17px;margin:0}p{margin:0;font-size:13px;color:var(--mut);line-height:1.4}
+.t{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px}.t label{display:flex;gap:5px;align-items:center}
+ul{list-style:none;margin:0;padding:0;overflow:auto;flex:1;min-height:0;border-top:1px solid var(--line)}
+li button{all:unset;box-sizing:border-box;width:100%;display:grid;grid-template-columns:32px 1fr auto;gap:6px;padding:6px 2px;font-size:13px;border-bottom:1px solid var(--line);cursor:pointer}
+li button:hover,li button:focus-visible,li button.on{background:color-mix(in srgb,var(--accent) 14%,transparent);outline:none}
+.n,.a{font-family:var(--mono);font-size:12px;color:var(--mut);font-variant-numeric:tabular-nums}.n{color:var(--accent)}
+@media (max-width:760px){#app{grid-template-columns:1fr;grid-template-rows:58% 42%}aside{border-left:0;border-top:1px solid var(--line)}}
+</style>
+<div id="app"><div id="stage"><canvas id="c" aria-label="Modelo 3D del primer piso de la Clínica CREO+"></canvas><div id="tip" hidden></div><div id="help">Arrastra para girar · rueda para acercar · clic en un ambiente para seleccionarlo</div></div>
+<aside><h1>Clínica CREO+ · Primer piso</h1><p>Lámina A-07. Altura de muros y muebles aproximada; el plano no la indica.</p>
+<div class="t"><label><input type="checkbox" id="tm" checked>Mobiliario</label><label><input type="checkbox" id="tp" checked>Puertas</label><label><input type="checkbox" id="tv" checked>Vidrios y cortinas</label></div>
+<ul id="list"></ul></aside></div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/environments/RoomEnvironment.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/libs/meshopt_decoder.js"></script>
+<script>
+const AMB=__AMB__;const B64="__GLB__";
+const cv=document.getElementById('c'),st=document.getElementById('stage'),tip=document.getElementById('tip');
+const R=new THREE.WebGLRenderer({canvas:cv,antialias:true,preserveDrawingBuffer:true});R.setPixelRatio(Math.min(devicePixelRatio,2));
+R.outputEncoding=THREE.sRGBEncoding;R.toneMapping=THREE.ACESFilmicToneMapping;R.toneMappingExposure=.68;R.shadowMap.enabled=true;R.shadowMap.type=THREE.PCFSoftShadowMap;
+const S=new THREE.Scene();S.background=new THREE.Color(getComputedStyle(document.body).backgroundColor);
+const C=new THREE.PerspectiveCamera(32,1,.1,300);C.position.set(0,50,47);
+const O=new THREE.OrbitControls(C,cv);O.target.set(0,0,1);O.enableDamping=true;O.maxPolarAngle=1.45;O.minDistance=4;O.maxDistance=90;
+const PM=new THREE.PMREMGenerator(R);S.environment=PM.fromScene(new THREE.RoomEnvironment(),.04).texture;
+S.add(new THREE.HemisphereLight(0xffffff,0x9a9286,.25));
+const L=new THREE.DirectionalLight(0xfff3e2,.9);L.position.set(-14,30,16);L.castShadow=true;L.shadow.mapSize.set(4096,4096);Object.assign(L.shadow.camera,{left:-28,right:28,top:18,bottom:-18,far:80});L.shadow.camera.updateProjectionMatrix();L.shadow.bias=-.0004;L.shadow.normalBias=.03;S.add(L);
+const zones={},selCol=new THREE.Color(0xb23a55),hovCol=new THREE.Color(0xd98ca0);let sel=null,hov=null;const groups={m:[],p:[],v:[]};
+const list=document.getElementById('list');const info=Object.fromEntries(AMB.map(a=>[a.id,a]));
+AMB.forEach(a=>{const l=document.createElement('li'),b=document.createElement('button');b.id='b-'+a.id;b.innerHTML=`<span class="n">${a.id.slice(-2)}</span><span>${a.rotulo_en_plano||'Sin rótulo en el plano'}</span><span class="a">${a.area_m2} m²</span>`;b.onclick=()=>select(a.id);b.onmouseenter=()=>hover(a.id);b.onmouseleave=()=>hover(null);l.append(b);list.append(l)});
+function paint(){for(const id in zones){const m=zones[id].material;m.color.copy(zones[id].userData.base);if(id===hov)m.color.copy(hovCol);if(id===sel)m.color.copy(selCol)}}
+function hover(id){hov=id;paint()}
+function select(id){document.querySelector('button.on')?.classList.remove('on');sel=sel===id?null:id;if(sel){const b=document.getElementById('b-'+sel);b.classList.add('on');b.scrollIntoView({block:'nearest'})}paint()}
+const bytes=Uint8Array.from(atob(B64),c=>c.charCodeAt(0));
+const GL=new THREE.GLTFLoader();if(window.MeshoptDecoder)GL.setMeshoptDecoder(MeshoptDecoder);GL.parse(bytes.buffer,'',g=>{g.scene.traverse(o=>{if(!o.isMesh)return;const n=o.name;
+ o.castShadow=!/^ambiente|^piso|^losa|vidrio|cortina|zocalo/.test(n);o.receiveShadow=true;if(o.material){o.material.envMapIntensity=.55;if(o.material.aoMap)o.material.aoMapIntensity=1;}
+ if(n.startsWith('ambiente_')){o.material=o.material.clone();o.userData.base=o.material.color.clone();zones[n]=o}
+ if(n.startsWith('mobiliario'))groups.m.push(o);if(n.startsWith('puerta'))groups.p.push(o);if(/vidrio|cortina|mampara/.test(n))groups.v.push(o)});S.add(g.scene);window.READY=true},e=>{document.getElementById('help').textContent='No se pudo cargar el modelo.'});
+[['tm','m'],['tp','p'],['tv','v']].forEach(([i,k])=>document.getElementById(i).onchange=e=>groups[k].forEach(o=>o.visible=e.target.checked));
+const ray=new THREE.Raycaster(),pt=new THREE.Vector2();function pick(e){const r=cv.getBoundingClientRect();pt.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(pt,C);return ray.intersectObjects(Object.values(zones))[0]?.object.name||null}
+cv.addEventListener('pointermove',e=>{if(e.buttons)return;const id=pick(e);hover(id);if(id){const r=st.getBoundingClientRect();tip.hidden=false;tip.style.left=Math.min(e.clientX-r.left+14,r.width-250)+'px';tip.style.top=(e.clientY-r.top+14)+'px';tip.innerHTML=`<b>${id}</b>${info[id]?.rotulo_en_plano||'Sin rótulo en el plano'}`}else tip.hidden=true});
+cv.addEventListener('pointerleave',()=>{tip.hidden=true;hover(null)});
+let dn;cv.addEventListener('pointerdown',e=>dn=[e.clientX,e.clientY]);cv.addEventListener('pointerup',e=>{if(dn&&Math.hypot(e.clientX-dn[0],e.clientY-dn[1])<4){const id=pick(e);if(id)select(id)}});
+function size(){const w=st.clientWidth,h=st.clientHeight;R.setSize(w,h,false);C.aspect=w/h;C.updateProjectionMatrix()}addEventListener('resize',size);size();
+(function loop(){requestAnimationFrame(loop);O.update();R.render(S,C)})();
+</script>

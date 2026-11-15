@@ -50,6 +50,7 @@ export function nivelOcupacion(personas: number, zona: ZonaGeometria, sinDatos =
 
 export const NOMBRE_NIVEL: Record<NivelOcupacion, string> = {
   alta: 'Alta', media: 'Media', baja: 'Baja', nd: 'Sin datos',
+  ninguno: 'Sin aforo',
 };
 
 /** Texto y color del chip de estado de una atención. */

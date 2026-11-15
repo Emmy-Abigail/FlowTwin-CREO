@@ -1,0 +1,9 @@
+# Versiones con las que se generó y verificó el modelo entregado.
+pymupdf==2.1
+shapely==2.2.0
+trimesh==5.2.0
+numpy==2.5.3
+pillow==12.3.0
+mapbox-earcut==2.1.0
+networkx==3.7
+scipy==1.18.1
