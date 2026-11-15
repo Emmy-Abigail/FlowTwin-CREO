@@ -49,7 +49,11 @@
   <div class="principal">
     @if (modo.simulacion()) {
       <div class="franja-simulacion" role="status">
-        <span><app-icono nombre="matraz" [tamano]="18" /><b>SIMULACIÓN</b> · datos ficticios para la presentación · no se guardan ni aparecen en reportes</span>
+        @if (enAdmision()) {
+          <span><app-icono nombre="matraz" [tamano]="18" /><b>SIMULACIÓN</b> activa en Gemelo e Historial · Admisión no se simula: lo que ves aquí es real</span>
+        } @else {
+          <span><app-icono nombre="matraz" [tamano]="18" /><b>SIMULACIÓN</b> · datos ficticios para la presentación · no se guardan ni aparecen en reportes</span>
+        }
         <button type="button" (click)="modo.salir()">Salir de la simulación</button>
       </div>
     }
