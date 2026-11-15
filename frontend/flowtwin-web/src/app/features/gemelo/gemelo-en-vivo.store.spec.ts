@@ -15,7 +15,7 @@ describe('GemeloEnVivoStore', () => {
   const iso = (minAtras: number) => new Date(ahora - minAtras * 60_000).toISOString();
   const ESTADO = {
     zonas: [{ zonaId: 3, ocupacion: 2, aforo: 24, nivel: 'BAJA', pausada: false }, { zonaId: 2, ocupacion: 0, aforo: null, nivel: 'NINGUNO', pausada: false }],
-    atenciones: [{ codigo: 'A-0137', zonaActual: 3, estado: 'EN_ESPERA', inicioEn: iso(34), esperaMin: 34, zonaDesdeEn: iso(21) }],
+    atenciones: [{ id: 137, codigo: 'A-0137', zonaActual: 3, estado: 'EN_ESPERA', inicioEn: iso(34), esperaMin: 34, zonaDesdeEn: iso(21) }],
     kpis: { enClinica: 1, enEspera: 1, esperaPromMin: 34, consultaPromMin: null },
     nodos: [{ nodoId: 1, codigo: 'N-02', zonaId: 3, estado: 'EN_LINEA', ultimoLatidoEn: iso(0) }],
   };
@@ -24,7 +24,7 @@ describe('GemeloEnVivoStore', () => {
     const carga = store.activar(1, 'Sede Principal');
     http.expectOne('/api/v1/pisos/1/geometria').flush({ pisoId: 1, nombre: 'Piso 1', nivel: 1, anchoM: 40, fondoM: 20, altoMuroM: 2.7, planoUrl: '/planos/piso1.jpg', zonas: [], elementos: [], nodos: [] });
     http.expectOne('/api/v1/pisos/1/estado').flush(ESTADO);
-    http.expectOne('/api/v1/pisos/1/atendidas-hoy').flush([{ codigo: 'A-0130', inicioEn: iso(90), finEn: iso(10), motivo: 'DEVUELTA', esperaMin: 20, totalMin: 80 }]);
+    http.expectOne('/api/v1/pisos/1/atendidas-hoy').flush([{ id: 130, codigo: 'A-0130', inicioEn: iso(90), finEn: iso(10), motivo: 'DEVUELTA', esperaMin: 20, totalMin: 80 }]);
     await carga;
   }
 
@@ -44,6 +44,8 @@ describe('GemeloEnVivoStore', () => {
     expect(store.zonas().find(z => z.zonaId === 2)).toEqual({ zonaId: 2, personas: 0, aforo: null, nivel: 'ninguno' });
     expect(store.kpis()?.consultaPromMin).toBeNull();
     expect(store.pacientes().map(p => [p.codigo, p.estado])).toEqual([['A-0137', 'esperando'], ['A-0130', 'finalizado']]);
+    // La clave abre el detalle (P6): es el Id de la atención, porque el código se repite cada día
+    expect(store.pacientes().map(p => p.clave)).toEqual(['137', '130']);
     expect(store.nodos()[0].enLinea).toBe(true);
     expect(store.geometria()?.anchoM).toBe(40);
   });
@@ -59,7 +61,7 @@ describe('GemeloEnVivoStore', () => {
   it('un paciente que entra a consulta cambia de pestaña', async () => {
     await activar();
 
-    hub.atencion({ codigo: 'A-0137', zonaActual: 7, estado: 'EN_ATENCION', inicioEn: iso(34), esperaMin: 34, zonaDesdeEn: iso(0) });
+    hub.atencion({ id: 137, codigo: 'A-0137', zonaActual: 7, estado: 'EN_ATENCION', inicioEn: iso(34), esperaMin: 34, zonaDesdeEn: iso(0) });
 
     expect(store.pacientes().find(p => p.codigo === 'A-0137')).toMatchObject({ estado: 'en-consulta', zonaId: 7 });
   });
@@ -67,7 +69,7 @@ describe('GemeloEnVivoStore', () => {
   it('al devolver la tarjeta sale de los abiertos y se vuelven a pedir los atendidos', async () => {
     await activar();
 
-    hub.atencion({ codigo: 'A-0137', zonaActual: null, estado: 'FINALIZADA', inicioEn: iso(34), esperaMin: 34 });
+    hub.atencion({ id: 137, codigo: 'A-0137', zonaActual: null, estado: 'FINALIZADA', inicioEn: iso(34), esperaMin: 34 });
 
     expect(store.pacientes().some(p => p.codigo === 'A-0137' && p.estado !== 'finalizado')).toBe(false);
     http.expectOne('/api/v1/pisos/1/atendidas-hoy');

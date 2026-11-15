@@ -72,13 +72,15 @@
         @for (p of lista(); track p.codigo) {
           @let t = tarjeta(p);
           <li [class]="t.tono">
-            <span class="ic"><app-icono [nombre]="t.icono" [tamano]="17" /></span>
-            <div class="que"><b>{{ p.codigo }}</b><small>{{ t.detalle }}</small></div>
-            <div class="der">
-              <span class="chip" [class]="'chip ' + t.tono">{{ t.texto }}</span>
-              @if (p.estado === 'finalizado') { <span class="min">{{ p.totalMin }} min en total</span> }
-              @else { <span class="min">espera {{ p.esperaMin }} min</span> }
-            </div>
+            <a class="enlace" [routerLink]="['/atencion', p.clave]" [attr.aria-label]="'Ver el recorrido de ' + p.codigo">
+              <span class="ic"><app-icono [nombre]="t.icono" [tamano]="17" /></span>
+              <div class="que"><b>{{ p.codigo }}</b><small>{{ t.detalle }}</small></div>
+              <div class="der">
+                <span class="chip" [class]="'chip ' + t.tono">{{ t.texto }}</span>
+                @if (p.estado === 'finalizado') { <span class="min">{{ p.totalMin }} min en total</span> }
+                @else { <span class="min">espera {{ p.esperaMin }} min</span> }
+              </div>
+            </a>
           </li>
         } @empty {
           <li class="vacio">
@@ -108,9 +110,11 @@
       @for (p of d.pacientes; track p.codigo) {
         @let t = tarjeta(p);
         <li [class]="t.tono">
-          <span class="ic"><app-icono [nombre]="t.icono" [tamano]="17" /></span>
-          <div class="que"><b>{{ p.codigo }}</b><small>{{ p.zonaDesde ? 'aquí ' + hace(p.zonaDesde) : '' }}</small></div>
-          <span class="chip" [class]="'chip ' + t.tono">{{ t.texto }}</span>
+          <a class="enlace" [routerLink]="['/atencion', p.clave]" [attr.aria-label]="'Ver el recorrido de ' + p.codigo">
+            <span class="ic"><app-icono [nombre]="t.icono" [tamano]="17" /></span>
+            <div class="que"><b>{{ p.codigo }}</b><small>{{ p.zonaDesde ? 'aquí ' + hace(p.zonaDesde) : '' }}</small></div>
+            <span class="chip" [class]="'chip ' + t.tono">{{ t.texto }}</span>
+          </a>
         </li>
       } @empty {
         <li class="vacio">{{ d.zona.nivel === 'nd' ? 'Sin datos: no se sabe quién está.' : 'No hay pacientes en esta zona.' }}</li>

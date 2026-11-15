@@ -15,23 +15,18 @@ public static class Nivel
     public const string Baja = "BAJA", Media = "MEDIA", Alta = "ALTA", Ninguno = "NINGUNO", SinDatos = "SIN_DATOS";
 }
 
-/// <summary>EN_ESPERA: aún no entra a una zona Servicio. EN_ATENCION: está en una. ATENDIDO: ya pasó por una y salió.</summary>
-public static class EstadoAtencion
-{
-    public const string EnEspera = "EN_ESPERA", EnAtencion = "EN_ATENCION", Atendido = "ATENDIDO";
-}
-
 public sealed record ZonaEstado(int ZonaId, int Ocupacion, short? Aforo, string Nivel, bool Pausada);
 
 /// <summary>
 /// ZonaActual nula: no se le detecta en ninguna zona del piso ahora (sin zona, o en otro piso).
 /// ZonaDesdeEn: cuándo entró a la zona actual («en Sala de espera · hace 21 min»).
+/// Id: para abrir su detalle (P6); el código A-0143 se repite cada día. Estado: ver EstadoAtencion.
 /// </summary>
 public sealed record AtencionEstado(
-    string Codigo, int? ZonaActual, string Estado, DateTime InicioEn, int EsperaMin, int ConsultaMin, DateTime? ZonaDesdeEn = null);
+    long Id, string Codigo, int? ZonaActual, string Estado, DateTime InicioEn, int EsperaMin, int ConsultaMin, DateTime? ZonaDesdeEn = null);
 
 /// <summary>Una atención terminada hoy, para «Atendidos hoy» del gemelo.</summary>
-public sealed record AtendidaHoy(string Codigo, DateTime InicioEn, DateTime FinEn, string Motivo, int EsperaMin, int ConsultaMin, int TotalMin);
+public sealed record AtendidaHoy(long Id, string Codigo, DateTime InicioEn, DateTime FinEn, string Motivo, int EsperaMin, int ConsultaMin, int TotalMin);
 
 /// <summary>EsperaPromMin y ConsultaPromMin son nulos si todavía no hay con qué calcularlos (no un 0 que engañe).</summary>
 public sealed record KpisPiso(int EnClinica, int EnEspera, int? EsperaPromMin, int? ConsultaPromMin);
@@ -48,8 +43,6 @@ public sealed record EstadoPiso(int PisoId, DateTime GeneradoEn, IReadOnlyList<Z
 /// </summary>
 public static class CalculoEstado
 {
-    private const string Servicio = "SERVICIO";
-
     public static EstadoPiso Calcular(int pisoId, IReadOnlyList<ZonaSemaforo> zonas, IReadOnlyList<NodoZona> nodos,
         IReadOnlyList<AtencionEnCurso> atenciones, DateTime ahora)
     {
@@ -80,21 +73,18 @@ public static class CalculoEstado
         return new EstadoPiso(pisoId, ahora, estadoZonas, porAtencion, kpis, estadoNodos);
     }
 
-    /// <summary>
-    /// RN-06: espera = desde la entrega hasta la PRIMERA entrada a una zona Servicio (si aún no entra,
-    /// sigue corriendo); consulta = tiempo total en zonas Servicio.
-    /// </summary>
+    /// <summary>Tiempos con la regla RN-06 (ReglaTiempos) y la zona actual, solo si es de este piso.</summary>
     private static AtencionEstado Atencion(AtencionEnCurso a, Dictionary<int, string> tipoDe, DateTime ahora)
     {
-        var (espera, consulta, primeraConsulta) = Tiempos(a.Estadias, a.InicioEn, ahora, tipoDe);
+        var esServicio = EsServicio(tipoDe);
+        var t = ReglaTiempos.Calcular(a.Estadias, a.InicioEn, ahora, esServicio);
 
         // Solo cuenta como "en una zona del piso" si su estadía abierta es en una zona de ESTE piso
         var actual = a.Estadias.LastOrDefault(e => e.SalidaEn is null && tipoDe.ContainsKey(e.ZonaId));
-        var estado = actual is not null && tipoDe[actual.ZonaId] == Servicio ? EstadoAtencion.EnAtencion
-            : primeraConsulta is null ? EstadoAtencion.EnEspera
-            : EstadoAtencion.Atendido;
+        var estado = ReglaTiempos.EstadoAbierta(actual, t.PrimeraConsulta, esServicio);
 
-        return new AtencionEstado(a.Codigo, actual?.ZonaId, estado, a.InicioEn, Minutos(espera), Minutos(consulta), actual?.EntradaEn);
+        return new AtencionEstado(a.Id, a.Codigo, actual?.ZonaId, estado, a.InicioEn,
+            ReglaTiempos.Minutos(t.Espera), ReglaTiempos.Minutos(t.Consulta), actual?.EntradaEn);
     }
 
     /// <summary>
@@ -103,24 +93,17 @@ public static class CalculoEstado
     /// </summary>
     public static IReadOnlyList<AtendidaHoy> Atendidas(IReadOnlyList<ZonaSemaforo> zonas, IReadOnlyList<AtencionCerrada> cerradas)
     {
-        var tipoDe = zonas.ToDictionary(z => z.Id, z => z.Tipo);
+        var esServicio = EsServicio(zonas.ToDictionary(z => z.Id, z => z.Tipo));
         return [.. cerradas.Select(a =>
         {
-            var (espera, consulta, _) = Tiempos(a.Estadias, a.InicioEn, a.FinEn, tipoDe);
-            return new AtendidaHoy(a.Codigo, a.InicioEn, a.FinEn, a.Motivo, Minutos(espera), Minutos(consulta), Minutos(a.FinEn - a.InicioEn));
+            var t = ReglaTiempos.Calcular(a.Estadias, a.InicioEn, a.FinEn, esServicio);
+            return new AtendidaHoy(a.Id, a.Codigo, a.InicioEn, a.FinEn, a.Motivo,
+                ReglaTiempos.Minutos(t.Espera), ReglaTiempos.Minutos(t.Consulta), ReglaTiempos.Minutos(a.FinEn - a.InicioEn));
         })];
     }
 
-    /// <summary>RN-06 en un solo lugar: espera hasta la primera zona Servicio; consulta = tiempo en zonas Servicio.</summary>
-    private static (TimeSpan Espera, TimeSpan Consulta, DateTime? PrimeraConsulta) Tiempos(
-        IReadOnlyList<EstadiaInfo> estadias, DateTime inicio, DateTime hasta, Dictionary<int, string> tipoDe)
-    {
-        var enServicio = estadias.Where(e => tipoDe.GetValueOrDefault(e.ZonaId) == Servicio).ToList();
-        var primeraConsulta = enServicio.Select(e => (DateTime?)e.EntradaEn).Min();
-        var espera = (primeraConsulta ?? hasta) - inicio;
-        var consulta = enServicio.Aggregate(TimeSpan.Zero, (t, e) => t + ((e.SalidaEn ?? hasta) - e.EntradaEn));
-        return (espera, consulta, primeraConsulta);
-    }
+    private static Func<int, bool> EsServicio(Dictionary<int, string> tipoDe) =>
+        zonaId => tipoDe.GetValueOrDefault(zonaId) == ReglaTiempos.Servicio;
 
     private static string NivelDe(ZonaSemaforo z, int personas, bool tieneDatos)
     {
@@ -132,8 +115,6 @@ public static class CalculoEstado
         var porcentaje = personas * 100.0 / aforo;
         return porcentaje < z.UmbralMediaPct ? Nivel.Baja : porcentaje < z.UmbralAltaPct ? Nivel.Media : Nivel.Alta;
     }
-
-    private static int Minutos(TimeSpan t) => (int)Math.Floor(Math.Max(0, t.TotalMinutes));
 }
 
 /// <summary>Un mensaje para el hub: el método que recibe el navegador y su contenido.</summary>
@@ -159,12 +140,12 @@ public static class Diferencias
         {
             var previa = atencionesAntes.GetValueOrDefault(a.Codigo);
             if (previa is not null && previa.ZonaActual == a.ZonaActual && previa.Estado == a.Estado) continue;
-            mensajes.Add(new("AtencionActualizada", new { codigo = a.Codigo, zonaActual = a.ZonaActual, estado = a.Estado, inicioEn = a.InicioEn, esperaMin = a.EsperaMin, zonaDesdeEn = a.ZonaDesdeEn }));
+            mensajes.Add(new("AtencionActualizada", new { id = a.Id, codigo = a.Codigo, zonaActual = a.ZonaActual, estado = a.Estado, inicioEn = a.InicioEn, esperaMin = a.EsperaMin, zonaDesdeEn = a.ZonaDesdeEn }));
         }
         // Las que ya no están: devolvieron la tarjeta (o se anuló la entrega)
         var codigosAhora = ahora.Atenciones.Select(a => a.Codigo).ToHashSet();
         foreach (var codigo in atencionesAntes.Keys.Where(c => !codigosAhora.Contains(c)))
-            mensajes.Add(new("AtencionActualizada", new { codigo, zonaActual = (int?)null, estado = "FINALIZADA", inicioEn = atencionesAntes[codigo].InicioEn, esperaMin = atencionesAntes[codigo].EsperaMin }));
+            mensajes.Add(new("AtencionActualizada", new { id = atencionesAntes[codigo].Id, codigo, zonaActual = (int?)null, estado = EstadoAtencion.Finalizada, inicioEn = atencionesAntes[codigo].InicioEn, esperaMin = atencionesAntes[codigo].EsperaMin }));
 
         if (antes?.Kpis != ahora.Kpis)
             mensajes.Add(new("KpisActualizados", new
