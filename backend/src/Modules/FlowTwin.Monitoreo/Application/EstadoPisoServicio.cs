@@ -13,7 +13,7 @@ namespace FlowTwin.Monitoreo.Application;
 /// </summary>
 public sealed class EstadoPisoServicio(
     IZonasConsultas zonas, IPresenciaDispositivos dispositivos, IAtencionesEnCurso atenciones,
-    IUsuarioActual usuario, IReloj reloj)
+    IAtencionesCerradas cerradas, IUsuarioActual usuario, IReloj reloj, ZonaHoraria zona)
 {
     /// <summary>GET /pisos/{id}/estado (F-11): con permiso del piso (RN-24).</summary>
     public async Task<EstadoPiso> ParaUsuarioAsync(int pisoId, CancellationToken ct)
@@ -33,5 +33,15 @@ public sealed class EstadoPisoServicio(
             await dispositivos.NodosAsync(ct),
             await atenciones.DeSedeAsync(piso.SedeId, ct),
             reloj.AhoraUtc);
+    }
+
+    /// <summary>GET /pisos/{id}/atendidas-hoy: las atenciones terminadas hoy en la sede del piso (RN-24).</summary>
+    public async Task<IReadOnlyList<AtendidaHoy>> AtendidasHoyAsync(int pisoId, CancellationToken ct)
+    {
+        if (!usuario.PuedeVerPiso(pisoId)) throw new SinPermisoException("No tienes asignado este piso.");
+        var piso = await zonas.PisoAsync(pisoId, ct)
+            ?? throw new NoEncontradoException($"No existe el piso {pisoId} o aún no está publicado.");
+        var hoy = zona.FechaLocal(reloj.AhoraUtc);
+        return CalculoEstado.Atendidas(await zonas.DelPisoAsync(pisoId, ct), await cerradas.DelDiaAsync(piso.SedeId, hoy, ct));
     }
 }

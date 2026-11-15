@@ -18,7 +18,11 @@ public class Zona : EntidadEditable
     public decimal FondoM { get; set; }
     /// <summary>Polígono libre en JSON (fase 2); si existe, manda sobre el rectángulo.</summary>
     public string? Geometria { get; set; }
-    /// <summary>Personas que caben. Nulo en Tránsito y Salida (RN-13).</summary>
+    /// <summary>
+    /// Personas que caben. Nulo en Tránsito y Salida (RN-13). En Ingreso, Espera y Servicio, nulo
+    /// significa «aforo por definir»: la zona se muestra con su ocupación pero sin semáforo hasta que
+    /// el Administrador lo configure.
+    /// </summary>
     public short? Aforo { get; set; }
     /// <summary>% del aforo desde el que la zona pasa de concentración baja a media.</summary>
     public byte? UmbralMediaPct { get; set; }
@@ -44,9 +48,12 @@ public class Zona : EntidadEditable
         if (X < 0 || Y < 0) problemas.Add("La posición de la zona no puede ser negativa.");
         if (AnchoM <= 0 || FondoM <= 0) problemas.Add("El ancho y el fondo de la zona deben ser mayores que 0.");
 
-        // RN-13: solo las zonas donde la gente permanece tienen aforo y semáforo
+        // RN-13: solo las zonas donde la gente permanece tienen aforo y semáforo. El aforo puede quedar
+        // por definir (nulo, sin umbrales); si se define, va completo: aforo de 1 o más y sus umbrales.
         if (TipoZonaId.TieneAforo())
         {
+            var porDefinir = Aforo is null && UmbralMediaPct is null && UmbralAltaPct is null;
+            if (porDefinir) return problemas;
             if (Aforo is null or < 1) problemas.Add($"Una zona de tipo {TipoZonaId.Nombre()} necesita un aforo de 1 o más (RN-13).");
             if (UmbralMediaPct is null || UmbralAltaPct is null)
                 problemas.Add("La zona necesita los umbrales de concentración media y alta.");

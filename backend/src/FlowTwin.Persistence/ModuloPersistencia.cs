@@ -21,6 +21,7 @@ public static class ModuloPersistencia
         if (string.IsNullOrWhiteSpace(cadena))
             throw new InvalidOperationException(
                 "Falta ConnectionStrings:FlowTwin. Guárdala con: dotnet user-secrets set \"ConnectionStrings:FlowTwin\" \"...\"");
+        cadena = CadenaConexion.ConBase(cadena, config["BaseDatos:Nombre"]);
 
         services.AddScoped<RegistroInterceptor>();
         services.AddDbContext<FlowTwinDbContext>((sp, o) => o

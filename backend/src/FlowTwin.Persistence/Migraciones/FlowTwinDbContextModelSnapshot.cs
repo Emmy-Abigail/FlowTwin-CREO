@@ -883,7 +883,7 @@ namespace FlowTwin.Persistence.Migraciones
 
                     b.ToTable("Zona", "gem", t =>
                         {
-                            t.HasCheckConstraint("CK_Zona_AforoRN13", "([TipoZonaId] IN (1, 2, 3) AND [Aforo] >= 1 AND [UmbralMediaPct] > 0 AND [UmbralMediaPct] <= [UmbralAltaPct] AND [UmbralAltaPct] <= 100) OR ([TipoZonaId] IN (4, 5) AND [Aforo] IS NULL AND [UmbralMediaPct] IS NULL AND [UmbralAltaPct] IS NULL)");
+                            t.HasCheckConstraint("CK_Zona_AforoRN13", "([Aforo] IS NULL AND [UmbralMediaPct] IS NULL AND [UmbralAltaPct] IS NULL) OR ([TipoZonaId] IN (1, 2, 3) AND [Aforo] >= 1 AND [UmbralMediaPct] IS NOT NULL AND [UmbralAltaPct] IS NOT NULL AND [UmbralMediaPct] > 0 AND [UmbralMediaPct] <= [UmbralAltaPct] AND [UmbralAltaPct] <= 100)");
 
                             t.HasCheckConstraint("CK_Zona_Geometria", "[Geometria] IS NULL OR ISJSON([Geometria]) = 1");
 
@@ -896,7 +896,6 @@ namespace FlowTwin.Persistence.Migraciones
                         new
                         {
                             Id = 1,
-                            Aforo = (short)6,
                             AnchoM = 2.1m,
                             EnBorrador = false,
                             EstadoRegistro = true,
@@ -905,8 +904,6 @@ namespace FlowTwin.Persistence.Migraciones
                             Nombre = "Admisión y caja",
                             PisoId = 1,
                             TipoZonaId = 1,
-                            UmbralAltaPct = (byte)85,
-                            UmbralMediaPct = (byte)60,
                             UsuarioRegistroId = 1,
                             X = 35.0m,
                             Y = 8.7m
@@ -929,7 +926,6 @@ namespace FlowTwin.Persistence.Migraciones
                         new
                         {
                             Id = 3,
-                            Aforo = (short)24,
                             AnchoM = 5.7m,
                             EnBorrador = false,
                             EstadoRegistro = true,
@@ -938,8 +934,6 @@ namespace FlowTwin.Persistence.Migraciones
                             Nombre = "Sala de espera",
                             PisoId = 1,
                             TipoZonaId = 2,
-                            UmbralAltaPct = (byte)85,
-                            UmbralMediaPct = (byte)60,
                             UsuarioRegistroId = 1,
                             X = 19.3m,
                             Y = 15.0m
@@ -947,7 +941,6 @@ namespace FlowTwin.Persistence.Migraciones
                         new
                         {
                             Id = 4,
-                            Aforo = (short)3,
                             AnchoM = 3.1m,
                             EnBorrador = false,
                             EstadoRegistro = true,
@@ -956,8 +949,6 @@ namespace FlowTwin.Persistence.Migraciones
                             Nombre = "Triaje",
                             PisoId = 1,
                             TipoZonaId = 3,
-                            UmbralAltaPct = (byte)85,
-                            UmbralMediaPct = (byte)60,
                             UsuarioRegistroId = 1,
                             X = 25.2m,
                             Y = 13.9m
@@ -965,7 +956,6 @@ namespace FlowTwin.Persistence.Migraciones
                         new
                         {
                             Id = 5,
-                            Aforo = (short)3,
                             AnchoM = 3.1m,
                             EnBorrador = false,
                             EstadoRegistro = true,
@@ -974,8 +964,6 @@ namespace FlowTwin.Persistence.Migraciones
                             Nombre = "Tópico de enfermería",
                             PisoId = 1,
                             TipoZonaId = 3,
-                            UmbralAltaPct = (byte)85,
-                            UmbralMediaPct = (byte)60,
                             UsuarioRegistroId = 1,
                             X = 11.2m,
                             Y = 11.9m
@@ -983,7 +971,6 @@ namespace FlowTwin.Persistence.Migraciones
                         new
                         {
                             Id = 6,
-                            Aforo = (short)4,
                             AnchoM = 5.0m,
                             EnBorrador = false,
                             EstadoRegistro = true,
@@ -992,8 +979,6 @@ namespace FlowTwin.Persistence.Migraciones
                             Nombre = "Tópico urgencia",
                             PisoId = 1,
                             TipoZonaId = 3,
-                            UmbralAltaPct = (byte)85,
-                            UmbralMediaPct = (byte)60,
                             UsuarioRegistroId = 1,
                             X = 9.8m,
                             Y = 16.9m
@@ -1001,7 +986,6 @@ namespace FlowTwin.Persistence.Migraciones
                         new
                         {
                             Id = 7,
-                            Aforo = (short)6,
                             AnchoM = 7.4m,
                             EnBorrador = false,
                             EstadoRegistro = true,
@@ -1010,8 +994,6 @@ namespace FlowTwin.Persistence.Migraciones
                             Nombre = "Módulo 2 (consultorio)",
                             PisoId = 1,
                             TipoZonaId = 3,
-                            UmbralAltaPct = (byte)85,
-                            UmbralMediaPct = (byte)60,
                             UsuarioRegistroId = 1,
                             X = 2.2m,
                             Y = 15.1m
@@ -1019,7 +1001,6 @@ namespace FlowTwin.Persistence.Migraciones
                         new
                         {
                             Id = 8,
-                            Aforo = (short)4,
                             AnchoM = 3.2m,
                             EnBorrador = false,
                             EstadoRegistro = true,
@@ -1028,8 +1009,6 @@ namespace FlowTwin.Persistence.Migraciones
                             Nombre = "Observación",
                             PisoId = 1,
                             TipoZonaId = 3,
-                            UmbralAltaPct = (byte)85,
-                            UmbralMediaPct = (byte)60,
                             UsuarioRegistroId = 1,
                             X = 16.6m,
                             Y = 13.9m

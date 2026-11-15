@@ -25,7 +25,9 @@ public static class ModuloAtenciones
         services.AddSingleton<EstadoPresencia>();
         services.AddScoped<ProcesadorPresencia>();
         services.AddHostedService<MotorPresenciaEnSegundoPlano>();
-        services.AddScoped<IAtencionesEnCurso, AtencionesEnCursoConsulta>();
+        services.AddScoped<AtencionesEnCursoConsulta>();
+        services.AddScoped<IAtencionesEnCurso>(sp => sp.GetRequiredService<AtencionesEnCursoConsulta>());
+        services.AddScoped<IAtencionesCerradas>(sp => sp.GetRequiredService<AtencionesEnCursoConsulta>());
         services.AddValidatorsFromAssemblyContaining<EscaneoValidador>(ServiceLifetime.Singleton);
         return services;
     }

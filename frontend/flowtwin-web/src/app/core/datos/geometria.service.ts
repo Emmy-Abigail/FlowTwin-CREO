@@ -13,7 +13,6 @@ export class GeometriaService {
 
   /** null mientras se descarga. */
   readonly piso = toSignal(this.http.get<GeometriaPiso>('pisos/geometria-piso1.json'), { initialValue: null });
-  readonly planoUrl = 'pisos/piso1.jpg';
 
   readonly zonas = computed(() => this.piso()?.zonas ?? []);
   private porId = computed(() => new Map(this.zonas().map(z => [z.id, z])));

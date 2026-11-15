@@ -28,7 +28,7 @@ public class GemeloTests(ApiFixture api)
 
         var sala = zonas.Single(z => z.GetProperty("nombre").GetString() == "Sala de espera");
         Assert.Equal("ESPERA", sala.GetProperty("tipo").GetString());
-        Assert.Equal(24, sala.GetProperty("aforo").GetInt32());
+        Assert.Equal(JsonValueKind.Null, sala.GetProperty("aforo").ValueKind);   // por definir: lo configura el Administrador
 
         // RN-13: el Hall es Tránsito, no tiene aforo ni semáforo
         var hall = zonas.Single(z => z.GetProperty("tipo").GetString() == "TRANSITO");
@@ -96,6 +96,22 @@ public class GemeloTests(ApiFixture api)
             {
                 PisoId = 1, TipoZonaId = TipoZona.Transito, Nombre = "Pasillo (prueba)",
                 X = 1, Y = 1, AnchoM = 2, FondoM = 2, Aforo = 10,
+            });
+            return await db.SaveChangesAsync();
+        }));
+
+        Assert.Contains("CK_Zona_AforoRN13", ex.InnerException?.Message);
+    }
+
+    [Fact]
+    public async Task La_base_rechaza_un_aforo_sin_umbrales_RN13()
+    {
+        var ex = await Assert.ThrowsAsync<DbUpdateException>(() => api.EnBaseAsync(async db =>
+        {
+            db.Zonas.Add(new Zona
+            {
+                PisoId = 1, TipoZonaId = TipoZona.Servicio, Nombre = "Consultorio (prueba)",
+                X = 1, Y = 1, AnchoM = 2, FondoM = 2, Aforo = 4,
             });
             return await db.SaveChangesAsync();
         }));

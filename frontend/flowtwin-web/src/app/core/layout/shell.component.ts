@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { filter, map } from 'rxjs';
 import { IconoComponent } from '../../shared/componentes/icono.component';
 import { AuthService } from '../auth/auth.service';
 import { ModoDatosService } from '../datos/modo-datos.service';
@@ -39,6 +41,12 @@ export class ShellComponent {
   });
 
   protected colapsada = signal(leerColapsada());
+
+  private router = inject(Router);
+  private url = toSignal(this.router.events.pipe(filter(e => e instanceof NavigationEnd), map(() => this.router.url)),
+    { initialValue: this.router.url });
+  /** Admisión nunca se simula (ADR-22): ahí la franja aclara que lo que se ve es real. */
+  protected enAdmision = computed(() => this.url().startsWith('/admision'));
 
   constructor() {
     this.modo.cargar();

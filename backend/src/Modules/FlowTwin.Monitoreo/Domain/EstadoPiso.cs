@@ -5,7 +5,8 @@ using FlowTwin.Gemelo.Contracts;
 namespace FlowTwin.Monitoreo.Domain;
 
 /// <summary>
-/// Nivel de una zona en el gemelo. NINGUNO: Tránsito o Salida, sin aforo ni color (RN-13).
+/// Nivel de una zona en el gemelo. NINGUNO: sin semáforo, porque es Tránsito o Salida (RN-13) o porque
+/// su aforo aún está por definir.
 /// SIN_DATOS: ningún nodo En línea la cubre, así que el sistema NO SABE cuánta gente hay; mostrar
 /// "0 personas, verde" sería mostrar un dato falso.
 /// </summary>
@@ -22,8 +23,15 @@ public static class EstadoAtencion
 
 public sealed record ZonaEstado(int ZonaId, int Ocupacion, short? Aforo, string Nivel, bool Pausada);
 
-/// <summary>ZonaActual nula: no se le detecta en ninguna zona del piso ahora (sin zona, o en otro piso).</summary>
-public sealed record AtencionEstado(string Codigo, int? ZonaActual, string Estado, DateTime InicioEn, int EsperaMin, int ConsultaMin);
+/// <summary>
+/// ZonaActual nula: no se le detecta en ninguna zona del piso ahora (sin zona, o en otro piso).
+/// ZonaDesdeEn: cuándo entró a la zona actual («en Sala de espera · hace 21 min»).
+/// </summary>
+public sealed record AtencionEstado(
+    string Codigo, int? ZonaActual, string Estado, DateTime InicioEn, int EsperaMin, int ConsultaMin, DateTime? ZonaDesdeEn = null);
+
+/// <summary>Una atención terminada hoy, para «Atendidos hoy» del gemelo.</summary>
+public sealed record AtendidaHoy(string Codigo, DateTime InicioEn, DateTime FinEn, string Motivo, int EsperaMin, int ConsultaMin, int TotalMin);
 
 /// <summary>EsperaPromMin y ConsultaPromMin son nulos si todavía no hay con qué calcularlos (no un 0 que engañe).</summary>
 public sealed record KpisPiso(int EnClinica, int EnEspera, int? EsperaPromMin, int? ConsultaPromMin);
@@ -78,10 +86,7 @@ public static class CalculoEstado
     /// </summary>
     private static AtencionEstado Atencion(AtencionEnCurso a, Dictionary<int, string> tipoDe, DateTime ahora)
     {
-        var enServicio = a.Estadias.Where(e => tipoDe.GetValueOrDefault(e.ZonaId) == Servicio).ToList();
-        var primeraConsulta = enServicio.Select(e => (DateTime?)e.EntradaEn).Min();
-        var espera = (primeraConsulta ?? ahora) - a.InicioEn;
-        var consulta = enServicio.Aggregate(TimeSpan.Zero, (t, e) => t + ((e.SalidaEn ?? ahora) - e.EntradaEn));
+        var (espera, consulta, primeraConsulta) = Tiempos(a.Estadias, a.InicioEn, ahora, tipoDe);
 
         // Solo cuenta como "en una zona del piso" si su estadía abierta es en una zona de ESTE piso
         var actual = a.Estadias.LastOrDefault(e => e.SalidaEn is null && tipoDe.ContainsKey(e.ZonaId));
@@ -89,13 +94,41 @@ public static class CalculoEstado
             : primeraConsulta is null ? EstadoAtencion.EnEspera
             : EstadoAtencion.Atendido;
 
-        return new AtencionEstado(a.Codigo, actual?.ZonaId, estado, a.InicioEn, Minutos(espera), Minutos(consulta));
+        return new AtencionEstado(a.Codigo, actual?.ZonaId, estado, a.InicioEn, Minutos(espera), Minutos(consulta), actual?.EntradaEn);
+    }
+
+    /// <summary>
+    /// Las atenciones terminadas hoy, con la MISMA regla de espera y consulta (RN-06) que las abiertas,
+    /// medida hasta su fin. Solo cuenta como «Servicio» lo que es Servicio en las zonas dadas.
+    /// </summary>
+    public static IReadOnlyList<AtendidaHoy> Atendidas(IReadOnlyList<ZonaSemaforo> zonas, IReadOnlyList<AtencionCerrada> cerradas)
+    {
+        var tipoDe = zonas.ToDictionary(z => z.Id, z => z.Tipo);
+        return [.. cerradas.Select(a =>
+        {
+            var (espera, consulta, _) = Tiempos(a.Estadias, a.InicioEn, a.FinEn, tipoDe);
+            return new AtendidaHoy(a.Codigo, a.InicioEn, a.FinEn, a.Motivo, Minutos(espera), Minutos(consulta), Minutos(a.FinEn - a.InicioEn));
+        })];
+    }
+
+    /// <summary>RN-06 en un solo lugar: espera hasta la primera zona Servicio; consulta = tiempo en zonas Servicio.</summary>
+    private static (TimeSpan Espera, TimeSpan Consulta, DateTime? PrimeraConsulta) Tiempos(
+        IReadOnlyList<EstadiaInfo> estadias, DateTime inicio, DateTime hasta, Dictionary<int, string> tipoDe)
+    {
+        var enServicio = estadias.Where(e => tipoDe.GetValueOrDefault(e.ZonaId) == Servicio).ToList();
+        var primeraConsulta = enServicio.Select(e => (DateTime?)e.EntradaEn).Min();
+        var espera = (primeraConsulta ?? hasta) - inicio;
+        var consulta = enServicio.Aggregate(TimeSpan.Zero, (t, e) => t + ((e.SalidaEn ?? hasta) - e.EntradaEn));
+        return (espera, consulta, primeraConsulta);
     }
 
     private static string NivelDe(ZonaSemaforo z, int personas, bool tieneDatos)
     {
-        if (z.Aforo is not short aforo || z.UmbralMediaPct is null || z.UmbralAltaPct is null) return Nivel.Ninguno;
+        // Tránsito y Salida nunca tienen semáforo (RN-13). En las demás, «sin datos» va antes que
+        // «aforo por definir»: un nodo caído no debe esconderse detrás de una configuración pendiente.
+        if (z.Tipo is "TRANSITO" or "SALIDA") return Nivel.Ninguno;
         if (!tieneDatos) return Nivel.SinDatos;
+        if (z.Aforo is not short aforo || z.UmbralMediaPct is null || z.UmbralAltaPct is null) return Nivel.Ninguno;
         var porcentaje = personas * 100.0 / aforo;
         return porcentaje < z.UmbralMediaPct ? Nivel.Baja : porcentaje < z.UmbralAltaPct ? Nivel.Media : Nivel.Alta;
     }
@@ -126,7 +159,7 @@ public static class Diferencias
         {
             var previa = atencionesAntes.GetValueOrDefault(a.Codigo);
             if (previa is not null && previa.ZonaActual == a.ZonaActual && previa.Estado == a.Estado) continue;
-            mensajes.Add(new("AtencionActualizada", new { codigo = a.Codigo, zonaActual = a.ZonaActual, estado = a.Estado, inicioEn = a.InicioEn, esperaMin = a.EsperaMin }));
+            mensajes.Add(new("AtencionActualizada", new { codigo = a.Codigo, zonaActual = a.ZonaActual, estado = a.Estado, inicioEn = a.InicioEn, esperaMin = a.EsperaMin, zonaDesdeEn = a.ZonaDesdeEn }));
         }
         // Las que ya no están: devolvieron la tarjeta (o se anuló la entrega)
         var codigosAhora = ahora.Atenciones.Select(a => a.Codigo).ToHashSet();

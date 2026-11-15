@@ -26,6 +26,11 @@ public static class ModuloMonitoreo
             .WithTags("Monitoreo").RequireAuthorization()
             .WithSummary("Ocupación por zona, KPI y atenciones en curso del piso (F-11)");
 
+        app.MapGet("/api/v1/pisos/{id:int}/atendidas-hoy", async (int id, EstadoPisoServicio s, CancellationToken ct) =>
+                Results.Ok(await s.AtendidasHoyAsync(id, ct)))
+            .RequireAuthorization().WithTags("Monitoreo")
+            .WithSummary("Atenciones terminadas hoy en la sede del piso (sin las anuladas)");
+
         app.MapHub<GemeloHub>("/hubs/gemelo");
     }
 }

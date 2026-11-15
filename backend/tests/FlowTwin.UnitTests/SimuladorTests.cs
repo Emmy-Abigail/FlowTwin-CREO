@@ -37,4 +37,25 @@ public class SimuladorTests
 
         Assert.Equal(EmisorBle.Identificador(major: 1, minor: 7), escenario.UuidBle(7));
     }
+
+    private static Escenario Con(string api) => new(
+        api, "operador@creo.pe", "demo123", 1, "uuid", 1, new(1, 2), new(1, 2), new(1, 2), new(1, 2),
+        1, 3, 7, 10, 0, 1, []);
+
+    [Theory]
+    [InlineData("http://localhost:5080", true)]
+    [InlineData("http://127.0.0.1:5080/", true)]
+    [InlineData("http://localhost:5090", false)]   // la API del perfil «simulador»
+    [InlineData("http://servidor-demo:5080", false)]
+    public void Reconoce_la_API_de_la_base_de_trabajo(string api, bool esLaDeTrabajo) =>
+        Assert.Equal(esLaDeTrabajo, Con(api).ApuntaALaApiDeTrabajo);
+
+    [Fact]
+    public void Los_escenarios_incluidos_apuntan_a_la_API_del_simulador()
+    {
+        var carpeta = Path.Combine(AppContext.BaseDirectory, "escenarios");
+        var archivos = Directory.GetFiles(carpeta, "*.json");
+        Assert.NotEmpty(archivos);
+        Assert.All(archivos, f => Assert.False(Escenario.Leer(f).ApuntaALaApiDeTrabajo, Path.GetFileName(f)));
+    }
 }

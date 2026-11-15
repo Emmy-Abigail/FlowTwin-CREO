@@ -13,7 +13,8 @@ interface ConfiguracionApi {
  * ¿Datos reales o simulación? (ADR-22). Por defecto, siempre reales. La simulación es temporal, para
  * presentar el sistema antes de que lleguen los nodos:
  * - solo existe si el servidor lo permite (Demo:SimulacionDisponible, falso en la clínica);
- * - solo la usan Administrador y Gerencia: la pantalla del Operador es operativa, nunca ficticia;
+ * - la pueden activar todos los roles (Operador, Gerencia y Administrador), para mostrarle al sponsor
+ *   cómo se ve cada pantalla; Admisión siempre es real, porque ahí se entregan tarjetas de verdad;
  * - no se recuerda: al recargar la página se vuelve a los datos reales.
  */
 @Injectable({ providedIn: 'root' })
@@ -28,10 +29,7 @@ export class ModoDatosService {
   /** true mientras se muestran datos ficticios. Las pantallas lo usan para decidir qué mostrar. */
   readonly simulacion = this.simulando.asReadonly();
 
-  readonly puedeSimular = computed(() => {
-    const rol = this.auth.rol();
-    return this.disponible() && (rol === 'Administrador' || rol === 'Gerencia');
-  });
+  readonly puedeSimular = computed(() => this.disponible() && this.auth.rol() !== null);
 
   /** Pregunta al servidor si en esta instalación existe la simulación. Si falla, no existe. */
   async cargar(): Promise<void> {

@@ -80,7 +80,7 @@ public sealed class ColeccionApi : ICollectionFixture<ApiFixture>;
 /// <summary>
 /// Qué tarjeta de la semilla usa cada prueba. Todas comparten la misma base, así que dos pruebas que
 /// usan la misma tarjeta se arruinan entre sí según el orden en que corran. Elegir aquí, nunca a mano
-/// dentro de la prueba. Libres: T-04 y T-15. La semilla las deja todas Disponibles (sin
+/// dentro de la prueba. Libres: ninguna (agrega más tarjetas a la semilla si hace falta). La semilla las deja todas Disponibles (sin
 /// historia inventada): si una prueba necesita otro estado, lo prepara con el flujo real.
 /// </summary>
 public static class TarjetasDePrueba
@@ -96,6 +96,8 @@ public static class TarjetasDePrueba
     public const string TandaB = "T-02";             // AdmisionTests: desinfección por tandas
     public const string TandaDisponible = "T-03";    // AdmisionTests: una tanda con una tarjeta que no corresponde
     public const string TandaPendiente = "T-14";     // AdmisionTests: queda por desinfectar tras la tanda fallida
+    public const string AtendidaHoy = "T-04";        // EstadoPisoTests: se entrega y se devuelve
+    public const string AnuladaHoy = "T-15";         // EstadoPisoTests: se entrega y se deshace
     public const string PorDesinfectar = "T-11";     // AdmisionTests: se entrega y se devuelve para dejarla por desinfectar
     public const int SinAtencion = 12;               // PresenciaTests: emisor de una tarjeta Disponible (RN-12)
 }

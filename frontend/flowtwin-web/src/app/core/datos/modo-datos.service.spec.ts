@@ -53,15 +53,21 @@ describe('ModoDatosService', () => {
     expect(modo.puedeSimular()).toBe(false);
   });
 
-  it('el Operador nunca simula: su pantalla es operativa', async () => {
-    rol.set('Operador');
+  it.each(['Operador', 'Gerencia', 'Administrador'] as const)('%s puede simular para la demo al sponsor', async r => {
+    rol.set(r);
     await cargarCon({ simulacionDisponible: true });
 
     modo.activar();
 
+    expect(modo.simulacion()).toBe(true);
+    expect(simulador.iniciar).toHaveBeenCalled();
+  });
+
+  it('sin sesión no hay simulación', async () => {
+    rol.set(null);
+    await cargarCon({ simulacionDisponible: true });
+
     expect(modo.puedeSimular()).toBe(false);
-    expect(modo.simulacion()).toBe(false);
-    expect(simulador.iniciar).not.toHaveBeenCalled();
   });
 
   it('si no se puede saber la configuración, la simulación no existe', async () => {
