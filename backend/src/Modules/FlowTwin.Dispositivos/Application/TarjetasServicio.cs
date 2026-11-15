@@ -35,8 +35,11 @@ public sealed class TandaTarjetasValidador : AbstractValidator<TandaTarjetasRequ
 /// <summary>Tarjetas BLE: consultas, desinfección (F-09) y extravío (F-10).</summary>
 public sealed class TarjetasServicio(
     IDispositivosDb db, ISedesConsultas sedes, IAuditoria auditoria, IReloj reloj, IValidator<TandaTarjetasRequest> validadorTanda)
-    : ITarjetasAdmision
+    : ITarjetasAdmision, ITarjetasConsultas
 {
+    public async Task<string?> CodigoAsync(int tarjetaId, CancellationToken ct = default) =>
+        await db.Tarjetas.IgnoreQueryFilters().Where(t => t.Id == tarjetaId).Select(t => t.Codigo).SingleOrDefaultAsync(ct);
+
     public async Task<TarjetaInfo?> BuscarAsync(string codigoOQr, CancellationToken ct = default)
     {
         var qr = codigoOQr.Trim();

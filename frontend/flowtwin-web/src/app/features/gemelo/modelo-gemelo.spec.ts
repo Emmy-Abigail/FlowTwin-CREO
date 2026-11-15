@@ -53,7 +53,7 @@ describe('Modelo del gemelo', () => {
 
   describe('pacientes por pestaña', () => {
     const p = (codigo: string, estado: PacienteVista['estado'], extra: Partial<PacienteVista> = {}): PacienteVista =>
-      ({ codigo, estado, zonaId: 3, zonaDesde: 0, esperaMin: 0, ...extra });
+      ({ clave: codigo, codigo, estado, zonaId: 3, zonaDesde: 0, esperaMin: 0, ...extra });
 
     it('esperando: el que más espera, primero', () => {
       const g = pacientesPorPestana([p('A', 'esperando', { esperaMin: 5 }), p('B', 'esperando', { esperaMin: 30 })]);

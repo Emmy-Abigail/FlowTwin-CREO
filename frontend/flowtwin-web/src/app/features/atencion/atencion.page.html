@@ -1,0 +1,75 @@
+<a class="btn btn-o btn-sm volver" [routerLink]="volver().ruta"><app-icono nombre="back" [tamano]="16" />{{ volver().texto }}</a>
+
+@if (detalle(); as d) {
+  <header class="cabecera">
+    <div>
+      <span class="lbl">Atención anónima</span>
+      <h1 class="codigo">{{ d.codigo }}</h1>
+      <p class="sub">{{ fecha() }} · Tarjeta <span class="tarjeta">{{ d.tarjeta }}</span> · {{ d.sede }}</p>
+    </div>
+    <div class="estado">
+      @if (chip(); as c) { <span class="chip-estado" [class]="'chip-estado ' + c.tono"><span class="punto" aria-hidden="true"></span>{{ c.texto }}</span> }
+      @if (enVivo()) { <span class="vivo"><span class="punto" aria-hidden="true"></span>En vivo · se actualiza sola</span> }
+    </div>
+  </header>
+
+  @let n = notas();
+  <div class="kpis">
+    <div class="kpi"><span class="sello ambar"><app-icono nombre="reloj" [tamano]="18" /></span>
+      <div><b>{{ d.esperaMin ?? '—' }}@if (d.esperaMin !== null) {<small>min</small>}</b><span><strong>Espera</strong> · {{ n?.espera }}</span></div></div>
+    <div class="kpi"><span class="sello verde"><app-icono nombre="steth" [tamano]="18" /></span>
+      <div><b>{{ d.consultaMin ?? '—' }}@if (d.consultaMin !== null) {<small>min</small>}</b><span><strong>Consulta</strong> · {{ n?.consulta }}</span></div></div>
+    <div class="kpi"><span class="sello gris"><app-icono nombre="walk" [tamano]="18" /></span>
+      <div><b>{{ d.totalMin ?? '—' }}@if (d.totalMin !== null) {<small>min</small>}</b><span><strong>Total</strong> · {{ n?.total }}</span></div></div>
+  </div>
+
+  <section class="card recorrido" aria-labelledby="t-recorrido">
+    <h2 id="t-recorrido">Recorrido</h2>
+
+    @if (recorrido(); as r) {
+      @if (d.estado === 'ANULADA') {
+        <p class="sin-recorrido">La entrega se deshizo a los pocos segundos: no hay recorrido.</p>
+      } @else {
+        <!-- Carriles por TIPO de zona: con más salas no crecen; el nombre de cada sala va en su tramo -->
+        <div class="carriles" role="img" [attr.aria-label]="'Recorrido de ' + d.codigo + ' por tipo de zona. El detalle está en la lista de pasos.'">
+          @for (c of carriles; track c.id) {
+            <span class="etq">{{ c.texto }}</span>
+            <div class="carril">
+              @for (m of r.marcas; track m.t) { <span class="reja" [style.left.%]="m.izq"></span> }
+              @for (t of r.porCarril.get(c.id); track t.desde) {
+                <span class="tramo" [class]="'tramo ' + t.carril" [style.left.%]="t.izq" [style.width]="'calc(' + t.ancho + '% - 2px)'"
+                      [attr.title]="t.nombre + ' · ' + t.min + ' min'">
+                  @if (t.ancho > 12) { <b>{{ t.nombre }}</b> }
+                  @if (t.ancho > 4) { <small>{{ t.min }} min</small> }
+                </span>
+              }
+              @if (r.ahoraEnEje) { <span class="ahora" aria-hidden="true"></span> }
+            </div>
+          }
+          <span></span>
+          <div class="eje" aria-hidden="true">
+            @for (m of r.marcas; track m.t; let primero = $first; let ultimo = $last) {
+              <span [style.left.%]="m.izq" [class.primero]="primero" [class.ultimo]="ultimo">{{ m.texto }}</span>
+            }
+          </div>
+        </div>
+      }
+    }
+
+    <ol class="pasos" [style.grid-template-rows]="'repeat(' + filasPasos() + ', auto)'">
+      @for (p of pasos(); track $index; let ultimo = $last) {
+        <li [class.cierra-columna]="ultimo || $index === filasPasos() - 1">
+          <span class="hora">{{ hhmm(p.hora) }}</span>
+          <span class="linea" aria-hidden="true"><i [class]="p.tono"></i></span>
+          <div><b>{{ p.titulo }}</b><small>{{ p.detalle }}</small></div>
+        </li>
+      }
+    </ol>
+  </section>
+} @else if (cargando()) {
+  <div class="cargando"><span class="spin"></span> Cargando la atención…</div>
+} @else if (error(); as e) {
+  <app-estado-vacio [titulo]="e.titulo" [texto]="e.texto" />
+} @else {
+  <app-estado-vacio titulo="No se encontró la atención" texto="Ya no está en la simulación. Vuelve al gemelo y elige otra." />
+}

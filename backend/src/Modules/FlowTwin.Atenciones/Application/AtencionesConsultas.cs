@@ -5,8 +5,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FlowTwin.Atenciones.Application;
 
-/// <summary>Implementa IAtencionesEnCurso. Solo depende de la base, para no formar ciclos entre módulos.</summary>
-public sealed class AtencionesEnCursoConsulta(IAtencionesDb db) : IAtencionesEnCurso, IAtencionesCerradas
+/// <summary>
+/// Las consultas de atenciones que usan otros módulos (en curso, cerradas del día y una por Id).
+/// Solo depende de la base, para no formar ciclos entre módulos.
+/// </summary>
+public sealed class AtencionesConsultas(IAtencionesDb db) : IAtencionesEnCurso, IAtencionesCerradas, IAtencionesConsulta
 {
     public async Task<IReadOnlyList<AtencionEnCurso>> DeSedeAsync(int sedeId, CancellationToken ct = default)
     {
@@ -43,5 +46,19 @@ public sealed class AtencionesEnCursoConsulta(IAtencionesDb db) : IAtencionesEnC
                 .ToListAsync(ct))
             .ToLookup(e => e.AtencionId, e => e.Estadia);
         return [.. cerradas.Select(a => new AtencionCerrada(a.Id, a.Codigo, a.SedeId, a.InicioEn, a.FinEn, a.Motivo.Codigo(), [.. estadias[a.Id]]))];
+    }
+
+    public async Task<AtencionDetalleInfo?> PorIdAsync(long id, CancellationToken ct = default)
+    {
+        var a = await db.Atenciones.AsNoTracking().Where(x => x.Id == id)
+            .Select(x => new { x.Id, x.Codigo, x.FechaAtencion, x.SedeId, x.TarjetaId, x.InicioEn, x.FinEn, x.MotivoCierreId })
+            .SingleOrDefaultAsync(ct);
+        if (a is null) return null;
+        var estadias = await db.EventosZona.AsNoTracking()
+            .Where(e => e.AtencionId == id).OrderBy(e => e.EntradaEn)
+            .Select(e => new EstadiaInfo(e.ZonaId, e.EntradaEn, e.SalidaEn))
+            .ToListAsync(ct);
+        return new AtencionDetalleInfo(a.Id, a.Codigo, a.FechaAtencion, a.SedeId, a.TarjetaId, a.InicioEn, a.FinEn,
+            a.MotivoCierreId?.Codigo(), estadias);
     }
 }

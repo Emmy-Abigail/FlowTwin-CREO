@@ -41,12 +41,12 @@ export class GemeloSimuladoStore implements FuenteGemelo {
     const hoy0 = inicioDelDia(ahora);
     return this.clinica.atenciones().filter(a => a.inicio >= hoy0).map(a => {
       if (a.estado === 'cerrada') {
-        return { codigo: a.id, estado: 'finalizado' as const, zonaId: null, zonaDesde: null, esperaMin: espera(a) ?? 0, finEn: a.fin!, totalMin: total(a, ahora) };
+        return { clave: a.id, codigo: a.id, estado: 'finalizado' as const, zonaId: null, zonaDesde: null, esperaMin: espera(a) ?? 0, finEn: a.fin!, totalMin: total(a, ahora) };
       }
       const z = zonaActual(a);
       const esp = espera(a);
       const estado = z !== null && this.tipoDe().get(z) === 'SERVICIO' ? 'en-consulta' as const : esp === null ? 'esperando' as const : 'atendido' as const;
-      return { codigo: a.id, estado, zonaId: z, zonaDesde: a.eventos.at(-1)?.entrada ?? null, esperaMin: esp ?? esperaCorriendo(a, ahora) };
+      return { clave: a.id, codigo: a.id, estado, zonaId: z, zonaDesde: a.eventos.at(-1)?.entrada ?? null, esperaMin: esp ?? esperaCorriendo(a, ahora) };
     });
   });
 
