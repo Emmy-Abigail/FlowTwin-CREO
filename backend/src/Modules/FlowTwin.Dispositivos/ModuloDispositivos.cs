@@ -27,6 +27,7 @@ public static class ModuloDispositivos
         services.AddScoped<ITarjetasConsultas>(sp => sp.GetRequiredService<TarjetasServicio>());
         services.AddScoped<NodosServicio>();
         services.AddScoped<IUbicacionNodos, UbicacionNodos>();
+        services.AddScoped<IHistorialNodos, HistorialNodos>();
         return services;
     }
 

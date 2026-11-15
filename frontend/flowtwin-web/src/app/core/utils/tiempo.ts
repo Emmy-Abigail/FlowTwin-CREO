@@ -24,12 +24,6 @@ export function fechaLarga(t: number): string {
   return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
 
-/** "lun 26" para ejes y etiquetas compactas */
-export function diaCorto(t: number): string {
-  const d = new Date(t);
-  return `${DIAS[d.getDay()]} ${d.getDate()}`;
-}
-
 /** "2026-10-26", el formato de <input type="date"> */
 export function isoFecha(t: number): string {
   const d = new Date(t);

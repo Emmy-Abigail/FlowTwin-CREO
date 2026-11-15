@@ -3,6 +3,7 @@ using FlowTwin.Auditoria.Application;
 using FlowTwin.Dispositivos.Application;
 using FlowTwin.Gemelo.Application;
 using FlowTwin.Identidad.Application;
+using FlowTwin.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -33,6 +34,8 @@ public static class ModuloPersistencia
         services.AddScoped<IDispositivosDb>(sp => sp.GetRequiredService<FlowTwinDbContext>());
         services.AddScoped<IAtencionesDb>(sp => sp.GetRequiredService<FlowTwinDbContext>());
         services.AddScoped<IAuditoriaDb>(sp => sp.GetRequiredService<FlowTwinDbContext>());
+        // Para los módulos sin tablas propias (Reportes) que solo guardan su fila de auditoría
+        services.AddScoped<IUnidadDeTrabajo>(sp => sp.GetRequiredService<FlowTwinDbContext>());
         return services;
     }
 }
