@@ -26,4 +26,11 @@ public sealed class ZonasConsultas(IGemeloDb db) : IZonasConsultas
 
     public async Task<IReadOnlyList<ZonaInfo>> ZonasAsync(IReadOnlyCollection<int> zonaIds, CancellationToken ct = default) =>
         await db.Zonas.Where(z => zonaIds.Contains(z.Id)).Select(z => new ZonaInfo(z.Id, z.Nombre, z.PisoId)).ToListAsync(ct);
+
+    public async Task<IReadOnlyList<ZonaRecorrido>> ParaRecorridoAsync(IReadOnlyCollection<int> zonaIds, CancellationToken ct = default)
+    {
+        var zonas = await db.Zonas.IgnoreQueryFilters().Where(z => zonaIds.Contains(z.Id))
+            .Select(z => new { z.Id, z.Nombre, z.TipoZonaId, z.PisoId }).ToListAsync(ct);
+        return [.. zonas.Select(z => new ZonaRecorrido(z.Id, z.Nombre, z.TipoZonaId.Codigo(), z.PisoId))];
+    }
 }

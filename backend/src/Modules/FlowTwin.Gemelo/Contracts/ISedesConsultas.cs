@@ -12,6 +12,9 @@ public interface ISedesConsultas
     /// <summary>Sedes que puede operar el usuario actual: null = todas (Administrador).</summary>
     Task<IReadOnlyList<int>?> SedesDelUsuarioAsync(CancellationToken ct = default);
 
+    /// <summary>Nombre de la sede (también si se dio de baja: lo pide el historial). null si no existe.</summary>
+    Task<string?> NombreSedeAsync(int sedeId, CancellationToken ct = default);
+
     /// <summary>Letra con la que empiezan los códigos de atención de la sede.</summary>
     Task<char> PrefijoAtencionAsync(int sedeId, CancellationToken ct = default);
 }

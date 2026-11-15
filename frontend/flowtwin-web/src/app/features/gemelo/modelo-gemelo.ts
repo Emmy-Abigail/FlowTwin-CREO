@@ -19,6 +19,8 @@ export interface ZonaVista {
 export type EstadoPaciente = 'esperando' | 'en-consulta' | 'atendido' | 'finalizado';
 
 export interface PacienteVista {
+  /** Para abrir su detalle (P6): el Id de la atención real, o su código en la simulación. */
+  clave: string;
   codigo: string;
   estado: EstadoPaciente;
   /** Zona donde está ahora; null si no se le detecta en ninguna zona del piso. */
