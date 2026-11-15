@@ -1,0 +1,5 @@
+# Entorno aparte para el acabado (Blender como módulo de Python).
+# bpy 4.2 requiere exactamente Python 3.11.
+bpy==4.2.0
+numpy
+pillow

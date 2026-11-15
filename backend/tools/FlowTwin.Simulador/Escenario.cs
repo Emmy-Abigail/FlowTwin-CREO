@@ -36,6 +36,16 @@ public sealed record Escenario(
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { ReadCommentHandling = JsonCommentHandling.Skip };
 
+    /// <summary>
+    /// La API de trabajo (perfil «http», puerto 5080) usa la base donde se registra a mano. El simulador
+    /// escribe atenciones y lecturas como si fueran reales, así que va a la API del perfil «simulador»
+    /// (puerto 5090, base FlowTwin_Simulador). Apuntar a la de trabajo exige pedirlo a propósito.
+    /// </summary>
+    public const int PuertoApiDeTrabajo = 5080;
+
+    public bool ApuntaALaApiDeTrabajo =>
+        Uri.TryCreate(Api, UriKind.Absolute, out var u) && u.IsLoopback && u.Port == PuertoApiDeTrabajo;
+
     public static Escenario Leer(string ruta) =>
         JsonSerializer.Deserialize<Escenario>(File.ReadAllText(ruta), Json)
         ?? throw new InvalidOperationException($"El escenario {ruta} está vacío.");

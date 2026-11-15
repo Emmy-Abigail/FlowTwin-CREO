@@ -19,6 +19,26 @@ public class EstadoPisoTests(ApiFixture api)
         estado.GetProperty("zonas").EnumerateArray().Single(z => z.GetProperty("zonaId").GetInt32() == id);
 
     [Fact]
+    public async Task Atendidas_hoy_lista_las_devueltas_y_no_las_anuladas_RN04()
+    {
+        var operador = await api.ClienteDeAsync("operador@creo.pe");
+        var entrega = await Json(await operador.PostAsJsonAsync("/api/v1/admision/escaneos", new { codigoQr = TarjetasDePrueba.AtendidaHoy, modo = "AUTO" }));
+        var atendida = entrega.GetProperty("atencion").GetProperty("codigo").GetString();
+        await operador.PostAsJsonAsync("/api/v1/admision/escaneos", new { codigoQr = TarjetasDePrueba.AtendidaHoy, modo = "AUTO" });   // devuelve
+        var otra = await Json(await operador.PostAsJsonAsync("/api/v1/admision/escaneos", new { codigoQr = TarjetasDePrueba.AnuladaHoy, modo = "AUTO" }));
+        var anulada = otra.GetProperty("atencion").GetProperty("codigo").GetString();
+        await operador.PostAsync($"/api/v1/admision/atenciones/{otra.GetProperty("atencion").GetProperty("id").GetInt64()}/deshacer", null);
+
+        var r = await (await api.ClienteDeAsync("gerencia@creo.pe")).GetAsync("/api/v1/pisos/1/atendidas-hoy");
+
+        Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+        var lista = (await Json(r)).EnumerateArray().ToList();
+        var fila = Assert.Single(lista, a => a.GetProperty("codigo").GetString() == atendida);
+        Assert.Equal("DEVUELTA", fila.GetProperty("motivo").GetString());
+        Assert.DoesNotContain(lista, a => a.GetProperty("codigo").GetString() == anulada);
+    }
+
+    [Fact]
     public async Task Un_paciente_en_Modulo_2_con_su_nodo_en_linea_se_ve_en_el_estado()
     {
         // N-03 (Módulo 2) envía un latido: queda En línea

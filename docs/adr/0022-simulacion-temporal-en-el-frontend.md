@@ -14,7 +14,9 @@ nodos hace falta mostrarle al patrocinador cómo se verá el sistema con datos.
 - **Un modo «Simulación»** que muestra datos ficticios generados en el navegador:
   - solo existe si el servidor lo permite: `Demo:SimulacionDisponible` (falso por defecto; verdadero solo
     en desarrollo y en la instalación de la demostración), expuesto en `GET /api/v1/configuracion`;
-  - solo lo ven Administrador y Gerencia; nunca el Operador, cuya pantalla es operativa;
+  - lo pueden activar los tres roles (Operador, Gerencia y Administrador), para mostrarle al patrocinador
+    cada pantalla tal como la verá cada rol; Admisión no cambia: siempre es real *(modificado el 15/11/2026;
+    antes el Operador no lo veía)*;
   - mientras está activo, una franja violeta fija y un marco violeta lo dejan claro en toda la pantalla;
   - no escribe nada en la base ni aparece en reportes;
   - no se recuerda: al recargar se vuelve a los datos reales.

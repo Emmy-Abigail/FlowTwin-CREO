@@ -87,6 +87,29 @@ public class EstadoPisoTests
     }
 
     [Fact]
+    public void Con_el_aforo_por_definir_muestra_la_ocupacion_sin_semaforo()
+    {
+        ZonaSemaforo[] zonas = [new(Sala, "Sala de espera", "ESPERA", null, null, null)];
+        var a = Atencion("A-0150", 5, En(Sala, 5));
+
+        var sala = CalculoEstado.Calcular(1, zonas, [Nodo(Sala)], [a], Ahora).Zonas.Single();
+
+        Assert.Equal(Nivel.Ninguno, sala.Nivel);
+        Assert.Equal(1, sala.Ocupacion);
+        Assert.Null(sala.Aforo);
+    }
+
+    [Fact]
+    public void Sin_datos_va_antes_que_el_aforo_por_definir()
+    {
+        ZonaSemaforo[] zonas = [new(Sala, "Sala de espera", "ESPERA", null, null, null)];
+
+        var sala = CalculoEstado.Calcular(1, zonas, [Nodo(Sala, "SIN_SENAL")], [], Ahora).Zonas.Single();
+
+        Assert.Equal(Nivel.SinDatos, sala.Nivel);
+    }
+
+    [Fact]
     public void Transito_no_tiene_semaforo_RN13()
     {
         Assert.Equal(Nivel.Ninguno, CalculoEstado.Calcular(1, Zonas, TodosEnLinea, [], Ahora).Zonas.Single(z => z.ZonaId == Hall).Nivel);
@@ -166,5 +189,41 @@ public class EstadoPisoTests
 
         Assert.Single(mensajes, m => m.Metodo == "NodoEstadoCambiado");
         Assert.Single(mensajes, m => m.Metodo == "OcupacionZonaCambiada" && m.Contenido.ToString()!.Contains(Nivel.SinDatos));
+    }
+
+    [Fact]
+    public void Cada_atencion_dice_desde_cuando_esta_en_su_zona_actual()
+    {
+        var a = Atencion("A-0143", 30, En(Admision, 30, 27), En(Sala, 21));
+
+        var estado = CalculoEstado.Calcular(1, Zonas, TodosEnLinea, [a], Ahora).Atenciones.Single();
+
+        Assert.Equal(Ahora.AddMinutes(-21), estado.ZonaDesdeEn);
+    }
+
+    [Fact]
+    public void Atendidas_hoy_usan_la_misma_regla_de_espera_y_consulta_medida_hasta_su_fin_RN06()
+    {
+        // Entregada a las 15:00, consulta de 15:20 a 15:45, devuelta a las 15:52
+        var inicio = Ahora.AddMinutes(-60);
+        var cerrada = new AtencionCerrada(1, "A-0139", 1, inicio, inicio.AddMinutes(52), "DEVUELTA",
+            [new(Sala, inicio.AddMinutes(2), inicio.AddMinutes(20)), new(Modulo2, inicio.AddMinutes(20), inicio.AddMinutes(45)),
+             new(Admision, inicio.AddMinutes(45), inicio.AddMinutes(52))]);
+
+        var a = CalculoEstado.Atendidas(Zonas, [cerrada]).Single();
+
+        Assert.Equal((20, 25, 52), (a.EsperaMin, a.ConsultaMin, a.TotalMin));
+        Assert.Equal("DEVUELTA", a.Motivo);
+    }
+
+    [Fact]
+    public void Una_atendida_que_nunca_entro_a_consulta_espero_todo_su_tiempo()
+    {
+        var inicio = Ahora.AddMinutes(-40);
+        var cerrada = new AtencionCerrada(2, "A-0140", 1, inicio, inicio.AddMinutes(35), "SIN_LECTURAS", [new(Sala, inicio, inicio.AddMinutes(35))]);
+
+        var a = CalculoEstado.Atendidas(Zonas, [cerrada]).Single();
+
+        Assert.Equal((35, 0), (a.EsperaMin, a.ConsultaMin));
     }
 }

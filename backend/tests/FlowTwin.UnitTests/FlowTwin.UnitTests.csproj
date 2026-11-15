@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\FlowTwin.Persistence\FlowTwin.Persistence.csproj" />
     <ProjectReference Include="..\..\src\Modules\FlowTwin.Atenciones\FlowTwin.Atenciones.csproj" />
     <ProjectReference Include="..\..\src\Modules\FlowTwin.Auditoria\FlowTwin.Auditoria.csproj" />
     <ProjectReference Include="..\..\src\Modules\FlowTwin.Dispositivos\FlowTwin.Dispositivos.csproj" />
