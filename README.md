@@ -31,22 +31,13 @@
   y qué zona se está llenando, <b>en vivo</b>, para que la clínica actúe a tiempo y decida con datos.
 </p>
 
-<p align="center">
-  Proyecto de la <b>Universidad Peruana Cayetano Heredia</b> · Facultad de Ciencias e Ingeniería<br/>
-  Proyectos de Ingeniería II · 8.º ciclo · 2026 · Desarrollado para la <b>Clínica CREO+</b>
-</p>
-
 ---
 
 ## 📑 Tabla de contenidos
 
 - [📘 Introducción](#-introducción)
 - [🏥 Problemática](#-problemática)
-- [🌟 Misión](#-misión)
-- [👁️ Visión](#️-visión)
-- [🎯 ODS 3: Salud y bienestar](#-ods-3-salud-y-bienestar)
 - [🎯 Objetivos](#-objetivos)
-- [📌 Justificación](#-justificación)
 - [⚙️ ¿Cómo funciona?](#️-cómo-funciona)
 - [🖥️ Componentes del sistema](#️-componentes-del-sistema)
 - [👥 Roles y pantallas](#-roles-y-pantallas)
@@ -103,30 +94,6 @@ ni en el momento ni en el historial.
 
 ---
 
-## 🌟 Misión
-
-Dar a la clínica una visión en tiempo real y objetiva del recorrido de sus pacientes, con una solución accesible y
-respetuosa de su privacidad, para reducir las esperas y mejorar la experiencia de atención.
-
-## 👁️ Visión
-
-Ser una referencia en el uso de gemelos digitales para la gestión del flujo de pacientes en clínicas del Perú, y
-demostrar que una solución de bajo costo puede mejorar de forma medible la calidad del servicio de salud.
-
----
-
-## 🎯 ODS 3: Salud y bienestar
-
-**Meta 3.8:**
-> "Lograr la cobertura sanitaria universal, en particular la protección contra los riesgos financieros, el acceso a
-> servicios de salud esenciales de calidad y el acceso a medicamentos y vacunas inocuos, eficaces, asequibles y de
-> calidad para todos."
-
-FlowTwin aporta al **acceso a servicios de salud de calidad**: menos espera y una atención mejor organizada son parte
-de esa calidad.
-
----
-
 ## 🎯 Objetivos
 
 ### Objetivo general
@@ -142,16 +109,6 @@ toma de decisiones.
 - **Alertar al Operador** solo cuando hace falta actuar: esperas largas y tarjetas sin señal.
 - **Medir y conservar los tiempos** de espera y de atención para ver cuándo y dónde se forman los cuellos de botella.
 - **Dar a cada rol solo lo que necesita**, con permisos, auditoría y seguridad aptos para una clínica real.
-
----
-
-## 📌 Justificación
-
-Medir el flujo de pacientes a mano (cronómetros, hojas de registro) es costoso, interrumpe la atención y no se
-sostiene en el tiempo. Las cámaras plantean problemas de privacidad. Las tarjetas BLE con un código anónimo, junto con
-nodos ESP32 de bajo costo, permiten medir de forma **continua, automática y anónima**. Convertir esas mediciones en un
-gemelo visual hace que la información sea útil para quien la necesita: recepción en el momento, y gerencia en el
-historial.
 
 ---
 
