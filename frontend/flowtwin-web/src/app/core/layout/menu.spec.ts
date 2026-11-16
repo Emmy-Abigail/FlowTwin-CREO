@@ -4,7 +4,7 @@ describe('Menú por rol', () => {
   it('solo muestra las pantallas construidas: nada de callejones sin salida', () => {
     const rutas = menuDe('Administrador').map(i => i.ruta);
 
-    expect(rutas).toEqual(['/gemelo', '/historial']);
+    expect(rutas).toEqual(['/gemelo', '/historial', '/dispositivos']);
   });
 
   it('el Operador empieza por Admisión, su pantalla de trabajo', () => {

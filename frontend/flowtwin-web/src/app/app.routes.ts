@@ -57,7 +57,7 @@ export const routes: Routes = [
         path: 'dispositivos',
         canActivate: [rolGuard(PERMISOS.dispositivos)],
         data: { titulo: 'Dispositivos', descripcion: 'Nodos ESP32 y tarjetas BLE (P9).' },
-        loadComponent: proximamente,
+        loadComponent: () => import('./features/dispositivos/dispositivos.page').then(m => m.DispositivosPage),
       },
       {
         path: 'usuarios',

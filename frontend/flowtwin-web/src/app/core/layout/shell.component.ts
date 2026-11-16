@@ -53,8 +53,9 @@ export class ShellComponent {
   private router = inject(Router);
   private url = toSignal(this.router.events.pipe(filter(e => e instanceof NavigationEnd), map(() => this.router.url)),
     { initialValue: this.router.url });
-  /** Admisión nunca se simula (ADR-22): ahí la franja aclara que lo que se ve es real. */
-  protected enAdmision = computed(() => this.url().startsWith('/admision'));
+  /** Admisión y Dispositivos nunca se simulan (ADR-22): ahí la franja aclara que lo que se ve es real. */
+  protected pantallaReal = computed(() =>
+    this.url().startsWith('/admision') ? 'Admisión' : this.url().startsWith('/dispositivos') ? 'Dispositivos' : null);
 
   constructor() {
     this.modo.cargar();

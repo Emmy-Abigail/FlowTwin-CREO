@@ -42,7 +42,7 @@ Varias pantallas son **la misma para varios roles**, pero muestran u ocultan acc
 | # | Pantalla | Qué hace |
 |---|---|---|
 | P8 | **Construcción del gemelo** | Árbol a la izquierda (Sede › Piso › Zonas y nodos), plano al centro con herramientas de dibujo, propiedades a la derecha y vista previa 3D. Botones **Guardar borrador** y **Publicar cambios**. |
-| P9 | **Dispositivos** | Dos pestañas. **Nodos ESP32**: registrar nodo (nombre, MAC, zona) y ver su estado (en línea / sin señal, último latido). **Tarjetas BLE**: registrar tarjeta, estado y dar de baja. La calibración RSSI no está aquí: la hace el equipo técnico al instalar (ver diseno-sistema.md). |
+| P9 | **Dispositivos** | Por excepción: abre en lo que **requiere atención** (nodos sin señal; tarjetas extraviadas o que no se detectan hace más de un día: ¿batería?) y lo demás se encuentra con filtros con conteo y búsqueda, paginado (escala a miles). **Nodos**: registrar (muestra una sola vez usuario, clave y temas MQTT, solo para copiar), cambiar zona, regenerar clave, dar de baja. **Tarjetas**: registrar por rango (calcula el identificador BLE y el texto del QR) y dar de baja. La calibración RSSI la hace el equipo técnico; la posición del nodo, P8. |
 | P10 | **Usuarios** | Tabla de usuarios: crear, editar, asignar pisos y zonas, restablecer contraseña y desactivar. |
 | P11 | **Auditoría** | Bitácora de solo lectura: quién hizo qué, cuándo, y el antes y después. Con filtros y opción de exportar. |
 

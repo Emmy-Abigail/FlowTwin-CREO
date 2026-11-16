@@ -188,6 +188,10 @@ public sealed class TarjetaConfig : IEntityTypeConfiguration<Tarjeta>
         b.HasIndex(t => t.CodigoQr).IsUnique().HasFilter("[EstadoRegistro] = 1");
         b.HasOne<Sede>().WithMany().HasForeignKey(t => t.SedeId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<Catalogo<EstadoTarjeta>>().WithMany().HasForeignKey(t => t.EstadoTarjetaId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<Nodo>().WithMany().HasForeignKey(t => t.UltimoNodoId).OnDelete(DeleteBehavior.Restrict);
+        b.Property(t => t.UltimaDeteccionEn).HasPrecision(3);
+        // Inventario (P9): conteos y filtros por estado dentro de una sede, con miles de tarjetas
+        b.HasIndex(t => new { t.SedeId, t.EstadoTarjetaId });
     }
 }
 
