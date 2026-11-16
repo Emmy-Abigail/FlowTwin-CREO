@@ -11,4 +11,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Contraseñas filtradas (ASVS 2.1.7), dentro del ensamblado: no se consulta internet -->
+    <EmbeddedResource Include="Domain\contrasenas-filtradas.txt.gz" LogicalName="FlowTwin.Identidad.contrasenas-filtradas.txt.gz" />
+  </ItemGroup>
+
 </Project>
