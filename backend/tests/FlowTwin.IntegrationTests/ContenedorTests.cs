@@ -1,3 +1,4 @@
+using FlowTwin.Mensajeria.Contracts;
 using FlowTwin.Atenciones.Application;
 using FlowTwin.Dispositivos.Application;
 using FlowTwin.Dispositivos.Contracts;
@@ -22,7 +23,8 @@ public class ContenedorTests(ApiFixture api)
     [InlineData(typeof(IUbicacionNodos))]
     [InlineData(typeof(NodosServicio))]
     [InlineData(typeof(TarjetasServicio))]
-    [InlineData(typeof(IAutenticacionNodos))]
+    [InlineData(typeof(INodosIngesta))]
+    [InlineData(typeof(ICuentasNodosBroker))]
     [InlineData(typeof(IngestaNodosServicio))]
     [InlineData(typeof(IngestaServicio))]
     [InlineData(typeof(PurgaLecturasServicio))]

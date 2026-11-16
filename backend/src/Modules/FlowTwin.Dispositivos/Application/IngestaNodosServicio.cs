@@ -17,8 +17,11 @@ public sealed class OpcionesNodos
     public int RevisionLatidosSegundos { get; set; } = 30;
 }
 
-/// <summary>Cada 30 s el ESP32 avisa que sigue vivo. RssiWifi y MemoriaLibre van al log para diagnosticar.</summary>
-public sealed record LatidoRequest(string Mac, string? VersionFirmware, int? RssiWifi, int? MemoriaLibre);
+/// <summary>
+/// Cada 30 s el ESP32 avisa que sigue vivo. RssiWifi y MemoriaLibre van al log para diagnosticar.
+/// La MAC no viaja en el mensaje: es la del tema MQTT, que solo ese nodo puede usar (ADR-24).
+/// </summary>
+public sealed record LatidoRequest(string? VersionFirmware, int? RssiWifi, int? MemoriaLibre);
 
 public sealed class LatidoValidador : AbstractValidator<LatidoRequest>
 {
@@ -30,24 +33,22 @@ public sealed class LatidoValidador : AbstractValidator<LatidoRequest>
     }
 }
 
-/// <summary>Autenticación de nodos, latidos (F-15) y vigilancia de latidos (RN-20).</summary>
+/// <summary>Nodos que envían datos, latidos (F-15) y vigilancia de latidos (RN-20).</summary>
 public sealed class IngestaNodosServicio(
     IDispositivosDb db, IReloj reloj, ZonaHoraria zona, IOptions<OpcionesNodos> opciones,
     IValidator<LatidoRequest> validador, ILogger<IngestaNodosServicio> log)
-    : IAutenticacionNodos
+    : INodosIngesta
 {
-    public async Task<NodoAutenticado> AutenticarAsync(string? clave, string? mac, CancellationToken ct = default)
+    public async Task<NodoAutenticado?> ActivoPorMacAsync(string mac, CancellationToken ct = default)
     {
-        var nodo = await NodoDeAsync(clave, mac, ct);
-        return new NodoAutenticado(nodo.Id, nodo.Codigo, nodo.ZonaId, nodo.AjusteRssiDb);
+        var nodo = await NodoActivoAsync(mac, ct);
+        return nodo is null ? null : new NodoAutenticado(nodo.Id, nodo.Codigo, nodo.ZonaId, nodo.AjusteRssiDb);
     }
 
-    /// <summary>POST /ingesta/latidos: registra el latido y, si estaba Sin señal, el nodo pasa a En línea.</summary>
-    public async Task RegistrarLatidoAsync(string? clave, LatidoRequest req, CancellationToken ct)
+    /// <summary>Latido por MQTT: registra la hora y, si estaba Sin señal, el nodo pasa a En línea.</summary>
+    public async Task RegistrarLatidoAsync(string mac, LatidoRequest req, CancellationToken ct)
     {
-        // Primero quién es (401) y después si el formato es correcto (400): a quien no tiene clave
-        // no se le da información sobre el formato que espera la API
-        var nodo = await NodoDeAsync(clave, req.Mac, ct);
+        var nodo = await NodoActivoAsync(mac, ct) ?? throw Rechazado(mac);
         await validador.ValidarAsync(req, ct);
         nodo.UltimoLatidoEn = reloj.AhoraUtc;
         if (!string.IsNullOrWhiteSpace(req.VersionFirmware)) nodo.VersionFirmware = req.VersionFirmware.Trim();
@@ -82,20 +83,22 @@ public sealed class IngestaNodosServicio(
         return callados.Count;
     }
 
-    /// <summary>
-    /// Mismo mensaje para MAC desconocida, clave incorrecta o nodo de baja: a quien prueba claves
-    /// no se le dice cuál de las tres falló.
-    /// </summary>
-    private async Task<Nodo> NodoDeAsync(string? clave, string? mac, CancellationToken ct)
+    /// <summary>El nodo registrado con esa MAC, si no está de baja.</summary>
+    private async Task<Nodo?> NodoActivoAsync(string mac, CancellationToken ct)
     {
-        var macNormal = mac is null ? null : Nodo.NormalizarMac(mac);
-        var nodo = macNormal is null ? null : await db.Nodos.SingleOrDefaultAsync(n => n.Mac == macNormal, ct);
-        if (nodo is null || string.IsNullOrEmpty(clave) || !nodo.ClaveCoincide(clave))
-        {
-            Metricas.Rechazos.Add(1, new KeyValuePair<string, object?>("motivo", "autenticacion"));
-            log.LogWarning("Petición de nodo rechazada (MAC {Mac})", mac);
-            throw new NoAutenticadoException("Nodo no autorizado.");
-        }
-        return nodo;
+        var macNormal = Nodo.NormalizarMac(mac);
+        if (macNormal is null) return null;
+        return await db.Nodos.SingleOrDefaultAsync(n => n.Mac == macNormal && n.EstadoNodoId != EstadoNodo.Baja, ct);
+    }
+
+    /// <summary>
+    /// Con el broker no debería pasar (al dar de baja se borra la cuenta), pero si pasa se rechaza y queda en el
+    /// log: puede ser una cuenta del broker que quedó sin borrar.
+    /// </summary>
+    private NoAutenticadoException Rechazado(string mac)
+    {
+        Metricas.Rechazos.Add(1, new KeyValuePair<string, object?>("motivo", "nodo_no_activo"));
+        log.LogWarning("Mensaje de un nodo no registrado o de baja (MAC {Mac})", mac);
+        return new NoAutenticadoException("Nodo no autorizado.");
     }
 }

@@ -25,11 +25,17 @@ public sealed record AtencionDetalleInfo(
     long Id, string Codigo, DateOnly Fecha, int SedeId, int TarjetaId, DateTime InicioEn, DateTime? FinEn, string? Motivo,
     IReadOnlyList<EstadiaInfo> Estadias);
 
-/// <summary>Lo que el módulo Reportes necesita para el detalle de una atención (P6).</summary>
+/// <summary>Lo que el módulo Reportes necesita: el detalle de una atención (P6) y las de un periodo (P5).</summary>
 public interface IAtencionesConsulta
 {
     /// <summary>La atención con ese Id y sus estadías en orden, o null si no existe. No revisa permisos.</summary>
     Task<AtencionDetalleInfo?> PorIdAsync(long id, CancellationToken ct = default);
+
+    /// <summary>
+    /// Las atenciones de la sede con fecha (día de Lima) entre «desde» y «hasta», ambos incluidos, abiertas
+    /// o cerradas, SIN las anuladas (RN-04), con sus estadías en orden. No revisa permisos.
+    /// </summary>
+    Task<IReadOnlyList<AtencionDetalleInfo>> DelPeriodoAsync(int sedeId, DateOnly desde, DateOnly hasta, CancellationToken ct = default);
 }
 
 /// <summary>Lo que Monitoreo necesita para «Atendidos hoy» del gemelo.</summary>

@@ -69,6 +69,10 @@ public sealed class ZonaHoraria(string id)
     public DateTime ALocal(DateTime utc) => TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), zona);
 
     public DateOnly FechaLocal(DateTime utc) => DateOnly.FromDateTime(ALocal(utc));
+
+    /// <summary>El instante UTC de una hora local de la clínica: «el 9 de noviembre a las 10:00 en Lima».</summary>
+    public DateTime AUtc(DateOnly fecha, int hora) =>
+        TimeZoneInfo.ConvertTimeToUtc(fecha.ToDateTime(new TimeOnly(0, 0)).AddHours(hora), zona);
 }
 
 /// <summary>

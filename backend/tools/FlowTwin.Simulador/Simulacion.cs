@@ -19,7 +19,7 @@ public sealed class Paciente(TarjetaApi tarjeta, int numero, string atencion)
 /// API, recorren Admisión → Sala de espera → consulta y devuelven la tarjeta. Mientras tanto cada nodo
 /// simulado envía cada 2 s lo que "ve" según la distancia, y un latido cada 30 s.
 /// </summary>
-public sealed class Simulacion(Escenario escenario, ClienteApi api, Random azar, TextWriter salida)
+public sealed class Simulacion(Escenario escenario, ClienteApi api, ICanalNodos canal, Random azar, TextWriter salida)
 {
     private static readonly TimeSpan CadaLote = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan CadaLatido = TimeSpan.FromSeconds(30);
@@ -140,7 +140,7 @@ public sealed class Simulacion(Escenario escenario, ClienteApi api, Random azar,
         {
             if (ahora >= nodo.ProximoLatido)
             {
-                var (latido, _) = await api.LatidoAsync(nodo.Config, ct);
+                var (latido, _) = await canal.LatidoAsync(nodo.Config, ct);
                 if (Atender(nodo, latido, TimeSpan.FromSeconds(60), ahora)) nodo.ProximoLatido = ahora + CadaLatido;
             }
 
@@ -151,7 +151,7 @@ public sealed class Simulacion(Escenario escenario, ClienteApi api, Random azar,
                 .ToList();
             if (lecturas.Count == 0) continue;   // el contrato permite no enviar un lote vacío
 
-            var (respuesta, espera) = await api.LoteAsync(nodo.Config, nodo.Secuencia, lecturas, ct);
+            var (respuesta, espera) = await canal.LoteAsync(nodo.Config, nodo.Secuencia, lecturas, ct);
             if (Atender(nodo, respuesta, espera, ahora)) nodo.Secuencia++;
         }
     }
@@ -164,16 +164,16 @@ public sealed class Simulacion(Escenario escenario, ClienteApi api, Random azar,
             case RespuestaNodo.Recibido:
                 return true;
             case RespuestaNodo.Rechazado:
-                Escribir($"{nodo.Config.Codigo}: la API rechazó el formato (400); se descarta, revisar el simulador");
+                Escribir($"{nodo.Config.Codigo}: el backend respondió INVALIDO; se descarta, revisar el simulador");
                 return true;
             case RespuestaNodo.ClaveInvalida:
-                Escribir($"{nodo.Config.Codigo}: clave o MAC inválidas (401); reintenta en 60 s");
+                Escribir($"{nodo.Config.Codigo}: el broker o el backend no lo reconocen (clave o cuenta); reintenta en 60 s");
                 break;
             case RespuestaNodo.Esperar:
-                Escribir($"{nodo.Config.Codigo}: demasiadas peticiones (429); espera {espera.TotalSeconds:0} s");
+                Escribir($"{nodo.Config.Codigo}: demasiados mensajes (LIMITE); espera {espera.TotalSeconds:0} s");
                 break;
             case RespuestaNodo.SinConexion:
-                Escribir($"{nodo.Config.Codigo}: sin conexión con la API");
+                Escribir($"{nodo.Config.Codigo}: sin conexión con el broker o sin respuesta del backend");
                 break;
         }
         nodo.EnPausaHasta = ahora + espera;

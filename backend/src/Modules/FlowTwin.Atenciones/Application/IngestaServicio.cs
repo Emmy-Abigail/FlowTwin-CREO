@@ -20,8 +20,11 @@ public sealed class OpcionesIngesta
     public int HoraPurga { get; set; } = 3;
 }
 
-/// <summary>Contrato de ingesta: un lote cada 2 s con lo que el nodo vio (sección "Contrato de ingesta").</summary>
-public sealed record LoteLecturasRequest(string Mac, long Secuencia, List<LecturaRequest> Lecturas);
+/// <summary>
+/// Un lote cada 2 s con lo que el nodo vio (contrato de integración, sección 4). La MAC no viaja en el
+/// mensaje: es la del tema MQTT, que solo ese nodo puede usar (ADR-24).
+/// </summary>
+public sealed record LoteLecturasRequest(long Secuencia, List<LecturaRequest> Lecturas);
 
 /// <summary>EdadMs: hace cuántos ms el nodo vio al emisor por última vez.</summary>
 public sealed record LecturaRequest(string UuidBle, int Rssi, int EdadMs);
@@ -48,21 +51,21 @@ public sealed class LoteLecturasValidador : AbstractValidator<LoteLecturasReques
 }
 
 /// <summary>
-/// POST /ingesta/lecturas (F-07): autentica al nodo, valida el lote, descarta reenvíos y guarda las
-/// lecturas crudas. Debe responder en milisegundos: no hace cálculos de presencia aquí (los hará el motor).
+/// Lecturas por MQTT (F-07): comprueba que el nodo esté activo, valida el lote, descarta reenvíos y guarda
+/// las lecturas crudas. Debe tardar milisegundos: no hace cálculos de presencia aquí (los hace el motor).
 /// </summary>
 public sealed class IngestaServicio(
     IAtencionesDb db,
-    IAutenticacionNodos nodos,
+    INodosIngesta nodos,
     RegistroSecuencias secuencias,
     IValidator<LoteLecturasRequest> validador,
     IReloj reloj)
 {
-    public async Task<LoteRecibido> RecibirLoteAsync(string? clave, LoteLecturasRequest req, CancellationToken ct)
+    public async Task<LoteRecibido> RecibirLoteAsync(string mac, LoteLecturasRequest req, CancellationToken ct)
     {
         var cronometro = Stopwatch.StartNew();
-        // Primero quién es (401) y después si el formato es correcto (400)
-        var nodo = await nodos.AutenticarAsync(clave, req.Mac, ct);
+        // Primero si el nodo está activo (RECHAZADO) y después si el formato es correcto (INVALIDO)
+        var nodo = await nodos.ActivoPorMacAsync(mac, ct) ?? throw new NoAutenticadoException("Nodo no autorizado.");
         await validador.ValidarAsync(req, ct);
 
         if (!secuencias.Registrar(nodo.Id, req.Secuencia))

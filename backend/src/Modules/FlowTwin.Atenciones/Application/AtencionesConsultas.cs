@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 namespace FlowTwin.Atenciones.Application;
 
 /// <summary>
-/// Las consultas de atenciones que usan otros módulos (en curso, cerradas del día y una por Id).
+/// Las consultas de atenciones que usan otros módulos (en curso, cerradas del día, una por Id y las de un periodo).
 /// Solo depende de la base, para no formar ciclos entre módulos.
 /// </summary>
 public sealed class AtencionesConsultas(IAtencionesDb db) : IAtencionesEnCurso, IAtencionesCerradas, IAtencionesConsulta
@@ -60,5 +60,26 @@ public sealed class AtencionesConsultas(IAtencionesDb db) : IAtencionesEnCurso, 
             .ToListAsync(ct);
         return new AtencionDetalleInfo(a.Id, a.Codigo, a.FechaAtencion, a.SedeId, a.TarjetaId, a.InicioEn, a.FinEn,
             a.MotivoCierreId?.Codigo(), estadias);
+    }
+
+    public async Task<IReadOnlyList<AtencionDetalleInfo>> DelPeriodoAsync(int sedeId, DateOnly desde, DateOnly hasta, CancellationToken ct = default)
+    {
+        // El índice (SedeId, FechaAtencion, Codigo) cubre este filtro
+        var delPeriodo = db.Atenciones.AsNoTracking()
+            .Where(a => a.SedeId == sedeId && a.FechaAtencion >= desde && a.FechaAtencion <= hasta
+                && (a.MotivoCierreId == null || a.MotivoCierreId != MotivoCierreAtencion.Anulada));
+        var atenciones = await delPeriodo
+            .OrderBy(a => a.InicioEn)
+            .Select(x => new { x.Id, x.Codigo, x.FechaAtencion, x.SedeId, x.TarjetaId, x.InicioEn, x.FinEn, x.MotivoCierreId })
+            .ToListAsync(ct);
+        // Subconsulta en vez de una lista de Ids: en 31 días pueden ser miles y no conviene mandarlos como parámetros
+        var estadias = (await db.EventosZona.AsNoTracking()
+                .Where(e => delPeriodo.Select(a => a.Id).Contains(e.AtencionId))
+                .OrderBy(e => e.EntradaEn)
+                .Select(e => new { e.AtencionId, Estadia = new EstadiaInfo(e.ZonaId, e.EntradaEn, e.SalidaEn) })
+                .ToListAsync(ct))
+            .ToLookup(e => e.AtencionId, e => e.Estadia);
+        return [.. atenciones.Select(a => new AtencionDetalleInfo(a.Id, a.Codigo, a.FechaAtencion, a.SedeId, a.TarjetaId,
+            a.InicioEn, a.FinEn, a.MotivoCierreId?.Codigo(), [.. estadias[a.Id]]))];
     }
 }

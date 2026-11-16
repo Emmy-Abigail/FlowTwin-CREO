@@ -6,39 +6,35 @@ using FlowTwin.Atenciones.Application;
 using FlowTwin.Atenciones.Domain;
 using FlowTwin.Dispositivos.Application;
 using FlowTwin.Dispositivos.Domain;
-using Microsoft.AspNetCore.TestHost;
+using MQTTnet;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace FlowTwin.IntegrationTests;
 
 /// <summary>
-/// La puerta de entrada de los ESP32: autenticación del nodo, latidos (F-15), lecturas (F-07),
-/// vigilante (RN-20) y purga (DD-11). Usa los nodos de la semilla: N-01 para lecturas y N-03 para
-/// latidos (N-02 lo deja Sin señal la prueba de geometría).
+/// La puerta de entrada de los ESP32 por MQTT (ADR-24): cuentas del broker, latidos (F-15), lecturas (F-07),
+/// vigilante (RN-20) y purga (DD-11). Un «nodo de prueba» se conecta al Mosquitto real con su usuario y
+/// clave. Usa los nodos de la semilla: N-01 para lecturas y N-03 para latidos (N-02 lo deja Sin señal la
+/// prueba de geometría).
 /// </summary>
 [Collection("Api")]
 public class IngestaTests(ApiFixture api)
 {
+    private const string MacN01 = "02:00:00:00:00:01", MacN02 = "02:00:00:00:00:02", MacN03 = "02:00:00:00:00:03";
+
     private static async Task<JsonElement> Json(HttpResponseMessage r) => await r.Content.ReadFromJsonAsync<JsonElement>();
 
-    private HttpClient Nodo(string? clave)
-    {
-        var c = api.Fabrica.CreateClient();
-        if (clave is not null) c.DefaultRequestHeaders.Add("X-Node-Key", clave);
-        return c;
-    }
-
-    private static object Lote(string mac, long secuencia, params (string uuid, int rssi, int edadMs)[] lecturas) =>
-        new { mac, secuencia, lecturas = lecturas.Select(l => new { uuidBle = l.uuid, l.rssi, l.edadMs }) };
+    private Task<NodoMqtt> N01() => NodoMqtt.ConectarCuandoExistaAsync(MacN01, SemillaDesarrollo.ClaveNodoDemo("N-01"));
 
     [Fact]
     public async Task El_primer_latido_pone_al_nodo_en_linea_y_queda_en_su_historial()
     {
-        var r = await Nodo(SemillaDesarrollo.ClaveNodoDemo("N-03"))
-            .PostAsJsonAsync("/api/v1/ingesta/latidos", new { mac = "02:00:00:00:00:03", versionFirmware = "1.0.0", rssiWifi = -55 });
+        await using var nodo = await NodoMqtt.ConectarCuandoExistaAsync(MacN03, SemillaDesarrollo.ClaveNodoDemo("N-03"));
 
-        Assert.Equal(HttpStatusCode.Accepted, r.StatusCode);
+        var r = await nodo.EnviarAsync("latidos", new { versionFirmware = "1.0.0", rssiWifi = -55 });
+
+        Assert.Equal("GUARDADO", r.GetProperty("estado").GetString());
         var (estado, firmware, latido, eventos) = await api.EnBaseAsync(async db =>
         {
             var n = await db.Nodos.SingleAsync(x => x.Codigo == "N-03");
@@ -51,31 +47,42 @@ public class IngestaTests(ApiFixture api)
         Assert.True(eventos >= 1);
     }
 
-    [Theory]
-    [InlineData("nk_clave-inventada", "02:00:00:00:00:01")]          // clave incorrecta
-    [InlineData(null, "02:00:00:00:00:01")]                          // sin cabecera
-    [InlineData("nk_dev_N-01", "02:00:00:00:00:02")]                 // clave de N-01 con la MAC de N-02
-    public async Task Sin_clave_valida_para_esa_MAC_responde_401_y_no_guarda_nada(string? clave, string mac)
+    [Fact]
+    public async Task Con_una_clave_incorrecta_el_broker_no_lo_deja_conectarse()
     {
-        var antes = await api.EnBaseAsync(db => db.LecturasBle.CountAsync());
+        await using var _ = await N01();   // la cuenta ya existe: el rechazo es por la clave, no porque falte
 
-        var r = await Nodo(clave).PostAsJsonAsync("/api/v1/ingesta/lecturas", Lote(mac, 1, ("uuid-x", -60, 100)));
+        var e = await Assert.ThrowsAsync<ConexionRechazadaException>(() => NodoMqtt.ConectarAsync(MacN01, "nk_clave-inventada"));
 
-        Assert.Equal(HttpStatusCode.Unauthorized, r.StatusCode);
-        Assert.Equal(antes, await api.EnBaseAsync(db => db.LecturasBle.CountAsync()));
+        // MQTT 3.1.1 solo tiene «no autorizado»: no dice si falló el usuario o la clave, y así debe ser
+        Assert.Equal(MqttClientConnectResultCode.NotAuthorized, e.Codigo);
     }
 
     [Fact]
-    public async Task Un_lote_valido_guarda_las_lecturas_con_la_hora_del_servidor()
+    public async Task Un_nodo_no_puede_publicar_en_el_tema_de_otro()
     {
+        await using var n01 = await N01();
+        var uuid = $"suplantacion-{Guid.NewGuid():N}";
+
+        // N-01 intenta enviar lecturas como si fuera N-02: el rol del broker lo impide
+        await n01.PublicarAsync("lecturas", NodoMqtt.Lote(1, (uuid, -60, 100)),
+            raiz: $"{ApiFixture.PrefijoMqtt}/v1/nodos/{MacN02.Replace(":", "")}");
+
+        Assert.Null(await n01.RespuestaAsync(TimeSpan.FromSeconds(2)));
+        Assert.False(await api.EnBaseAsync(db => db.LecturasBle.AnyAsync(l => l.UuidBle == uuid)));
+    }
+
+    [Fact]
+    public async Task Un_lote_valido_se_guarda_con_la_hora_del_servidor_y_se_confirma()
+    {
+        await using var nodo = await N01();
         var uuid = $"f7826da6-prueba-{Guid.NewGuid():N}"[..40];
         var antes = DateTime.UtcNow;
 
-        var r = await Nodo(SemillaDesarrollo.ClaveNodoDemo("N-01"))
-            .PostAsJsonAsync("/api/v1/ingesta/lecturas", Lote("02:00:00:00:00:01", 1001, (uuid.ToUpperInvariant(), -61, 2_000)));
+        var r = await nodo.EnviarAsync("lecturas", NodoMqtt.Lote(1001, (uuid.ToUpperInvariant(), -61, 2_000)));
 
-        Assert.Equal(HttpStatusCode.Accepted, r.StatusCode);
-        Assert.Equal(1, (await Json(r)).GetProperty("recibidas").GetInt32());
+        Assert.Equal("GUARDADO", r.GetProperty("estado").GetString());
+        Assert.Equal(1001, r.GetProperty("secuencia").GetInt64());   // el nodo sabe qué lote borrar de su búfer
         var lectura = await api.EnBaseAsync(db => db.LecturasBle.SingleAsync(l => l.UuidBle == uuid));
         Assert.Equal(-61, lectura.Rssi);
         // LeidaEn ≈ llegada - 2 s, calculada con el reloj del servidor
@@ -83,56 +90,72 @@ public class IngestaTests(ApiFixture api)
     }
 
     [Fact]
-    public async Task Un_lote_reenviado_no_se_guarda_dos_veces()
+    public async Task Un_lote_reenviado_se_confirma_como_duplicado_y_no_se_guarda_dos_veces()
     {
+        await using var nodo = await N01();
         var uuid = $"reenvio-{Guid.NewGuid():N}";
-        var nodo = Nodo(SemillaDesarrollo.ClaveNodoDemo("N-01"));
-        var lote = Lote("02:00:00:00:00:01", 2002, (uuid, -70, 500));
+        var lote = NodoMqtt.Lote(2002, (uuid, -70, 500));
 
-        var primero = await Json(await nodo.PostAsJsonAsync("/api/v1/ingesta/lecturas", lote));
-        var segundo = await Json(await nodo.PostAsJsonAsync("/api/v1/ingesta/lecturas", lote));
+        var primero = await nodo.EnviarAsync("lecturas", lote);
+        var segundo = await nodo.EnviarAsync("lecturas", lote);
 
-        Assert.False(primero.GetProperty("duplicado").GetBoolean());
-        Assert.True(segundo.GetProperty("duplicado").GetBoolean());
+        Assert.Equal("GUARDADO", primero.GetProperty("estado").GetString());
+        Assert.Equal("DUPLICADO", segundo.GetProperty("estado").GetString());
         Assert.Equal(1, await api.EnBaseAsync(db => db.LecturasBle.CountAsync(l => l.UuidBle == uuid)));
     }
 
     [Fact]
-    public async Task Una_lectura_con_RSSI_imposible_responde_400()
+    public async Task Un_lote_que_no_cumple_el_contrato_responde_invalido_con_sus_errores()
     {
-        var r = await Nodo(SemillaDesarrollo.ClaveNodoDemo("N-01"))
-            .PostAsJsonAsync("/api/v1/ingesta/lecturas", Lote("02:00:00:00:00:01", 3003, ("uuid-y", 12, 100)));
+        await using var nodo = await N01();
 
-        Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode);
+        var rssi = await nodo.EnviarAsync("lecturas", NodoMqtt.Lote(3003, ("uuid-y", 12, 100)));
+        await nodo.PublicarCrudoAsync("lecturas", "esto no es json");
+        var roto = await nodo.RespuestaAsync();
+
+        Assert.Equal("INVALIDO", rssi.GetProperty("estado").GetString());
+        Assert.Equal(3003, rssi.GetProperty("secuencia").GetInt64());
+        Assert.True(rssi.GetProperty("errores").EnumerateObject().Any());
+        Assert.Equal("INVALIDO", roto?.GetProperty("estado").GetString());
     }
 
     [Fact]
-    public async Task Al_superar_el_limite_responde_429_con_Retry_After()
+    public async Task Registrar_un_nodo_le_crea_su_cuenta_y_regenerar_la_clave_corta_la_anterior()
     {
-        using var app = api.Fabrica.WithWebHostBuilder(b => b.UseSetting("LimitePeticiones:IngestaPorMinuto", "1"));
-        var nodo = app.CreateClient();
-        nodo.DefaultRequestHeaders.Add("X-Node-Key", SemillaDesarrollo.ClaveNodoDemo("N-01"));
-        var latido = new { mac = "02:00:00:00:00:01" };
+        var admin = await api.ClienteDeAsync("admin@creo.pe");
+        var creado = await Json(await admin.PostAsJsonAsync("/api/v1/nodos",
+            new { codigo = "N-62", mac = "A4:CF:12:9B:3E:62", zonaId = 3, posX = 20.0, posY = 16.0 }));
+        var id = creado.GetProperty("nodo").GetProperty("id").GetInt32();
+        var mqtt = creado.GetProperty("mqtt");
+        Assert.Equal(NodoMqtt.Usuario("A4:CF:12:9B:3E:62"), mqtt.GetProperty("usuario").GetString());
+        Assert.EndsWith("/a4cf129b3e62/lecturas", mqtt.GetProperty("temaLecturas").GetString());
 
-        await nodo.PostAsJsonAsync("/api/v1/ingesta/latidos", latido);
-        var r = await nodo.PostAsJsonAsync("/api/v1/ingesta/latidos", latido);
+        await using var conClaveVieja = await NodoMqtt.ConectarAsync("A4:CF:12:9B:3E:62", creado.GetProperty("clave").GetString()!);
+        Assert.Equal("GUARDADO", (await conClaveVieja.EnviarAsync("latidos", new { })).GetProperty("estado").GetString());
 
-        Assert.Equal(HttpStatusCode.TooManyRequests, r.StatusCode);
-        Assert.True(int.Parse(r.Headers.GetValues("Retry-After").Single()) > 0);   // el ESP32 sabe cuánto esperar
+        var nueva = (await Json(await admin.PostAsync($"/api/v1/nodos/{id}/regenerar-clave", null))).GetProperty("clave").GetString()!;
+
+        await Task.Delay(500);
+        Assert.False(conClaveVieja.Conectado);   // el broker cerró la sesión de la clave anterior
+        await Assert.ThrowsAsync<ConexionRechazadaException>(() => NodoMqtt.ConectarAsync("A4:CF:12:9B:3E:62", creado.GetProperty("clave").GetString()!));
+        await using var conClaveNueva = await NodoMqtt.ConectarAsync("A4:CF:12:9B:3E:62", nueva);
+        Assert.True(conClaveNueva.Conectado);
     }
 
     [Fact]
-    public async Task Un_nodo_de_baja_ya_no_puede_enviar_aunque_tenga_su_clave()
+    public async Task Un_nodo_de_baja_queda_desconectado_y_ya_no_puede_entrar()
     {
         var admin = await api.ClienteDeAsync("admin@creo.pe");
         var creado = await Json(await admin.PostAsJsonAsync("/api/v1/nodos",
             new { codigo = "N-60", mac = "A4:CF:12:9B:3E:60", zonaId = 3, posX = 20.0, posY = 16.0 }));
         var clave = creado.GetProperty("clave").GetString()!;
+        await using var nodo = await NodoMqtt.ConectarAsync("A4:CF:12:9B:3E:60", clave);
+
         await admin.PostAsync($"/api/v1/nodos/{creado.GetProperty("nodo").GetProperty("id").GetInt32()}/baja", null);
 
-        var r = await Nodo(clave).PostAsJsonAsync("/api/v1/ingesta/latidos", new { mac = "A4:CF:12:9B:3E:60" });
-
-        Assert.Equal(HttpStatusCode.Unauthorized, r.StatusCode);
+        await Task.Delay(500);
+        Assert.False(nodo.Conectado);
+        await Assert.ThrowsAsync<ConexionRechazadaException>(() => NodoMqtt.ConectarAsync("A4:CF:12:9B:3E:60", clave));
     }
 
     [Fact]
