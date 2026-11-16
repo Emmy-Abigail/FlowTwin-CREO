@@ -24,18 +24,23 @@ public interface IUsuarioActual
 }
 
 /// <summary>
-/// RN-24 en un solo lugar: el Administrador ve todos los pisos; Operador y Gerencia, solo los asignados.
+/// RN-24 en un solo lugar (ADR-29): el Administrador y Gerencia ven todos los pisos (Gerencia, solo lectura:
+/// cada acción tiene su propio permiso); el Operador, solo los asignados.
 /// Antes estaba copiada en cada servicio; una regla de seguridad copiada es una regla que algún día
 /// queda distinta en una de sus copias.
 /// </summary>
 public static class AccesoPisos
 {
     public const string RolAdmin = "ADMIN";
+    public const string RolGerencia = "GERENCIA";
 
     public static bool EsAdmin(this IUsuarioActual usuario) => usuario.Rol == RolAdmin;
 
+    /// <summary>Administrador y Gerencia no tienen pisos asignados: ven todos.</summary>
+    public static bool VeTodosLosPisos(this IUsuarioActual usuario) => usuario.Rol is RolAdmin or RolGerencia;
+
     public static bool PuedeVerPiso(this IUsuarioActual usuario, int pisoId) =>
-        usuario.EsAdmin() || usuario.Pisos.Contains(pisoId);
+        usuario.VeTodosLosPisos() || usuario.Pisos.Contains(pisoId);
 
     /// <summary>
     /// La misma regla sobre los claims del token. La usa el hub SignalR: una conexión dura mucho y
@@ -43,7 +48,7 @@ public static class AccesoPisos
     /// no serlo según el transporte.
     /// </summary>
     public static bool PuedeVerPiso(this System.Security.Claims.ClaimsPrincipal? usuario, int pisoId) =>
-        usuario?.FindFirst(Claims.Rol)?.Value == RolAdmin
+        usuario?.FindFirst(Claims.Rol)?.Value is RolAdmin or RolGerencia
         || (usuario?.FindAll(Claims.Piso).Any(c => c.Value == pisoId.ToString()) ?? false);
 }
 

@@ -1,0 +1,117 @@
+<header class="cabecera">
+  <h1>Usuarios</h1>
+  <button type="button" class="btn btn-p" (click)="abrirNuevo()"><app-icono nombre="plus" [tamano]="16" />Usuario</button>
+</header>
+
+<section class="card panel">
+  <div class="barra">
+    <div class="buscar">
+      <app-icono nombre="search" [tamano]="16" />
+      <input class="inp" type="search" maxlength="80" aria-label="Buscar usuario" placeholder="Buscar por nombre o correo"
+             [value]="buscar()" (input)="buscar.set($any($event.target).value)">
+    </div>
+    <select class="inp rol" aria-label="Filtrar por rol" (change)="rolFiltro.set($any($event.target).value)">
+      <option value="" [selected]="rolFiltro() === ''">Todos los roles</option>
+      @for (r of roles; track r.codigo) { <option [value]="r.codigo" [selected]="rolFiltro() === r.codigo">{{ r.texto }}</option> }
+    </select>
+    <label class="chk"><input type="checkbox" [checked]="inactivos()" (change)="inactivos.set($any($event.target).checked)">Mostrar inactivos</label>
+  </div>
+
+  @if (error(); as e) {
+    <app-estado-vacio titulo="No se pudo cargar" [texto]="e" />
+  } @else if (lista() !== null) {
+    <div class="lista">
+      <table class="tbl">
+        <thead><tr><th>Usuario</th><th>Rol</th><th>Pisos</th><th>Último ingreso</th><th>Estado</th><th class="acc"><span class="sr-only">Acciones</span></th></tr></thead>
+        <tbody>
+          @for (u of visibles(); track u.id) {
+            @let est = estadoUsuario(u);
+            <tr [class.inactivo]="!u.estadoRegistro">
+              <td><b class="nom">{{ nombreCompleto(u) }}</b><small>{{ u.correo }}</small></td>
+              <td><span class="chip" [class]="'chip r-' + u.rol">{{ textoRol(u.rol) }}</span></td>
+              <td>{{ pisosDe(u) }}</td>
+              <td>{{ ultimoIngreso(u) }}</td>
+              <td><span class="est" [class]="'est ' + est.tono">{{ est.texto }}</span></td>
+              <td class="acc">
+                <div class="menu">
+                  <button type="button" class="mas" [attr.aria-label]="'Acciones de ' + nombreCompleto(u)" [attr.aria-expanded]="menu() === u.id"
+                          (click)="menu.set(menu() === u.id ? null : u.id)">⋯</button>
+                  @if (menu() === u.id) {
+                    <div class="opciones" role="menu">
+                      @if (u.estadoRegistro) {
+                        <button type="button" role="menuitem" (click)="abrirEditar(u)">Editar</button>
+                        <button type="button" role="menuitem" (click)="confirmarRestablecer(u)">Restablecer contraseña</button>
+                        @if (!esYo(u)) { <button type="button" role="menuitem" class="peligro" (click)="confirmarDesactivar(u)">Desactivar</button> }
+                      } @else {
+                        <button type="button" role="menuitem" (click)="activar(u)">Activar</button>
+                      }
+                    </div>
+                  }
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="6"><p class="vacio">Sin resultados</p></td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else {
+    <p class="vacio"><span class="spin"></span> Cargando…</p>
+  }
+</section>
+
+<!-- Nuevo usuario / Editar -->
+@if (formulario(); as f) {
+  <app-modal [titulo]="f.id === null ? 'Nuevo usuario' : 'Editar usuario'" (cerrar)="formulario.set(null)">
+    <div class="dos">
+      <label class="campo">Nombres<input class="inp" maxlength="80" [value]="datos().nombres" (input)="campo('nombres', $any($event.target).value)"></label>
+      <label class="campo">Apellidos<input class="inp" maxlength="80" [value]="datos().apellidos" (input)="campo('apellidos', $any($event.target).value)"></label>
+    </div>
+    <label class="campo">Correo<input class="inp" type="email" maxlength="120" [value]="datos().correo" (input)="campo('correo', $any($event.target).value)"></label>
+    <div class="campo" role="group" aria-label="Rol">Rol
+      <div class="seg">
+        @for (r of roles; track r.codigo) {
+          <button type="button" [class.on]="datos().rol === r.codigo" [attr.aria-pressed]="datos().rol === r.codigo" (click)="campo('rol', r.codigo)">{{ r.texto }}</button>
+        }
+      </div>
+    </div>
+    @if (rolTienePisos(datos().rol)) {
+      <div class="campo" role="group" aria-label="Pisos que verá">Pisos que verá
+        <div class="seg">
+          @for (p of pisosDisponibles(); track p.id) {
+            <button type="button" [class.on]="datos().pisos.includes(p.id)" [attr.aria-pressed]="datos().pisos.includes(p.id)" (click)="alternarPiso(p.id)">{{ p.nombre }}</button>
+          }
+        </div>
+      </div>
+    }
+    @if (errorVentana(); as e) { <p class="err" role="alert">{{ e }}</p> }
+    <div pie>
+      <button type="button" class="btn btn-o" (click)="formulario.set(null)">Cancelar</button>
+      <button type="button" class="btn btn-p" [disabled]="trabajando() || !valido()" (click)="guardar(f.id)">{{ f.id === null ? 'Crear usuario' : 'Guardar' }}</button>
+    </div>
+  </app-modal>
+}
+
+<!-- Contraseña temporal: una sola vez -->
+@if (clave(); as c) {
+  <app-modal [titulo]="'Contraseña temporal de ' + c.nombre" (cerrar)="clave.set(null)">
+    <div class="clave" aria-label="Contraseña temporal">{{ c.valor }}</div>
+    <p class="aviso-clave">Cópiala y entrégasela ahora: no se vuelve a mostrar. Deberá cambiarla al ingresar.</p>
+    <div pie>
+      <button type="button" class="btn btn-o" (click)="copiar(c.valor)">Copiar</button>
+      <button type="button" class="btn btn-p" (click)="clave.set(null)">Listo</button>
+    </div>
+  </app-modal>
+}
+
+<!-- Confirmar -->
+@if (confirmacion(); as c) {
+  <app-modal [titulo]="c.titulo" (cerrar)="confirmacion.set(null)">
+    @if (errorVentana(); as e) { <p class="err" role="alert">{{ e }}</p> }
+    <div pie>
+      <button type="button" class="btn btn-o" (click)="confirmacion.set(null)">Cancelar</button>
+      <button type="button" class="btn btn-p" [disabled]="trabajando()" (click)="ejecutarConfirmacion(c)">{{ c.boton }}</button>
+    </div>
+  </app-modal>
+}

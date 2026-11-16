@@ -67,13 +67,56 @@ public class IdentidadTests(ApiFixture api)
         Assert.Equal(HttpStatusCode.OK, (await cliente.GetAsync("/api/v1/sedes")).StatusCode);
     }
 
+    /// <summary>ADR-29: el Operador necesita pisos; Gerencia y Administrador ven todos y no guardan ninguno.</summary>
+    [Fact]
+    public async Task Solo_el_Operador_tiene_pisos_asignados_y_Gerencia_ve_todos_ADR29()
+    {
+        var admin = await api.ClienteDeAsync("admin@creo.pe");
+
+        var operadorSinPisos = await admin.PostAsJsonAsync("/api/v1/usuarios",
+            new { nombres = "Sin", apellidos = "Pisos", correo = "sin.pisos@creo.pe", rol = "OPERADOR", pisos = Array.Empty<int>() });
+        var gerente = await admin.PostAsJsonAsync("/api/v1/usuarios",
+            new { nombres = "Gloria", apellidos = "Paz", correo = "gloria.paz@creo.pe", rol = "GERENCIA", pisos = new[] { 1 } });   // los pisos se ignoran
+
+        Assert.Equal("RN24_PISO_REQUERIDO", (await Json(operadorSinPisos)).GetProperty("codigo").GetString());
+        Assert.Equal(HttpStatusCode.Created, gerente.StatusCode);
+        var cuerpo = await Json(gerente);
+        Assert.Empty(cuerpo.GetProperty("usuario").GetProperty("pisos").EnumerateArray());
+
+        // Entra y ve los pisos publicados aunque no tenga ninguno asignado; sigue siendo de solo lectura
+        using var sinRegla = api.ConAjustes(("Contrasenas:ExigirCambioPrimerIngreso", "false"));
+        var cliente = sinRegla.CreateClient();
+        var login = await Json(await cliente.PostAsJsonAsync("/api/v1/auth/login",
+            new { correo = "gloria.paz@creo.pe", clave = cuerpo.GetProperty("contrasenaTemporal").GetString() }));
+        cliente.DefaultRequestHeaders.Authorization = new("Bearer", login.GetProperty("accessToken").GetString());
+        var sedes = await Json(await cliente.GetAsync("/api/v1/sedes"));
+        Assert.NotEmpty(sedes.EnumerateArray().SelectMany(sede => sede.GetProperty("pisos").EnumerateArray()));
+        Assert.Equal(HttpStatusCode.OK, (await cliente.GetAsync("/api/v1/pisos/1/estado")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await cliente.GetAsync("/api/v1/pisos/1/alertas")).StatusCode);   // acciones del Operador: no
+    }
+
+    [Fact]
+    public async Task Pasar_de_Operador_a_Gerencia_da_de_baja_sus_pisos_ADR29()
+    {
+        var admin = await api.ClienteDeAsync("admin@creo.pe");
+        var creado = await Json(await admin.PostAsJsonAsync("/api/v1/usuarios",
+            new { nombres = "Pablo", apellidos = "Cruz", correo = "pablo.cruz@creo.pe", rol = "OPERADOR", pisos = new[] { 1 } }));
+        var id = creado.GetProperty("usuario").GetProperty("id").GetInt32();
+        Assert.Equal([1], creado.GetProperty("usuario").GetProperty("pisos").EnumerateArray().Select(p => p.GetInt32()));
+
+        var editado = await Json(await admin.PutAsJsonAsync($"/api/v1/usuarios/{id}",
+            new { nombres = "Pablo", apellidos = "Cruz", correo = "pablo.cruz@creo.pe", rol = "GERENCIA", pisos = Array.Empty<int>() }));
+
+        Assert.Empty(editado.GetProperty("pisos").EnumerateArray());
+    }
+
     [Fact]
     public async Task Crear_y_dar_de_baja_un_usuario_no_lo_borra_RN28()
     {
         var admin = await api.ClienteDeAsync("admin@creo.pe");
 
         var creado = await admin.PostAsJsonAsync("/api/v1/usuarios",
-            new { nombres = "Rosa", apellidos = "Vega", correo = "rosa.vega@creo.pe", rol = "GERENCIA", pisos = new[] { 1 } });
+            new { nombres = "Rosa", apellidos = "Vega", correo = "rosa.vega@creo.pe", rol = "OPERADOR", pisos = new[] { 1 } });
         Assert.Equal(HttpStatusCode.Created, creado.StatusCode);
         var cuerpo = await Json(creado);
         Assert.Equal(12, cuerpo.GetProperty("contrasenaTemporal").GetString()!.Length);
