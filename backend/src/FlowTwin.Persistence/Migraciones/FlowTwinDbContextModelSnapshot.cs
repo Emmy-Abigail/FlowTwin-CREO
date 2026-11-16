@@ -587,6 +587,13 @@ namespace FlowTwin.Persistence.Migraciones
                     b.Property<int>("SedeId")
                         .HasColumnType("int");
 
+                    b.Property<DateTime?>("UltimaDeteccionEn")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("UltimoNodoId")
+                        .HasColumnType("int");
+
                     b.Property<int?>("UsuarioActualizacionId")
                         .HasColumnType("int");
 
@@ -617,11 +624,13 @@ namespace FlowTwin.Persistence.Migraciones
 
                     b.HasIndex("EstadoTarjetaId");
 
-                    b.HasIndex("SedeId");
+                    b.HasIndex("UltimoNodoId");
 
                     b.HasIndex("UuidBle")
                         .IsUnique()
                         .HasFilter("[EstadoRegistro] = 1");
+
+                    b.HasIndex("SedeId", "EstadoTarjetaId");
 
                     b.ToTable("Tarjeta", "dis");
                 });
@@ -986,7 +995,7 @@ namespace FlowTwin.Persistence.Migraciones
 
                     b.ToTable("Zona", "gem", t =>
                         {
-                            t.HasCheckConstraint("CK_Zona_AforoRN13", "([Aforo] IS NULL AND [UmbralMediaPct] IS NULL AND [UmbralAltaPct] IS NULL) OR ([TipoZonaId] IN (1, 2, 3) AND [Aforo] >= 1 AND [UmbralMediaPct] IS NOT NULL AND [UmbralAltaPct] IS NOT NULL AND [UmbralMediaPct] > 0 AND [UmbralMediaPct] <= [UmbralAltaPct] AND [UmbralAltaPct] <= 100)");
+                            t.HasCheckConstraint("CK_Zona_AforoRN13", "([Aforo] IS NULL AND [UmbralMediaPct] IS NULL AND [UmbralAltaPct] IS NULL) OR ([TipoZonaId] IN (1, 2, 3, 6) AND [Aforo] >= 1 AND [UmbralMediaPct] IS NOT NULL AND [UmbralAltaPct] IS NOT NULL AND [UmbralMediaPct] > 0 AND [UmbralMediaPct] <= [UmbralAltaPct] AND [UmbralAltaPct] <= 100)");
 
                             t.HasCheckConstraint("CK_Zona_Geometria", "[Geometria] IS NULL OR ISJSON([Geometria]) = 1");
 
@@ -1051,7 +1060,7 @@ namespace FlowTwin.Persistence.Migraciones
                             FondoM = 4.8m,
                             Nombre = "Triaje",
                             PisoId = 1,
-                            TipoZonaId = 3,
+                            TipoZonaId = 6,
                             UsuarioRegistroId = 1,
                             X = 25.2m,
                             Y = 13.9m
@@ -1917,6 +1926,15 @@ namespace FlowTwin.Persistence.Migraciones
                             FechaRegistro = new DateTime(2026, 10, 27, 0, 0, 0, 0, DateTimeKind.Utc),
                             Nombre = "Salida",
                             UsuarioRegistroId = 1
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Codigo = "TRIAJE",
+                            EstadoRegistro = true,
+                            FechaRegistro = new DateTime(2026, 10, 27, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Nombre = "Triaje",
+                            UsuarioRegistroId = 1
                         });
                 });
 
@@ -2478,6 +2496,11 @@ namespace FlowTwin.Persistence.Migraciones
                         .HasForeignKey("SedeId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("FlowTwin.Dispositivos.Domain.Nodo", null)
+                        .WithMany()
+                        .HasForeignKey("UltimoNodoId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("FlowTwin.Gemelo.Domain.ElementoPlano", b =>

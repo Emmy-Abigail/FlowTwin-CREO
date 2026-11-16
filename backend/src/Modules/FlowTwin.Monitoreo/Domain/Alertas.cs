@@ -4,21 +4,22 @@ using FlowTwin.SharedKernel;
 namespace FlowTwin.Monitoreo.Domain;
 
 /// <summary>
-/// Sección «Alertas» de appsettings (ADR-25). Valores por defecto tomados de la práctica de sistemas RTLS
-/// en clínicas (avisos de espera a los 20, 40 y 60 min); la clínica no definió los suyos.
+/// Sección «Alertas» de appsettings (ADR-25). Valores por defecto (la clínica no definió los suyos). Contra
+/// la fatiga de alarmas, la primera alerta de espera es a los 40 min: a los 20, con una mediana de espera
+/// cercana, sonaría por la mitad de los pacientes y nadie podría hacer nada con eso.
 /// </summary>
 public sealed class OpcionesAlertas
 {
-    public int EsperaAvisoMin { get; set; } = 20;
     public int EsperaAltaMin { get; set; } = 40;
     public int EsperaCriticaMin { get; set; } = 60;
     /// <summary>Sin lecturas por este tiempo: el paciente pudo irse sin devolver la tarjeta (o estar en una zona sin nodo).</summary>
     public int SinLecturasMin { get; set; } = 30;
 }
 
+/// <summary>CRITICA: pide actuar ya (suena). ALTA: hay que saberlo.</summary>
 public static class NivelAlerta
 {
-    public const string Aviso = "AVISO", Alta = "ALTA", Critica = "CRITICA";
+    public const string Alta = "ALTA", Critica = "CRITICA";
 }
 
 /// <summary>
@@ -52,9 +53,9 @@ public static class CalculoAlertas
             alertas.Add(new AlertaPiso($"{SinDevolver}:{a.Id}", SinDevolver, NivelAlerta.Alta, visto, a.Id, a.Codigo, zona));
         }
 
-        foreach (var a in estado.Atenciones.Where(a => a.Estado == EstadoAtencion.EnEspera && a.EsperaMin >= o.EsperaAvisoMin && !sinLecturas.Contains(a.Id)))
+        foreach (var a in estado.Atenciones.Where(a => a.Estado == EstadoAtencion.EnEspera && a.EsperaMin >= o.EsperaAltaMin && !sinLecturas.Contains(a.Id)))
         {
-            var nivel = a.EsperaMin >= o.EsperaCriticaMin ? NivelAlerta.Critica : a.EsperaMin >= o.EsperaAltaMin ? NivelAlerta.Alta : NivelAlerta.Aviso;
+            var nivel = a.EsperaMin >= o.EsperaCriticaMin ? NivelAlerta.Critica : NivelAlerta.Alta;
             alertas.Add(new AlertaPiso($"{Espera}:{a.Id}:{nivel}", Espera, nivel, a.InicioEn, a.Id, a.Codigo, a.ZonaActual));
         }
 
@@ -63,6 +64,6 @@ public static class CalculoAlertas
                 n.UltimoLatidoEn ?? ahora, ZonaId: n.ZonaId, Nodo: n.Codigo));
 
         // Lo más urgente primero; dentro de cada nivel, lo más antiguo
-        return [.. alertas.OrderBy(a => a.Nivel switch { NivelAlerta.Critica => 0, NivelAlerta.Alta => 1, _ => 2 }).ThenBy(a => a.Desde)];
+        return [.. alertas.OrderBy(a => a.Nivel == NivelAlerta.Critica ? 0 : 1).ThenBy(a => a.Desde)];
     }
 }

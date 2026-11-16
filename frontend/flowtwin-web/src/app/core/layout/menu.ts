@@ -28,7 +28,7 @@ const MENU_COMPLETO: Record<Rol, ItemMenu[]> = {
     { ruta: '/gemelo', icono: 'cube', texto: 'Gemelo en vivo', construida: true },
     { ruta: '/historial', icono: 'chart', texto: 'Historial y reportes', construida: true },
     { ruta: '/construccion', icono: 'ruler', texto: 'Construcción del gemelo', construida: false },
-    { ruta: '/dispositivos', icono: 'cpu', texto: 'Dispositivos', construida: false },
+    { ruta: '/dispositivos', icono: 'cpu', texto: 'Dispositivos', construida: true },
     { ruta: '/usuarios', icono: 'users', texto: 'Usuarios', construida: false },
     { ruta: '/auditoria', icono: 'list', texto: 'Auditoría', construida: false },
   ],

@@ -92,7 +92,7 @@ public sealed class ZonaConfig : IEntityTypeConfiguration<Zona>
             ZonaPiso1(1, TipoZona.Ingreso, "Admisión y caja", 35.0m, 8.7m, 2.1m, 5.1m),
             ZonaPiso1(2, TipoZona.Transito, "Hall principal", 28.5m, 10.2m, 6.2m, 4.8m),
             ZonaPiso1(3, TipoZona.Espera, "Sala de espera", 19.3m, 15.0m, 5.7m, 5.3m),
-            ZonaPiso1(4, TipoZona.Servicio, "Triaje", 25.2m, 13.9m, 3.1m, 4.8m),
+            ZonaPiso1(4, TipoZona.Triaje, "Triaje", 25.2m, 13.9m, 3.1m, 4.8m),   // ADR-26
             ZonaPiso1(5, TipoZona.Servicio, "Tópico de enfermería", 11.2m, 11.9m, 3.1m, 4.7m),
             ZonaPiso1(6, TipoZona.Servicio, "Tópico urgencia", 9.8m, 16.9m, 5.0m, 3.7m),
             ZonaPiso1(7, TipoZona.Servicio, "Módulo 2 (consultorio)", 2.2m, 15.1m, 7.4m, 5.2m),
@@ -188,6 +188,10 @@ public sealed class TarjetaConfig : IEntityTypeConfiguration<Tarjeta>
         b.HasIndex(t => t.CodigoQr).IsUnique().HasFilter("[EstadoRegistro] = 1");
         b.HasOne<Sede>().WithMany().HasForeignKey(t => t.SedeId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<Catalogo<EstadoTarjeta>>().WithMany().HasForeignKey(t => t.EstadoTarjetaId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<Nodo>().WithMany().HasForeignKey(t => t.UltimoNodoId).OnDelete(DeleteBehavior.Restrict);
+        b.Property(t => t.UltimaDeteccionEn).HasPrecision(3);
+        // Inventario (P9): conteos y filtros por estado dentro de una sede, con miles de tarjetas
+        b.HasIndex(t => new { t.SedeId, t.EstadoTarjetaId });
     }
 }
 

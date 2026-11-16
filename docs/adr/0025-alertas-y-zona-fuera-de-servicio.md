@@ -25,10 +25,13 @@ sin nodo, no se detecta: un cierre automático cerraría atenciones de pacientes
 3. **No se descuentan minutos de las métricas** (cambia RN-18/RN-15): los pacientes se siguen detectando y
    esas detecciones son reales. El historial **marca** las horas fuera de servicio para explicar por qué
    hubo menos gente.
-4. **Alertas calculadas del estado actual** (no se guardan en `ope.Alerta`): espera larga (20/40/60 min),
+4. **Alertas calculadas del estado actual** (no se guardan en `ope.Alerta`): espera larga (40 y 60 min; a los
+   20 avisaría por casos normales y causaría fatiga de alarmas),
    sin lecturas por 30 min (`TARJETA_SIN_DEVOLVER`) y nodo sin señal. Desaparecen solas al resolverse; no
-   hay que «marcarlas como leídas». Las ven Operador y Administrador. Suenan al aparecer (Web Audio, con
-   opción de silenciar) y animan la campana.
+   hay que «marcarlas como leídas», pero sí se puede marcar **«Enterado»**: deja de contar y de sonar hasta
+   que empeore (otro nivel = otra clave). Una sola alerta por paciente (sin lecturas tapa a espera). Solo
+   **suena** lo que pide actuar ya (espera crítica, sin lecturas, nodo sin señal); el sonido se apaga en
+   «Mi cuenta». Las ven Operador y Administrador.
 5. **RN-07 cambia**: a los 30 min sin lecturas hay una alerta y **el Operador decide** «No devolvió la
    tarjeta». No hay cierre automático por falta de lecturas mientras haya zonas sin nodo.
 6. **Cierre de jornada (RN-08)** a la hora `Jornada:HoraCierre` (por defecto 22:00): atenciones abiertas →

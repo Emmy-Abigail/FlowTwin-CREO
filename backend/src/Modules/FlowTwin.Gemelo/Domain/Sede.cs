@@ -10,6 +10,8 @@ public enum TipoZona
     [Catalogo("SERVICIO", "Servicio")] Servicio = 3,
     [Catalogo("TRANSITO", "Tránsito")] Transito = 4,
     [Catalogo("SALIDA", "Salida")] Salida = 5,
+    /// <summary>Evaluación previa (ADR-26): tiene aforo, pero NO detiene la espera ni suma a la consulta.</summary>
+    [Catalogo("TRIAJE", "Triaje")] Triaje = 6,
 }
 
 /// <summary>Catálogo cat.TipoElementoPlano: lo que se dibuja en el plano además de las zonas.</summary>

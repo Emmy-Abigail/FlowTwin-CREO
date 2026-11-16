@@ -14,7 +14,8 @@ public static class EstadoAtencion
 /// <summary>
 /// RN-06 en un solo lugar, para el gemelo (Monitoreo), el detalle de una atención y los reportes:
 /// espera = desde la entrega hasta la PRIMERA entrada a una zona Servicio (si aún no entra, sigue
-/// corriendo hasta «hasta»); consulta = tiempo total dentro de zonas Servicio. Es pura: recibe qué
+/// corriendo hasta «hasta»); consulta = tiempo total dentro de zonas Servicio. El triaje es TRIAJE, no
+/// Servicio (ADR-26): es parte del camino hasta el médico, así que no detiene la espera («door-to-provider»). Es pura: recibe qué
 /// zonas son Servicio, porque eso lo sabe el módulo Gemelo.
 /// </summary>
 public static class ReglaTiempos

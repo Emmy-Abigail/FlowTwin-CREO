@@ -22,7 +22,7 @@ public sealed class HistorialServicio(
     private static readonly string[] SinMapa = ["TRANSITO", "SALIDA"];
 
     /// <summary>La zona que se abre primero: donde se acumula la gente.</summary>
-    private static readonly string[] OrdenTipos = ["ESPERA", "SERVICIO", "INGRESO"];
+    private static readonly string[] OrdenTipos = ["ESPERA", "TRIAJE", "SERVICIO", "INGRESO"];
 
     public async Task<ResumenHistorial> ResumenAsync(int pisoId, DateOnly desde, DateOnly hasta, CancellationToken ct)
     {

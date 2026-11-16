@@ -78,7 +78,7 @@ public class Zona : EntidadEditable
 
 public static class TipoZonaExtensiones
 {
-    /// <summary>RN-13: Ingreso, Espera y Servicio tienen aforo y color; Tránsito y Salida no.</summary>
+    /// <summary>RN-13: Ingreso, Espera, Triaje y Servicio tienen aforo y color; Tránsito y Salida no.</summary>
     public static bool TieneAforo(this TipoZona tipo) =>
-        tipo is TipoZona.Ingreso or TipoZona.Espera or TipoZona.Servicio;
+        tipo is TipoZona.Ingreso or TipoZona.Espera or TipoZona.Triaje or TipoZona.Servicio;
 }

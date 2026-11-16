@@ -14,20 +14,22 @@ import { AlertaVista, vista } from './modelo-alertas';
   selector: 'app-alertas-panel',
   imports: [RouterLink, IconoComponent, ModalComponent],
   template: `
-    <app-modal variante="panel" [titulo]="'Alertas · ' + vistas().length" (cerrar)="cerrar.emit()">
-      <button type="button" class="sonido" [attr.aria-pressed]="!alertas.silencio()" (click)="alertas.alternarSilencio()">
-        <app-icono nombre="bell" [tamano]="15" />{{ alertas.silencio() ? 'Sonido apagado' : 'Sonido activado' }}
-      </button>
+    <app-modal variante="panel" [titulo]="'Alertas · ' + alertas.pendientes().length" (cerrar)="cerrar.emit()">
       @for (g of grupos(); track g.nombre) {
         <h3 class="grupo">{{ g.nombre }}</h3>
         <ul class="lista">
           @for (a of g.alertas; track a.clave) {
-            <li [class]="'alerta ' + a.tono">
+            <li [class]="'alerta ' + a.tono" [class.enterado]="a.enterado">
+              @if (!a.enterado) {
+                <button type="button" class="ok" title="Enterado" [attr.aria-label]="'Enterado: ' + a.titulo" (click)="alertas.marcarEnterado(a.clave)">
+                  <app-icono nombre="check" [tamano]="16" />
+                </button>
+              }
               <span class="ic"><app-icono [nombre]="a.icono" [tamano]="17" /></span>
               <div class="texto">
                 <b>{{ a.titulo }}</b>
                 @if (a.detalle) { <span>{{ a.detalle }}</span> }
-                @if (a.atencion || (a.puedeCerrar && !modo.simulacion())) {
+                @if (!a.enterado) {
                   <div class="acciones">
                     @if (a.atencion) {
                       <a class="btn btn-o btn-sm" [routerLink]="['/atencion', a.atencion]" (click)="cerrar.emit()">Ver recorrido</a>
@@ -51,15 +53,19 @@ import { AlertaVista, vista } from './modelo-alertas';
     </app-modal>
   `,
   styles: `
-    .sonido { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; border: 0; background: var(--fondo-2); border-radius: 999px; padding: 5px 12px; font-size: 13px; font-weight: 700; color: var(--gris); }
-    .sonido[aria-pressed="true"] { color: var(--tinta); }
     .grupo { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--gris-2); margin: 4px 0 0; }
     .lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
-    .alerta { display: grid; grid-template-columns: auto 1fr; gap: 12px; border: 1px solid var(--linea); border-left-width: 4px; border-radius: 12px; padding: 12px 14px; animation: entrar .28s ease-out both; }
+    .alerta { position: relative; display: grid; grid-template-columns: auto 1fr; gap: 12px; border: 1px solid var(--linea); border-left-width: 4px; border-radius: 12px; padding: 12px 14px; animation: entrar .28s ease-out both; }
     .alerta .ic { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; }
     .alerta.roja { border-left-color: var(--alta); } .alerta.roja .ic { background: var(--alta-s); color: #B3261E; }
     .alerta.ambar { border-left-color: var(--media); } .alerta.ambar .ic { background: var(--amarillo-suave); color: var(--ambar-t); }
+    .alerta.enterado { opacity: .55; }
     .alerta.gris { border-left-color: var(--gris-3); } .alerta.gris .ic { background: var(--fondo-2); color: var(--gris); }
+    /* «Enterado»: pequeño, arriba a la derecha, como en las notificaciones habituales */
+    .ok { position: absolute; top: 8px; right: 8px; width: 30px; height: 30px; border-radius: 8px; border: 0; background: none; color: var(--gris-2); display: grid; place-items: center; }
+    .ok:hover { background: var(--fondo-2); color: var(--tinta); }
+    .ok:focus-visible { outline: 3px solid var(--rojo); outline-offset: 1px; }
+    .texto b { padding-right: 30px; }
     .texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
     .texto b { font-size: 15px; }
     .texto span { color: var(--gris); font-size: 13.5px; }
@@ -82,12 +88,15 @@ export class AlertasPanelComponent {
 
   protected vistas = computed<AlertaVista[]>(() => {
     const ahora = this.alertas.ahora();
-    return this.alertas.lista().map(a => vista(a, ahora, id => this.geo.nombreZona(id)));
+    const enterado = this.alertas.enterado();
+    return this.alertas.lista().map(a => vista(a, ahora, id => this.geo.nombreZona(id), enterado.has(a.clave)));
   });
 
-  protected grupos = computed(() => (['Pacientes', 'Equipos'] as const)
-    .map(nombre => ({ nombre, alertas: this.vistas().filter(a => a.grupo === nombre) }))
-    .filter(g => g.alertas.length));
+  /** Lo pendiente primero, por grupo; lo marcado «Enterado» al final, atenuado. */
+  protected grupos = computed(() => [
+    ...(['Pacientes', 'Equipos'] as const).map(nombre => ({ nombre: nombre as string, alertas: this.vistas().filter(a => a.grupo === nombre && !a.enterado) })),
+    { nombre: 'Enterado', alertas: this.vistas().filter(a => a.enterado) },
+  ].filter(g => g.alertas.length));
 
   protected async cerrarSinDevolver(atencionId: number): Promise<void> {
     this.trabajando.set(true);
