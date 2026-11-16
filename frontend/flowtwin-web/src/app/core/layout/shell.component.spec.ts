@@ -18,6 +18,9 @@ describe('ShellComponent', () => {
   const alertasDisponibles = signal(false);
   const alertas = signal<Alerta[]>([]);
   const pulso = signal(0);
+  const usuario = signal({ id: 1, nombre: 'Ana Torres', correo: 'admin@creo.pe', rol: 'Administrador' as Rol, pisos: [1], debeCambiarContrasena: false });
+  const cargarPisos = vi.fn();
+  const cargarModo = vi.fn();
   const pagina = () => fixture.nativeElement as HTMLElement;
   const textoMenu = () => [...pagina().querySelectorAll('.nav .item')].map(a => a.textContent?.trim());
 
@@ -33,21 +36,36 @@ describe('ShellComponent', () => {
     simulacion.set(false);
     alertasDisponibles.set(false);
     alertas.set([]);
+    usuario.update(u => ({ ...u, debeCambiarContrasena: false }));
+    cargarPisos.mockClear();
+    cargarModo.mockClear();
     await TestBed.configureTestingModule({
       imports: [ShellComponent],
       providers: [
         provideRouter([{ path: 'admision', children: [] }, { path: 'gemelo', children: [] }]),
         {
           provide: AuthService, useValue: {
-            rol, usuario: signal({ id: 1, nombre: 'Ana Torres', correo: 'admin@creo.pe', rol: 'Administrador', pisos: [1], debeCambiarContrasena: false }),
+            rol, usuario,
             registrarActividad: vi.fn(), cerrarSesion: vi.fn(),
           },
         },
-        { provide: ModoDatosService, useValue: { cargar: vi.fn(), puedeSimular, simulacion, activar: vi.fn(), salir: vi.fn() } },
-        { provide: PisoActualService, useValue: { cargar: vi.fn() } },
+        { provide: ModoDatosService, useValue: { cargar: cargarModo, puedeSimular, simulacion, activar: vi.fn(), salir: vi.fn() } },
+        { provide: PisoActualService, useValue: { cargar: cargarPisos } },
         { provide: AlertasService, useValue: { disponible: alertasDisponibles, lista: alertas, pendientes: alertas, pulso, silencio: signal(false), ahora: signal(0) } },
       ],
     }).compileComponents();
+  });
+
+  it('con la contraseña temporal no pide pisos ni configuración, y los pide en cuanto se cambia (F-02)', async () => {
+    usuario.update(u => ({ ...u, debeCambiarContrasena: true }));
+    await crear();
+    expect(cargarPisos).not.toHaveBeenCalled();   // el servidor respondería 403 y la app quedaría sin pisos
+    expect(cargarModo).not.toHaveBeenCalled();
+
+    usuario.update(u => ({ ...u, debeCambiarContrasena: false }));
+    await fixture.whenStable();
+    expect(cargarPisos).toHaveBeenCalledTimes(1);
+    expect(cargarModo).toHaveBeenCalledTimes(1);
   });
 
   it('el Administrador solo ve las pantallas que existen', async () => {

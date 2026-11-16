@@ -50,6 +50,27 @@ public class IdentidadTests(ApiFixture api)
         Assert.False((await Json(cambio)).GetProperty("usuario").GetProperty("debeCambiarContrasena").GetBoolean());
     }
 
+    /// <summary>OWASP ASVS 2.1: 12 caracteres, sin composición obligatoria y sin contraseñas filtradas.</summary>
+    [Fact]
+    public async Task Una_contrasena_filtrada_se_rechaza_y_una_frase_larga_se_acepta()
+    {
+        var admin = await api.ClienteDeAsync("admin@creo.pe");
+        var creado = await Json(await admin.PostAsJsonAsync("/api/v1/usuarios",
+            new { nombres = "Frase", apellidos = "Segura", correo = "frase.segura@creo.pe", rol = "OPERADOR", pisos = new[] { 1 } }));
+        var temporal = creado.GetProperty("contrasenaTemporal").GetString()!;
+        var cliente = api.Fabrica.CreateClient();
+        var login = await Json(await cliente.PostAsJsonAsync("/api/v1/auth/login", new { correo = "frase.segura@creo.pe", clave = temporal }));
+        cliente.DefaultRequestHeaders.Authorization = new("Bearer", login.GetProperty("accessToken").GetString());
+
+        var filtrada = await cliente.PostAsJsonAsync("/api/v1/auth/cambiar-contrasena",
+            new { actual = temporal, nueva = "qwerty123456", confirmacion = "qwerty123456" });
+        var frase = await cliente.PostAsJsonAsync("/api/v1/auth/cambiar-contrasena",
+            new { actual = temporal, nueva = "el gemelo de la sala azul", confirmacion = "el gemelo de la sala azul" });
+
+        Assert.Equal("POLITICA_CONTRASENA", (await Json(filtrada)).GetProperty("codigo").GetString());
+        Assert.Equal(HttpStatusCode.OK, frase.StatusCode);
+    }
+
     [Fact]
     public async Task Con_la_regla_F02_apagada_la_temporal_entra_directo()
     {

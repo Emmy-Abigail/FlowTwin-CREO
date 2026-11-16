@@ -243,6 +243,7 @@ Angular 22, pensada para usarse sin scroll en una pantalla de 1280 × 720.
 - 🕶️ **Pacientes anónimos:** solo un código como `A-0143`; ningún nombre ni documento entra al sistema (Ley 29733).
 - 🔑 **Acceso por rol:** cada pantalla y cada acción se autoriza en el servidor; Gerencia es de solo lectura.
 - 🛡️ **Contra abusos:** límite de peticiones en toda la API y bloqueo tras 5 intentos de contraseña.
+- 🔐 **Contraseñas según OWASP ASVS:** 12 caracteres o más (una frase vale) y se rechazan las filtradas en ataques conocidos.
 - 📜 **Auditoría sellada:** cada cambio queda registrado con su antes y después, y una cadena de sellos revela si
   alguien alteró la bitácora directamente en la base.
 - 📡 **Nodos con cuenta propia:** cada ESP32 solo puede publicar en sus temas MQTT.
@@ -252,7 +253,7 @@ Angular 22, pensada para usarse sin scroll en una pantalla de 1280 × 720.
 | Escaneo OWASP ZAP de toda la API | 0 fallos y 0 advertencias en 213 URL |
 | Avalancha de peticiones (k6) | más de 1 millón en 30 s; el usuario normal fue atendido el 100 % de las veces |
 | Dependencias | 0 vulnerabilidades conocidas (.NET y npm) |
-| Pruebas automáticas | 223 unitarias · 18 de arquitectura · 119 de integración · 196 del frontend |
+| Pruebas automáticas | 230 unitarias · 18 de arquitectura · 120 de integración · 198 del frontend |
 
 Detalle y evidencia en el [informe de seguridad](docs/seguridad/informe-seguridad.md) (OWASP ASVS nivel 1).
 
@@ -354,6 +355,7 @@ ESP32) está en el [README del backend](backend/README.md).
 | [Contrato con los nodos](docs/contrato-integracion-nodos.md) | Equipo de hardware (firmware de los ESP32) |
 | [Decisiones de arquitectura (ADR)](docs/adr/README.md) | Equipo técnico; las anteriores al ADR-21 están en el documento de arquitectura |
 | [Informe de seguridad](docs/seguridad/informe-seguridad.md) | Evaluación y auditoría |
+| [Despliegue](docs/despliegue.md) | Quien instale el sistema: demo en la nube y servidor de la clínica |
 | [Backend](backend/README.md) · [Generador 3D](tools/generador-modelo-3d/README.md) | Desarrollo |
 
 ---
@@ -367,9 +369,9 @@ ESP32) está en el [README del backend](backend/README.md).
 - [x] Historial con mapa día × hora y exportación CSV
 - [x] Pantallas del Administrador: dispositivos, usuarios, auditoría y configuración
 - [x] Endurecimiento de seguridad e informe con OWASP ZAP y k6
+- [x] Contraseñas según OWASP ASVS: 12 caracteres o una frase, y sin contraseñas filtradas
 - [ ] Demostración en la nube para la clínica
 - [ ] Instalación de los nodos y las tarjetas en la clínica (MQTT con TLS)
-- [ ] Contraseñas según OWASP ASVS (12 caracteres, sin composición obligatoria)
 - [ ] Respaldos automáticos y despliegue en la nube de la clínica
 - [ ] Nivel de batería de las tarjetas
 

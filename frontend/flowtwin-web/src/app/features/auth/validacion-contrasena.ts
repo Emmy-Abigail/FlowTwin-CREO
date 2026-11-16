@@ -2,20 +2,24 @@
  * Reglas del formulario «Cambiar contraseña»: funciones puras, una por campo. Devuelven el mensaje que se
  * muestra debajo del campo, o null si está bien. Cada mensaje es un caso de prueba (validacion-contrasena.spec.ts).
  *
- * Son las mismas reglas que valida el servidor (PoliticaContrasena.cs): el navegador avisa antes para
- * ahorrar un viaje, pero la verdad final la tiene el servidor (por ejemplo, no repetir las 3 últimas).
+ * Son las mismas reglas que valida el servidor (PoliticaContrasena.cs, OWASP ASVS): lo que importa es la
+ * longitud, no combinar mayúsculas, números y símbolos; una frase con espacios vale. El navegador avisa antes para
+ * ahorrar un viaje, pero la verdad final la tiene el servidor: él revisa además que no sea una contraseña filtrada
+ * en ataques conocidos y que no repita las 3 últimas.
  */
 
 export type CampoClave = 'actual' | 'nueva' | 'confirmacion';
 
+export const LONGITUD_MINIMA = 12;
+export const LONGITUD_MAXIMA = 128;
+
+const variada = (clave: string) => new Set(clave).size >= 4;
+
 /** Requisitos de la política, para la lista que se va marcando mientras se escribe. */
 export function requisitosClave(clave: string): { ok: boolean; texto: string }[] {
   return [
-    { ok: clave.length >= 8, texto: 'Al menos 8 caracteres' },
-    { ok: /\p{Lu}/u.test(clave), texto: 'Una letra mayúscula' },
-    { ok: /\p{Ll}/u.test(clave), texto: 'Una letra minúscula' },
-    { ok: /\d/.test(clave), texto: 'Un número' },
-    { ok: /[^\p{L}\d]/u.test(clave), texto: 'Un símbolo (# $ % & * ! ?)' },
+    { ok: clave.length >= LONGITUD_MINIMA, texto: `Al menos ${LONGITUD_MINIMA} caracteres (puede ser una frase)` },
+    { ok: variada(clave), texto: 'Sin repetir lo mismo (aaaa…, 1212…)' },
   ];
 }
 
@@ -31,8 +35,9 @@ function palabrasPersonales(correo: string, nombre: string): string[] {
 
 export function errorNueva(nueva: string, actual: string, correo: string, nombre: string): string | null {
   if (!nueva) return 'Escribe la nueva contraseña.';
-  const faltan = requisitosClave(nueva).filter(r => !r.ok).map(r => r.texto.toLowerCase());
-  if (faltan.length) return `Le falta: ${faltan.join(', ')}.`;
+  if (nueva.length < LONGITUD_MINIMA) return `Debe tener al menos ${LONGITUD_MINIMA} caracteres. Puede ser una frase con espacios.`;
+  if (nueva.length > LONGITUD_MAXIMA) return `Puede tener como máximo ${LONGITUD_MAXIMA} caracteres.`;
+  if (!variada(nueva)) return 'Es demasiado repetitiva: usa una frase o más variedad de caracteres.';
   const minuscula = nueva.toLowerCase();
   if (palabrasPersonales(correo, nombre).some(p => minuscula.includes(p.toLowerCase())))
     return 'No puede contener tu correo ni tu nombre.';
