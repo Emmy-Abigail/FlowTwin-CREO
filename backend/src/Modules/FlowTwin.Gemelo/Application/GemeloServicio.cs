@@ -37,12 +37,12 @@ public sealed record GeometriaPisoDto(
 
 public sealed class GemeloServicio(IGemeloDb db, IUsuarioActual usuario, IUbicacionNodos nodos) : ISedesConsultas
 {
-    /// <summary>GET /sedes: sedes y pisos publicados que el usuario puede ver (Admin ve todos, RN-24).</summary>
+    /// <summary>GET /sedes: sedes y pisos publicados que el usuario puede ver (Admin y Gerencia ven todos, RN-24).</summary>
     public async Task<List<SedeDto>> SedesVisiblesAsync(CancellationToken ct)
     {
-        var esAdmin = usuario.EsAdmin();
+        var veTodos = usuario.VeTodosLosPisos();
         var pisos = await db.Pisos
-            .Where(p => p.Publicado && (esAdmin || usuario.Pisos.Contains(p.Id)))
+            .Where(p => p.Publicado && (veTodos || usuario.Pisos.Contains(p.Id)))
             .OrderBy(p => p.Nivel).ToListAsync(ct);
         var sedeIds = pisos.Select(p => p.SedeId).Distinct().ToList();
         var sedes = await db.Sedes.Where(s => sedeIds.Contains(s.Id)).OrderBy(s => s.Nombre).ToListAsync(ct);
@@ -52,7 +52,7 @@ public sealed class GemeloServicio(IGemeloDb db, IUsuarioActual usuario, IUbicac
 
     /// <summary>
     /// GET /pisos/{id}/geometria (F-11): solo pisos publicados y solo sus zonas publicadas.
-    /// Admin ve todos; los demás, solo los pisos que tienen asignados (RN-24).
+    /// Admin y Gerencia ven todos; el Operador, solo los pisos que tiene asignados (RN-24).
     /// </summary>
     public async Task<GeometriaPisoDto> GeometriaAsync(int pisoId, CancellationToken ct)
     {
@@ -95,7 +95,7 @@ public sealed class GemeloServicio(IGemeloDb db, IUsuarioActual usuario, IUbicac
     }
 
     public async Task<IReadOnlyList<int>?> SedesDelUsuarioAsync(CancellationToken ct = default) =>
-        usuario.EsAdmin() ? null : await SedesDePisosAsync(usuario.Pisos, ct);
+        usuario.VeTodosLosPisos() ? null : await SedesDePisosAsync(usuario.Pisos, ct);
 
     public async Task<string?> NombreSedeAsync(int sedeId, CancellationToken ct = default) =>
         await db.Sedes.IgnoreQueryFilters().Where(s => s.Id == sedeId).Select(s => s.Nombre).SingleOrDefaultAsync(ct);

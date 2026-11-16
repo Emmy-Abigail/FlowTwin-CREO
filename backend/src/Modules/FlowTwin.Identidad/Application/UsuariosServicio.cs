@@ -52,7 +52,7 @@ public sealed class UsuariosServicio(
     {
         await validador.ValidarAsync(req, ct);
         var rol = RolDe(req.Rol);
-        ValidarPisos(rol, req.Pisos);
+        var pisos = PisosDe(rol, req.Pisos);
         var correo = req.Correo.Trim().ToLowerInvariant();
         if (await db.Usuarios.IgnoreQueryFilters().AnyAsync(u => u.Correo == correo, ct))
             throw new ReglaNegocioException("CORREO_DUPLICADO", "Ya existe un usuario con ese correo.");
@@ -60,7 +60,7 @@ public sealed class UsuariosServicio(
         var usuario = new Usuario
         {
             Correo = correo, Nombres = req.Nombres.Trim(), Apellidos = req.Apellidos.Trim(), RolId = rol,
-            Pisos = [.. req.Pisos.Distinct().Select(p => new UsuarioPiso { PisoId = p })],
+            Pisos = [.. pisos.Select(p => new UsuarioPiso { PisoId = p })],
         };
         var temporal = AsignarTemporal(usuario);
         db.Usuarios.Add(usuario);
@@ -75,7 +75,7 @@ public sealed class UsuariosServicio(
         await validador.ValidarAsync(req, ct);
         var usuario = await BuscarActivoAsync(id, ct);
         var rol = RolDe(req.Rol);
-        ValidarPisos(rol, req.Pisos);
+        var pisos = PisosDe(rol, req.Pisos);
         var correo = req.Correo.Trim().ToLowerInvariant();
         if (await db.Usuarios.IgnoreQueryFilters().AnyAsync(u => u.Correo == correo && u.Id != id, ct))
             throw new ReglaNegocioException("CORREO_DUPLICADO", "Ya existe un usuario con ese correo.");
@@ -86,7 +86,7 @@ public sealed class UsuariosServicio(
         usuario.Apellidos = req.Apellidos.Trim();
         usuario.Correo = correo;
         usuario.RolId = rol;
-        SincronizarPisos(usuario, req.Pisos);
+        SincronizarPisos(usuario, pisos);
         auditoria.Registrar(AccionAuditoria.Editar, "Usuario", id.ToString(), antes, Resumen(usuario));
         await db.GuardarAsync(ct);
         return Dto(usuario);
@@ -165,10 +165,17 @@ public sealed class UsuariosServicio(
             usuario.Pisos.Add(new UsuarioPiso { UsuarioId = usuario.Id, PisoId = nuevo });
     }
 
-    private static void ValidarPisos(Rol rol, int[] pisos)
+    /// <summary>
+    /// RN-24 (ADR-29): solo el Operador tiene pisos asignados y necesita al menos uno. Administrador y Gerencia ven
+    /// todos, así que no se guarda ninguno (si antes era Operador, sus pisos se dan de baja al sincronizar).
+    /// </summary>
+    private static int[] PisosDe(Rol rol, int[] pisos)
     {
-        if (rol != Rol.Admin && pisos.Length == 0)
-            throw new ReglaNegocioException("RN24_PISO_REQUERIDO", "Operador y Gerencia necesitan al menos un piso asignado.");
+        if (rol != Rol.Operador) return [];
+        var distintos = pisos.Distinct().ToArray();
+        if (distintos.Length == 0)
+            throw new ReglaNegocioException("RN24_PISO_REQUERIDO", "El Operador necesita al menos un piso asignado.");
+        return distintos;
     }
 
     private static Rol RolDe(string codigo) => Enum.GetValues<Rol>().Single(r => r.Codigo() == codigo);
