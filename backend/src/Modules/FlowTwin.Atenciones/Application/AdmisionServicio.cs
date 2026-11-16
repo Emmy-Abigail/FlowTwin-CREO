@@ -11,6 +11,8 @@ public interface IAtencionesDb : IUnidadDeTrabajo
 {
     DbSet<Atencion> Atenciones { get; }
     DbSet<LecturaBle> LecturasBle { get; }
+    DbSet<LoteNodo> LotesNodo { get; }
+    DbSet<PausaZona> PausasZona { get; }
     DbSet<EventoZona> EventosZona { get; }
 }
 

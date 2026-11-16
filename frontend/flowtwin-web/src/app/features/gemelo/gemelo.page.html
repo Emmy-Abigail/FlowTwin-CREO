@@ -98,12 +98,38 @@
 
 <!-- M2 · Detalle de zona -->
 @if (detalle(); as d) {
-  <app-modal variante="panel" [titulo]="d.nombre" [antetitulo]="d.tipo" (cerrar)="zonaSeleccionada.set(null)">
+  <app-modal variante="panel" [titulo]="d.nombre" [antetitulo]="d.tipo" (cerrar)="cerrarZona()">
     <div class="detalle-cifra">
       @if (d.monitoreada) { <span class="grande">{{ d.cifra }}</span> }
       <span class="det-res">{{ d.resumen }}</span>
     </div>
     <p class="det-nodo"><app-icono nombre="radio" [tamano]="15" />{{ d.nodo }}</p>
+    @if (puedeCambiarServicio()) {
+      @let fuera = d.zona.fueraDeServicio;
+      <div class="servicio" [class.fuera]="!!fuera || eligiendo()">
+        <label class="fila-servicio">
+          <span>{{ fuera ? 'Fuera de servicio · ' + textoMotivo(fuera) : 'En servicio' }}</span>
+          <input type="checkbox" role="switch" class="interruptor" [checked]="!fuera && !eligiendo()" [disabled]="guardandoServicio()"
+                 (change)="fuera ? ponerEnServicio(d.zona.zonaId, d.nombre) : eligiendo.set(!eligiendo())">
+        </label>
+        @if (eligiendo() && !fuera) {
+          <div class="motivos" role="radiogroup" aria-label="Motivo">
+            @for (m of motivos; track m.codigo) {
+              <button type="button" role="radio" [attr.aria-checked]="motivo() === m.codigo" [class.on]="motivo() === m.codigo"
+                      (click)="motivo.set(m.codigo)">{{ m.texto }}</button>
+            }
+          </div>
+          @if (motivo() === 'OTRO') {
+            <input class="inp" maxlength="200" placeholder="¿Cuál?" aria-label="Motivo" [value]="detalleOtro()" (input)="detalleOtro.set($any($event.target).value)">
+          }
+          <div class="acciones-servicio">
+            <button type="button" class="btn btn-o btn-sm" (click)="eligiendo.set(false)">Cancelar</button>
+            <button type="button" class="btn btn-p btn-sm" [disabled]="guardandoServicio() || (motivo() === 'OTRO' && !detalleOtro().trim())"
+                    (click)="ponerFuera(d.zona.zonaId, d.nombre)">Confirmar</button>
+          </div>
+        }
+      </div>
+    }
     @if (d.monitoreada) {
     <h3>En la zona ahora</h3>
     <ul class="tarjetas">

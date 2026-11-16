@@ -20,6 +20,7 @@ public static class ModuloMensajeria
         services.AddSingleton<ICuentasNodosBroker>(sp => sp.GetRequiredService<AdministracionBroker>());
         services.AddSingleton<ServicioIngestaMqtt>();
         services.AddHostedService(sp => sp.GetRequiredService<ServicioIngestaMqtt>());
+        services.AddHealthChecks().AddCheck<SaludBroker>("broker");
         return services;
     }
 }

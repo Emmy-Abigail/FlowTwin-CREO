@@ -11,7 +11,6 @@ export const PERMISOS = {
   gemelo: TODOS,
   historial: TODOS,
   atencion: TODOS,
-  seguimiento: ['Operador'],
   construccion: ['Administrador'],
   dispositivos: ['Administrador'],
   usuarios: ['Administrador'],

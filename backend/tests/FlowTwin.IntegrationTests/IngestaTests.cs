@@ -104,6 +104,55 @@ public class IngestaTests(ApiFixture api)
         Assert.Equal(1, await api.EnBaseAsync(db => db.LecturasBle.CountAsync(l => l.UuidBle == uuid)));
     }
 
+    /// <summary>Anota lotes como ya recibidos, directo en la base: como si hubieran llegado antes de un reinicio.</summary>
+    private Task AnotarLotesAsync(string codigoNodo, params long[] secuencias) => api.EnBaseAsync(async db =>
+    {
+        var nodoId = await db.Nodos.Where(n => n.Codigo == codigoNodo).Select(n => n.Id).SingleAsync();
+        db.LotesNodo.AddRange(secuencias.Select(s => new LoteNodo { NodoId = nodoId, Secuencia = s, Lecturas = 1 }));
+        return await db.SaveChangesAsync();
+    });
+
+    [Fact]
+    public async Task Un_reenvio_se_reconoce_aunque_la_API_se_haya_reiniciado()
+    {
+        // El lote 4004 se guardó y la API se cayó antes de confirmarlo: la marca quedó en la base, no en memoria
+        await AnotarLotesAsync("N-01", 4004);
+        await using var nodo = await N01();
+        var uuid = $"tras-reinicio-{Guid.NewGuid():N}";
+
+        var r = await nodo.EnviarAsync("lecturas", NodoMqtt.Lote(4004, (uuid, -60, 100)));
+
+        Assert.Equal("DUPLICADO", r.GetProperty("estado").GetString());
+        Assert.False(await api.EnBaseAsync(db => db.LecturasBle.AnyAsync(l => l.UuidBle == uuid)));
+    }
+
+    [Fact]
+    public async Task Cada_nodo_lleva_su_propia_cuenta_de_secuencias()
+    {
+        await AnotarLotesAsync("N-01", 6006);
+        await using var n03 = await NodoMqtt.ConectarCuandoExistaAsync(MacN03, SemillaDesarrollo.ClaveNodoDemo("N-03"));
+
+        var r = await n03.EnviarAsync("lecturas", NodoMqtt.Lote(6006, ($"otro-nodo-{Guid.NewGuid():N}", -60, 100)));
+
+        Assert.Equal("GUARDADO", r.GetProperty("estado").GetString());
+    }
+
+    [Fact]
+    public async Task Solo_cuentan_las_ultimas_64_secuencias_asi_un_nodo_reiniciado_no_pierde_lecturas()
+    {
+        // El nodo ya envió el 5005 hace rato y después 64 lotes más: si se reinicia y su contador vuelve a
+        // pasar por el 5005, es un lote NUEVO y debe guardarse (con «rechazar lo ya visto» para siempre se perdería)
+        await AnotarLotesAsync("N-01", 5005);
+        await AnotarLotesAsync("N-01", [.. Enumerable.Range(0, LoteNodo.VentanaDuplicados).Select(i => 800_000L + i)]);
+        await using var nodo = await N01();
+
+        var viejo = await nodo.EnviarAsync("lecturas", NodoMqtt.Lote(5005, ($"reiniciado-{Guid.NewGuid():N}", -60, 100)));
+        var reciente = await nodo.EnviarAsync("lecturas", NodoMqtt.Lote(800_063, ($"reciente-{Guid.NewGuid():N}", -60, 100)));
+
+        Assert.Equal("GUARDADO", viejo.GetProperty("estado").GetString());
+        Assert.Equal("DUPLICADO", reciente.GetProperty("estado").GetString());
+    }
+
     [Fact]
     public async Task Un_lote_que_no_cumple_el_contrato_responde_invalido_con_sus_errores()
     {

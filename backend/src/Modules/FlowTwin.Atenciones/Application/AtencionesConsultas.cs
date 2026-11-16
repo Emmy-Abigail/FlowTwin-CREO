@@ -9,14 +9,28 @@ namespace FlowTwin.Atenciones.Application;
 /// Las consultas de atenciones que usan otros módulos (en curso, cerradas del día, una por Id y las de un periodo).
 /// Solo depende de la base, para no formar ciclos entre módulos.
 /// </summary>
-public sealed class AtencionesConsultas(IAtencionesDb db) : IAtencionesEnCurso, IAtencionesCerradas, IAtencionesConsulta
+public sealed class AtencionesConsultas(IAtencionesDb db) : IAtencionesEnCurso, IAtencionesCerradas, IAtencionesConsulta, IPausasZonas
 {
+    public Task<IReadOnlyList<PausaInfo>> AbiertasAsync(IReadOnlyCollection<int> zonaIds, CancellationToken ct = default) =>
+        PausasAsync(db.PausasZona.Where(p => zonaIds.Contains(p.ZonaId) && p.FinEn == null), ct);
+
+    public Task<IReadOnlyList<PausaInfo>> DelPeriodoAsync(IReadOnlyCollection<int> zonaIds, DateTime desde, DateTime hasta, CancellationToken ct = default) =>
+        PausasAsync(db.PausasZona.Where(p => zonaIds.Contains(p.ZonaId) && p.InicioEn < hasta && (p.FinEn == null || p.FinEn > desde)), ct);
+
+    private static async Task<IReadOnlyList<PausaInfo>> PausasAsync(IQueryable<PausaZona> consulta, CancellationToken ct)
+    {
+        var lista = await consulta.AsNoTracking().OrderBy(p => p.InicioEn)
+            .Select(p => new { p.ZonaId, p.MotivoPausaId, p.Detalle, p.InicioEn, p.FinEn, p.UsuarioId })
+            .ToListAsync(ct);
+        return [.. lista.Select(p => new PausaInfo(p.ZonaId, p.MotivoPausaId.Codigo(), p.Detalle, p.InicioEn, p.FinEn, p.UsuarioId))];
+    }
+
     public async Task<IReadOnlyList<AtencionEnCurso>> DeSedeAsync(int sedeId, CancellationToken ct = default)
     {
         var abiertas = await db.Atenciones.AsNoTracking()
             .Where(a => a.SedeId == sedeId && a.FinEn == null)
             .OrderBy(a => a.InicioEn)
-            .Select(a => new { a.Id, a.Codigo, a.SedeId, a.InicioEn })
+            .Select(a => new { a.Id, a.Codigo, a.SedeId, a.InicioEn, a.UltimaLecturaEn, a.TarjetaId })
             .ToListAsync(ct);
         var ids = abiertas.Select(a => a.Id).ToList();
         var estadias = (await db.EventosZona.AsNoTracking()
@@ -25,7 +39,7 @@ public sealed class AtencionesConsultas(IAtencionesDb db) : IAtencionesEnCurso, 
                 .Select(e => new { e.AtencionId, Estadia = new EstadiaInfo(e.ZonaId, e.EntradaEn, e.SalidaEn) })
                 .ToListAsync(ct))
             .ToLookup(e => e.AtencionId, e => e.Estadia);
-        return [.. abiertas.Select(a => new AtencionEnCurso(a.Id, a.Codigo, a.SedeId, a.InicioEn, [.. estadias[a.Id]]))];
+        return [.. abiertas.Select(a => new AtencionEnCurso(a.Id, a.Codigo, a.SedeId, a.InicioEn, [.. estadias[a.Id]], a.UltimaLecturaEn, a.TarjetaId))];
     }
 
     /// <summary>Tope de seguridad: un día normal del piloto tiene decenas, no cientos.</summary>

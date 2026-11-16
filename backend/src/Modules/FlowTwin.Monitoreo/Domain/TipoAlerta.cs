@@ -2,7 +2,7 @@ using FlowTwin.SharedKernel;
 
 namespace FlowTwin.Monitoreo.Domain;
 
-/// <summary>Catálogo cat.TipoAlerta. Las alertas y el hub SignalR llegan en el Avance 2.</summary>
+/// <summary>Catálogo cat.TipoAlerta. Las alertas se calculan del estado actual del piso (ADR-25, CalculoAlertas).</summary>
 public enum TipoAlerta
 {
     [Catalogo("AFORO_ALTO", "Aforo alto")] AforoAlto = 1,

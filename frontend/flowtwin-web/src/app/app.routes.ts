@@ -48,12 +48,6 @@ export const routes: Routes = [
         loadComponent: () => import('./features/atencion/atencion.page').then(m => m.AtencionPage),
       },
       {
-        path: 'seguimiento',
-        canActivate: [rolGuard(PERMISOS.seguimiento)],
-        data: { titulo: 'Seguimiento', descripcion: 'Active o pause el monitoreo de sus zonas y revise sus nodos (P7).' },
-        loadComponent: proximamente,
-      },
-      {
         path: 'construccion',
         canActivate: [rolGuard(PERMISOS.construccion)],
         data: { titulo: 'Construcción del gemelo', descripcion: 'Sedes, pisos, zonas y nodos sobre el plano (P8).' },

@@ -17,7 +17,8 @@ export interface ResumenApi {
 
 export interface ZonaHistorialApi { id: number; nombre: string; tipo: string; aforo: number | null; conNodo: boolean }
 export type EstadoCelda = 'OK' | 'SIN_DATOS' | 'FUTURO';
-export interface CeldaApi { hora: number; personas: number | null; estado: EstadoCelda }
+/** fueraDeServicio: la zona estuvo fuera de servicio la mayor parte de esa hora (ADR-25); el valor no cambia. */
+export interface CeldaApi { hora: number; personas: number | null; estado: EstadoCelda; fueraDeServicio?: boolean }
 /** Una fecha ('2026-11-09') o un día de la semana (1 = lunes … 7 = domingo). */
 export interface FilaMapaApi { fecha: string | null; diaSemana: number | null; celdas: CeldaApi[] }
 export interface OcupacionApi {
@@ -133,7 +134,7 @@ export function etiquetaFila(f: FilaMapaApi): string {
 const numero = new Intl.NumberFormat('es-PE', { maximumFractionDigits: 1 });
 
 export interface CeldaVista {
-  estado: EstadoCelda; texto: string; titulo: string;
+  estado: EstadoCelda; texto: string; titulo: string; fuera: boolean;
   /** 0–1: qué tan oscura, relativa al máximo del mapa (sin aforo no hay un «lleno» absoluto). */
   intensidad: number;
 }
@@ -147,12 +148,14 @@ export function celdas(o: OcupacionApi): { etiqueta: string; celdas: CeldaVista[
       etiqueta,
       celdas: f.celdas.map(c => {
         const hora = `${String(c.hora).padStart(2, '0')}:00`;
-        if (c.estado === 'SIN_DATOS') return { estado: c.estado, texto: '', intensidad: 0, titulo: `${etiqueta} ${hora} · sin datos: el nodo no tenía señal` };
-        if (c.estado === 'FUTURO' || c.personas === null) return { estado: 'FUTURO', texto: '', intensidad: 0, titulo: `${etiqueta} ${hora} · todavía no llega` };
+        const fuera = !!c.fueraDeServicio;
+        const nota = fuera ? ' · fuera de servicio' : '';
+        if (c.estado === 'SIN_DATOS') return { estado: c.estado, texto: '', intensidad: 0, fuera, titulo: `${etiqueta} ${hora} · sin datos: el nodo no tenía señal${nota}` };
+        if (c.estado === 'FUTURO' || c.personas === null) return { estado: 'FUTURO', texto: '', intensidad: 0, fuera: false, titulo: `${etiqueta} ${hora} · todavía no llega` };
         const texto = numero.format(c.personas);
         return {
-          estado: 'OK', texto, intensidad: maximo > 0 ? c.personas / maximo : 0,
-          titulo: `${etiqueta} ${hora} · ${texto} ${c.personas === 1 ? 'persona' : 'personas'} en promedio`,
+          estado: 'OK', texto, intensidad: maximo > 0 ? c.personas / maximo : 0, fuera,
+          titulo: `${etiqueta} ${hora} · ${texto} ${c.personas === 1 ? 'persona' : 'personas'} en promedio${nota}`,
         };
       }),
     };

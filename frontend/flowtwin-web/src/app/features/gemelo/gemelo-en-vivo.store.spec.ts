@@ -41,7 +41,7 @@ describe('GemeloEnVivoStore', () => {
   it('carga la foto del piso: zonas, KPI, pacientes (abiertos y atendidos hoy) y nodos', async () => {
     await activar();
 
-    expect(store.zonas().find(z => z.zonaId === 2)).toEqual({ zonaId: 2, personas: 0, aforo: null, nivel: 'ninguno' });
+    expect(store.zonas().find(z => z.zonaId === 2)).toEqual({ zonaId: 2, personas: 0, aforo: null, nivel: 'ninguno', fueraDeServicio: null });
     expect(store.kpis()?.consultaPromMin).toBeNull();
     expect(store.pacientes().map(p => [p.codigo, p.estado])).toEqual([['A-0137', 'esperando'], ['A-0130', 'finalizado']]);
     // La clave abre el detalle (P6): es el Id de la atención, porque el código se repite cada día

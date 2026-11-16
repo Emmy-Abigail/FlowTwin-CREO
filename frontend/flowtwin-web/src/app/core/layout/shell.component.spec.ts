@@ -1,6 +1,8 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
+import { AlertasService } from '../alertas/alertas.service';
+import { Alerta } from '../alertas/modelo-alertas';
 import { AuthService } from '../auth/auth.service';
 import { Rol } from '../datos/modelos';
 import { ModoDatosService } from '../datos/modo-datos.service';
@@ -13,6 +15,9 @@ describe('ShellComponent', () => {
   const rol = signal<Rol | null>('Administrador');
   const puedeSimular = signal(true);
   const simulacion = signal(false);
+  const alertasDisponibles = signal(false);
+  const alertas = signal<Alerta[]>([]);
+  const pulso = signal(0);
   const pagina = () => fixture.nativeElement as HTMLElement;
   const textoMenu = () => [...pagina().querySelectorAll('.nav .item')].map(a => a.textContent?.trim());
 
@@ -26,6 +31,8 @@ describe('ShellComponent', () => {
     rol.set('Administrador');
     puedeSimular.set(true);
     simulacion.set(false);
+    alertasDisponibles.set(false);
+    alertas.set([]);
     await TestBed.configureTestingModule({
       imports: [ShellComponent],
       providers: [
@@ -38,6 +45,7 @@ describe('ShellComponent', () => {
         },
         { provide: ModoDatosService, useValue: { cargar: vi.fn(), puedeSimular, simulacion, activar: vi.fn(), salir: vi.fn() } },
         { provide: PisoActualService, useValue: { cargar: vi.fn() } },
+        { provide: AlertasService, useValue: { disponible: alertasDisponibles, lista: alertas, pulso, silencio: signal(false), ahora: signal(0) } },
       ],
     }).compileComponents();
   });
@@ -103,5 +111,17 @@ describe('ShellComponent', () => {
 
     expect(pagina().textContent).not.toContain('En vivo');
     expect(pagina().querySelector('[aria-label="Alertas"]')).toBeNull();
+  });
+
+  it('la campana muestra cuántas alertas hay y solo aparece para quien las atiende', async () => {
+    await crear();
+    expect(pagina().querySelector('.item.alertas')).toBeNull();   // Gerencia, o sin piso: no hay campana
+
+    alertasDisponibles.set(true);
+    alertas.set([{ clave: 'ESPERA_LARGA:1:CRITICA', tipo: 'ESPERA_LARGA', nivel: 'CRITICA', desde: 0, atencion: '1', atencionId: 1, codigo: 'A-0001', zonaId: 3, nodo: null }]);
+    await fixture.whenStable();
+
+    expect(pagina().querySelector('.item.alertas .contador')?.textContent?.trim()).toBe('1');
+    expect(pagina().querySelector('.item.alertas')?.getAttribute('aria-label')).toBe('Alertas: 1');
   });
 });

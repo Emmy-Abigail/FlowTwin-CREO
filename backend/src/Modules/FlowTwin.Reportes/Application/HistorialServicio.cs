@@ -12,6 +12,7 @@ namespace FlowTwin.Reportes.Application;
 /// </summary>
 public sealed class HistorialServicio(
     IZonasConsultas zonas, IAtencionesConsulta atenciones, IHistorialNodos historialNodos, IPresenciaDispositivos dispositivos,
+    IPausasZonas pausas,
     IUsuarioActual usuario, IReloj reloj, ZonaHoraria zonaHoraria, IAuditoria auditoria, IUnidadDeTrabajo unidad)
 {
     /// <summary>Filas por página de la tabla: las que entran sin scroll en 1280×720.</summary>
@@ -73,7 +74,9 @@ public sealed class HistorialServicio(
         var estadias = c.Atenciones
             .SelectMany(a => a.Estadias.Where(e => e.ZonaId == zona.Id).Select(e => new Tramo(e.EntradaEn, e.SalidaEn ?? a.FinEn ?? c.Ahora)))
             .ToList();
-        var (grupo, filas) = CalculoHistorial.Mapa(c.Periodo, horaDesde, horaHasta, estadias, cobertura, c.Ahora, zonaHoraria);
+        var fueraDeServicio = (await pausas.DelPeriodoAsync([zona.Id], inicio, hastaCalculo, ct))
+            .Select(p => new Tramo(p.InicioEn, p.FinEn ?? hastaCalculo)).ToList();
+        var (grupo, filas) = CalculoHistorial.Mapa(c.Periodo, horaDesde, horaHasta, estadias, cobertura, c.Ahora, zonaHoraria, fueraDeServicio);
         return new OcupacionHistorial(lista, zona.Id, grupo, horaDesde, horaHasta, filas);
     }
 

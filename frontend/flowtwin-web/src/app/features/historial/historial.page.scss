@@ -46,6 +46,7 @@
 .leyenda .pocos { background: rgba(31, 95, 153, .2); }
 .leyenda .muchos { background: rgba(31, 95, 153, .9); }
 .leyenda .nd { background: repeating-linear-gradient(135deg, var(--fondo-2) 0 3px, var(--linea-2) 3px 6px); }
+.leyenda .fuera { outline: 2px dashed var(--gris-2); outline-offset: -2px; }
 .cuerpo-mapa { flex: 1; min-height: 0; }
 .nota { margin: 0; font-size: 12.5px; color: var(--gris); }
 .vacio { flex: 1; margin: 0; display: grid; place-items: center; color: var(--gris); }

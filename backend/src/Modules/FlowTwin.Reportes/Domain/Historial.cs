@@ -61,8 +61,11 @@ public static class EstadoCelda
     public const string Ok = "OK", SinDatos = "SIN_DATOS", Futuro = "FUTURO";
 }
 
-/// <summary>Personas en promedio en esa hora (con un decimal). Nulo si no es OK.</summary>
-public sealed record CeldaMapa(int Hora, double? Personas, string Estado);
+/// <summary>
+/// Personas en promedio en esa hora (con un decimal). Nulo si no es OK. FueraDeServicio: la zona estuvo
+/// fuera de servicio la mayor parte de la hora (ADR-25); el valor no se altera, solo se marca.
+/// </summary>
+public sealed record CeldaMapa(int Hora, double? Personas, string Estado, bool FueraDeServicio = false);
 
 /// <summary>Una fila del mapa: una fecha, o un día de la semana (1 = lunes … 7 = domingo) si el periodo es largo.</summary>
 public sealed record FilaMapa(DateOnly? Fecha, int? DiaSemana, IReadOnlyList<CeldaMapa> Celdas);
@@ -193,10 +196,11 @@ public static class CalculoHistorial
     /// </summary>
     public static (string Agrupacion, IReadOnlyList<FilaMapa> Filas) Mapa(
         Periodo periodo, int horaDesde, int horaHasta, IReadOnlyList<Tramo> estadias, IReadOnlyList<Tramo> cobertura,
-        DateTime ahora, ZonaHoraria zona)
+        DateTime ahora, ZonaHoraria zona, IReadOnlyList<Tramo>? fueraDeServicio = null)
     {
+        var pausas = Unir(fueraDeServicio ?? []);
         var porFecha = periodo.Fechas.Select(fecha => new FilaMapa(fecha, null,
-            [.. Enumerable.Range(horaDesde, horaHasta - horaDesde + 1).Select(h => Celda(fecha, h, estadias, cobertura, ahora, zona))])).ToList();
+            [.. Enumerable.Range(horaDesde, horaHasta - horaDesde + 1).Select(h => Celda(fecha, h, estadias, cobertura, pausas, ahora, zona))])).ToList();
         if (periodo.Dias <= Periodo.MaximoDiasPorFecha) return (PorFecha, porFecha);
 
         var porDia = porFecha
@@ -209,7 +213,8 @@ public static class CalculoHistorial
                 var estado = conDato.Count > 0 ? EstadoCelda.Ok
                     : celdas.Any(c => c.Estado == EstadoCelda.SinDatos) ? EstadoCelda.SinDatos
                     : EstadoCelda.Futuro;
-                return new CeldaMapa(horaDesde + i, conDato.Count > 0 ? Redondear(conDato.Average(c => c.Personas!.Value)) : null, estado);
+                return new CeldaMapa(horaDesde + i, conDato.Count > 0 ? Redondear(conDato.Average(c => c.Personas!.Value)) : null, estado,
+                    celdas.Any(c => c.FueraDeServicio));
             })]))
             .ToList();
         return (PorDiaSemana, porDia);
@@ -218,7 +223,8 @@ public static class CalculoHistorial
     /// <summary>1 = lunes … 7 = domingo (ISO), como se lee una semana en Perú.</summary>
     public static int DiaSemana(DateOnly fecha) => fecha.DayOfWeek == DayOfWeek.Sunday ? 7 : (int)fecha.DayOfWeek;
 
-    private static CeldaMapa Celda(DateOnly fecha, int hora, IReadOnlyList<Tramo> estadias, IReadOnlyList<Tramo> cobertura, DateTime ahora, ZonaHoraria zona)
+    private static CeldaMapa Celda(DateOnly fecha, int hora, IReadOnlyList<Tramo> estadias, IReadOnlyList<Tramo> cobertura,
+        IReadOnlyList<Tramo> pausas, DateTime ahora, ZonaHoraria zona)
     {
         var inicio = zona.AUtc(fecha, hora);
         if (inicio >= ahora) return new CeldaMapa(hora, null, EstadoCelda.Futuro);
@@ -226,12 +232,13 @@ public static class CalculoHistorial
         var fin = finHora < ahora ? finHora : ahora;
         var duracion = fin - inicio;
 
+        var fuera = pausas.Aggregate(TimeSpan.Zero, (s, t) => s + t.Solape(inicio, fin)).TotalSeconds >= CoberturaMinima * duracion.TotalSeconds;
         var cubierto = cobertura.Aggregate(TimeSpan.Zero, (s, t) => s + t.Solape(inicio, fin));
         if (cubierto.TotalSeconds < CoberturaMinima * duracion.TotalSeconds)
-            return new CeldaMapa(hora, null, EstadoCelda.SinDatos);
+            return new CeldaMapa(hora, null, EstadoCelda.SinDatos, fuera);
 
         var presencia = estadias.Aggregate(TimeSpan.Zero, (s, t) => s + t.Solape(inicio, fin));
-        return new CeldaMapa(hora, Redondear(presencia / duracion), EstadoCelda.Ok);
+        return new CeldaMapa(hora, Redondear(presencia / duracion), EstadoCelda.Ok, fuera);
     }
 
     private static double Redondear(double v) => Math.Round(v, 1, MidpointRounding.AwayFromZero);

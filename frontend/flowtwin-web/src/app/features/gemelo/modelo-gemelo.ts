@@ -14,7 +14,19 @@ export interface ZonaVista {
   /** null: la zona no tiene aforo (Tránsito/Salida) o aún está por definir (lo configura el Administrador). */
   aforo: number | null;
   nivel: NivelOcupacion;
+  /** Fuera de servicio (RF09, ADR-25): el código del motivo (LIMPIEZA…); null o ausente si está en servicio. */
+  fueraDeServicio?: string | null;
 }
+
+/** Motivos para poner una zona fuera de servicio (catálogo cat.MotivoPausa). */
+export const MOTIVOS_FUERA: { codigo: string; texto: string }[] = [
+  { codigo: 'LIMPIEZA', texto: 'Limpieza' },
+  { codigo: 'MANTENIMIENTO', texto: 'Mantenimiento' },
+  { codigo: 'SIN_ATENCION', texto: 'Sin atención' },
+  { codigo: 'OTRO', texto: 'Otro' },
+];
+
+export const textoMotivo = (codigo: string | null | undefined) => MOTIVOS_FUERA.find(m => m.codigo === codigo)?.texto ?? 'Otro';
 
 export type EstadoPaciente = 'esperando' | 'en-consulta' | 'atendido' | 'finalizado';
 
@@ -129,7 +141,10 @@ export function etiquetaZona(z: ZonaVista, tipo?: TipoZona): string {
  */
 export function ocupacionParaRender(zonas: ZonaVista[], nodos: NodoVista[], tipoDe: (id: number) => TipoZona | undefined): OcupacionZona[] {
   const conNodo = new Set(nodos.map(n => n.zonaId));
-  return zonas.map(z => conNodo.has(z.zonaId)
+  return zonas.map(z => z.fueraDeServicio
+    // Gris y con su rótulo: lo que se ve no se interpreta como «sala libre»
+    ? { zonaId: z.zonaId, personas: z.personas, aforo: z.aforo, nivel: 'nd', etiqueta: 'Fuera de servicio' }
+    : conNodo.has(z.zonaId)
     ? { zonaId: z.zonaId, personas: z.personas, aforo: z.aforo, nivel: z.nivel, etiqueta: etiquetaZona(z, tipoDe(z.zonaId)) }
     : { zonaId: z.zonaId, personas: 0, aforo: null, nivel: 'ninguno', soloNombre: true });
 }
@@ -141,6 +156,7 @@ export const NOMBRE_NIVEL_VISTA: Record<NivelOcupacion, string> = {
 
 /** «13 de 24 pacientes · concentración baja», o lo honesto si no se sabe. */
 export function resumenZona(z: ZonaVista, tipo?: TipoZona): string {
+  if (z.fueraDeServicio) return `Fuera de servicio · ${textoMotivo(z.fueraDeServicio)}`;
   if (z.nivel === 'nd') return 'Sin datos: ningún nodo la cubre ahora';
   const personas = `${z.personas} ${z.personas === 1 ? 'paciente' : 'pacientes'}`;
   if (z.aforo === null) return `${personas} · ${tieneAforo(tipo) ? 'aforo por definir' : 'zona de paso, sin aforo'}`;

@@ -37,6 +37,8 @@ public sealed class FlowTwinDbContext(DbContextOptions<FlowTwinDbContext> option
     public DbSet<EventoNodo> EventosNodo => Set<EventoNodo>();
     public DbSet<Atencion> Atenciones => Set<Atencion>();
     public DbSet<LecturaBle> LecturasBle => Set<LecturaBle>();
+    public DbSet<LoteNodo> LotesNodo => Set<LoteNodo>();
+    public DbSet<PausaZona> PausasZona => Set<PausaZona>();
     public DbSet<EventoZona> EventosZona => Set<EventoZona>();
     public DbSet<RegistroAuditoria> Auditoria => Set<RegistroAuditoria>();
 
