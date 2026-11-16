@@ -1,71 +1,186 @@
-<div align="center">
+<table>
+  <tr>
+    <td><img src="docs/img/upch-escudo.png" alt="Escudo de la Universidad Peruana Cayetano Heredia" width="90" /></td>
+    <td>
+      <h1>UNIVERSIDAD PERUANA CAYETANO HEREDIA</h1>
+      <b>Facultad de Ciencias e Ingeniería</b> · Proyectos de Ingeniería II · 8.º ciclo · 2026
+    </td>
+  </tr>
+</table>
 
-<img src="docs/img/upch-logo.png" alt="Universidad Peruana Cayetano Heredia" height="70">
-&nbsp;&nbsp;&nbsp;&nbsp;
-<img src="docs/img/flowtwin-logo.png" alt="FlowTwin" height="70">
-&nbsp;&nbsp;&nbsp;&nbsp;
-<img src="docs/img/creo-logo.png" alt="Clínica CREO+" height="70">
+<p align="center">
+  <img src="docs/img/flowtwin-logo.png" alt="Logo de FlowTwin" width="460" />
+</p>
 
-# CREO FlowTwin
+<h1 align="center">CREO FlowTwin</h1>
+<p align="center"><b>Gemelo digital del flujo de pacientes</b></p>
 
-**Gemelo digital del flujo de pacientes de la Clínica Renal y Oncológica CREO+**
+<p align="center">
+  <a href="https://github.com/Emmy-Abigail/FlowTwin-CREO/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Emmy-Abigail/FlowTwin-CREO/actions/workflows/ci.yml/badge.svg?branch=develop" /></a>
+  <img alt=".NET 10" src="https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white" />
+  <img alt="Angular 22" src="https://img.shields.io/badge/Angular-22-DD0031?logo=angular&logoColor=white" />
+  <img alt="SQL Server" src="https://img.shields.io/badge/SQL_Server-2022-CC2927?logo=microsoftsqlserver&logoColor=white" />
+  <img alt="MQTT" src="https://img.shields.io/badge/MQTT-Mosquitto_2-3C5280?logo=eclipsemosquitto&logoColor=white" />
+  <img alt="Three.js" src="https://img.shields.io/badge/3D-Three.js-000000?logo=threedotjs&logoColor=white" />
+  <img alt="ESP32-C3" src="https://img.shields.io/badge/IoT-ESP32--C3_BLE-E7352C?logo=espressif&logoColor=white" />
+  <img alt="ODS 3" src="https://img.shields.io/badge/ODS-3_Salud_y_bienestar-4C9F38" />
+</p>
 
-Dónde está cada paciente, cuánto espera y qué zona se está llenando, en vivo y en 3D,
-con tarjetas BLE anónimas y nodos ESP32. Sin datos personales.
+<p align="center">
+  Tarjetas <b>BLE anónimas</b> y nodos <b>ESP32</b> muestran en un <b>gemelo 3D</b> dónde está cada paciente, cuánto espera
+  y qué zona se está llenando, <b>en vivo</b>, para que la clínica actúe a tiempo y decida con datos.
+</p>
 
-[![CI](https://github.com/Emmy-Abigail/FlowTwin-CREO/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/Emmy-Abigail/FlowTwin-CREO/actions/workflows/ci.yml)
-![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)
-![Angular 22](https://img.shields.io/badge/Angular-22-DD0031?logo=angular&logoColor=white)
-![SQL Server](https://img.shields.io/badge/SQL%20Server-2022-CC2927?logo=microsoftsqlserver&logoColor=white)
-![MQTT](https://img.shields.io/badge/MQTT-Mosquitto%202-3C5280?logo=eclipsemosquitto&logoColor=white)
-![Three.js](https://img.shields.io/badge/Three.js-3D-000000?logo=threedotjs&logoColor=white)
-![ESP32](https://img.shields.io/badge/ESP32--C3-BLE-E7352C?logo=espressif&logoColor=white)
-
-Proyecto de la **Universidad Peruana Cayetano Heredia** · Facultad de Ciencias e Ingeniería<br>
-Curso **Proyectos de Ingeniería II** · 8.º ciclo · 2026
-
-[El problema](#-el-problema) · [La solución](#-la-solución) · [Capturas](#-capturas) · [Roles](#-roles-y-pantallas) ·
-[Tecnologías](#-tecnologías) · [Arquitectura](#-arquitectura) · [Cómo correrlo](#-cómo-correrlo) ·
-[Calidad y seguridad](#-calidad-y-seguridad) · [Documentación](#-documentación) · [Equipo](#-equipo)
-
-</div>
+<p align="center">
+  Proyecto de la <b>Universidad Peruana Cayetano Heredia</b> · Facultad de Ciencias e Ingeniería<br/>
+  Proyectos de Ingeniería II · 8.º ciclo · 2026 · Desarrollado para la <b>Clínica CREO+</b>
+</p>
 
 ---
 
-## 🩺 El problema
+## 📑 Tabla de contenidos
 
-En una clínica, el recorrido de cada paciente (admisión, sala de espera, triaje, consulta o tratamiento) ocurre
-sin que nadie lo vea completo:
+- [📘 Introducción](#-introducción)
+- [🏥 Problemática](#-problemática)
+- [🌟 Misión](#-misión)
+- [👁️ Visión](#️-visión)
+- [🎯 ODS 3: Salud y bienestar](#-ods-3-salud-y-bienestar)
+- [🎯 Objetivos](#-objetivos)
+- [📌 Justificación](#-justificación)
+- [⚙️ ¿Cómo funciona?](#️-cómo-funciona)
+- [🖥️ Componentes del sistema](#️-componentes-del-sistema)
+- [👥 Roles y pantallas](#-roles-y-pantallas)
+- [🛠️ Tecnologías](#️-tecnologías)
+- [🔒 Privacidad y seguridad](#-privacidad-y-seguridad)
+- [🚀 Instalación y uso](#-instalación-y-uso)
+- [🗂️ Estructura del repositorio](#️-estructura-del-repositorio)
+- [📚 Documentación](#-documentación)
+- [🛣️ Hoja de ruta](#️-hoja-de-ruta)
+- [💡 ¿Qué nos impulsa?](#-qué-nos-impulsa)
+- [🧑‍💻 ¿Quiénes somos?](#-quiénes-somos)
 
-- **Nadie sabe dónde está cada paciente ni cuánto lleva esperando.** Recepción se entera de una espera larga
-  cuando el paciente se queja.
-- **Los cuellos de botella no se ven.** No se sabe si la sala de espera se llena porque faltan consultorios
-  libres, por la hora del día o por un servicio concreto.
-- **Las decisiones se toman sin datos.** Cambiar horarios o reforzar un servicio se decide por intuición, porque
-  los tiempos reales nunca se midieron.
+---
 
-## 💡 La solución
+## 📘 Introducción
 
-Un **gemelo digital**: una réplica en 3D de la clínica que se actualiza sola con lo que pasa en el piso real.
+**CREO FlowTwin** nace en la **Clínica Renal y Oncológica CREO+**, donde los pacientes recorren varias zonas
+(admisión, sala de espera, triaje, consulta y tratamiento) sin que nadie pueda ver ese recorrido completo mientras
+ocurre.
 
-1. En admisión, el paciente recibe una **tarjeta BLE** con un código anónimo (por ejemplo `A-0143`). Su nombre
-   nunca entra al sistema.
-2. **Nodos ESP32** en cada zona escuchan las tarjetas y envían lo que detectan por **MQTT**.
-3. El servidor decide en qué zona está cada paciente y calcula esperas y ocupación.
-4. Cada rol ve lo que necesita: el **Operador** a quién atender y las alertas, **Gerencia** los indicadores y el
-   historial, y el **Administrador** la configuración, los dispositivos, los usuarios y la auditoría.
+Un **gemelo digital** es una réplica virtual de un lugar real que se actualiza con lo que pasa en él. FlowTwin
+construye esa réplica en 3D a partir de los planos de la clínica y la alimenta con la posición de cada paciente,
+detectada con tarjetas BLE y nodos ESP32, **sin guardar ningún dato personal**.
+
+> *FlowTwin* une *flow* (flujo) y *twin* (gemelo): el gemelo del flujo de pacientes.
+
+---
+
+## 🏥 Problemática
+
+<p align="center">
+  <img src="docs/img/gemelo.png" alt="Gemelo en vivo de FlowTwin" width="860" />
+</p>
+
+### ⏳ Esperas que nadie ve
+
+Recepción no sabe dónde está cada paciente ni cuánto lleva esperando. Una espera larga se descubre cuando el paciente
+se queja o cuando ya se fue sin ser atendido.
+
+### 🚧 Cuellos de botella invisibles
+
+Cuando la sala de espera se llena, no se sabe por qué: si faltan consultorios libres, si es la hora del día o si un
+servicio concreto se está atrasando. Sin ese dato, la clínica no puede corregir la causa.
+
+### 📉 Decisiones sin datos
+
+Cambiar horarios, reforzar un servicio o redistribuir al personal se decide por intuición, porque los tiempos reales
+de espera y de atención nunca se midieron de forma continua.
+
+### ⚠️ El problema común
+
+La clínica no tiene una forma **objetiva, continua y respetuosa de la privacidad** de saber cómo fluyen sus pacientes,
+ni en el momento ni en el historial.
+
+---
+
+## 🌟 Misión
+
+Dar a la clínica una visión en tiempo real y objetiva del recorrido de sus pacientes, con una solución accesible y
+respetuosa de su privacidad, para reducir las esperas y mejorar la experiencia de atención.
+
+## 👁️ Visión
+
+Ser una referencia en el uso de gemelos digitales para la gestión del flujo de pacientes en clínicas del Perú, y
+demostrar que una solución de bajo costo puede mejorar de forma medible la calidad del servicio de salud.
+
+---
+
+## 🎯 ODS 3: Salud y bienestar
+
+**Meta 3.8:**
+> "Lograr la cobertura sanitaria universal, en particular la protección contra los riesgos financieros, el acceso a
+> servicios de salud esenciales de calidad y el acceso a medicamentos y vacunas inocuos, eficaces, asequibles y de
+> calidad para todos."
+
+FlowTwin aporta al **acceso a servicios de salud de calidad**: menos espera y una atención mejor organizada son parte
+de esa calidad.
+
+---
+
+## 🎯 Objetivos
+
+### Objetivo general
+
+Desarrollar un gemelo digital del flujo de pacientes que, a partir de tarjetas BLE anónimas y nodos IoT, muestre en
+tiempo real la ubicación, las esperas y la ocupación de cada zona de la clínica, y conserve el historial para la
+toma de decisiones.
+
+### Objetivos específicos
+
+- **Detectar en qué zona está cada paciente** con nodos ESP32 que escuchan tarjetas BLE, sin datos personales.
+- **Mostrar el estado en vivo** en una maqueta 3D del piso: ocupación por zona, pacientes esperando y en consulta.
+- **Alertar al Operador** solo cuando hace falta actuar: esperas largas y tarjetas sin señal.
+- **Medir y conservar los tiempos** de espera y de atención para ver cuándo y dónde se forman los cuellos de botella.
+- **Dar a cada rol solo lo que necesita**, con permisos, auditoría y seguridad aptos para una clínica real.
+
+---
+
+## 📌 Justificación
+
+Medir el flujo de pacientes a mano (cronómetros, hojas de registro) es costoso, interrumpe la atención y no se
+sostiene en el tiempo. Las cámaras plantean problemas de privacidad. Las tarjetas BLE con un código anónimo, junto con
+nodos ESP32 de bajo costo, permiten medir de forma **continua, automática y anónima**. Convertir esas mediciones en un
+gemelo visual hace que la información sea útil para quien la necesita: recepción en el momento, y gerencia en el
+historial.
+
+---
+
+## ⚙️ ¿Cómo funciona?
 
 ```mermaid
 flowchart LR
-    T["🎫 Tarjeta BLE<br/>(ESP32-C3)"] -- anuncio BLE --> N["📡 Nodo receptor<br/>(ESP32-C3)"]
-    N -- "MQTT (TLS en la clínica)" --> M[("Mosquitto")]
-    M --> API["⚙️ API .NET 10<br/>motor de presencia"]
-    API <--> DB[("SQL Server")]
-    API -- "SignalR (en vivo)" --> W["🖥️ Web Angular<br/>gemelo 3D"]
+    subgraph Clinica["🏥 Clínica"]
+        T["🎫 Tarjeta BLE<br/>(ESP32-C3)"] -- "anuncio BLE" --> N["📡 Nodo receptor<br/>(ESP32-C3)"]
+    end
+    subgraph Servidor["⚙️ Servidor"]
+        M[("Mosquitto<br/>MQTT")] --> API["API .NET 10<br/>motor de presencia"]
+        API <--> DB[("SQL Server")]
+    end
+    N -- "lecturas y latidos (MQTT)" --> M
+    API -- "SignalR, en vivo" --> W["🖥️ Gemelo 3D<br/>(Angular + Three.js)"]
+    API -- "esperas largas y tarjetas sin señal" --> AL["🔔 Alertas al Operador"]
 ```
 
+1. **En admisión** el Operador escanea una tarjeta y se abre una atención con un código anónimo (por ejemplo `A-0143`).
+2. **Los nodos de cada zona** escuchan las tarjetas y envían por MQTT la intensidad de la señal (RSSI).
+3. **El motor de presencia** decide en qué zona está cada paciente, con un margen que evita saltos falsos al pasar por
+   una puerta.
+4. **El gemelo 3D se actualiza al instante**: cada zona se pinta según su ocupación y aparece la lista de pacientes.
+5. **Las alertas** avisan solo lo que pide actuar, y el Operador puede marcarlas como «Enterado».
+6. **Al salir**, el paciente devuelve la tarjeta y la atención se cierra con sus tiempos, que alimentan el historial.
+
 <details>
-<summary><b>Recorrido de un paciente, paso a paso</b></summary>
+<summary><b>Ver el recorrido de un paciente como secuencia</b></summary>
 
 ```mermaid
 sequenceDiagram
@@ -76,32 +191,54 @@ sequenceDiagram
     A->>S: Escanea la tarjeta T-05 → abre la atención A-0143
     P->>N: Entra a la sala de espera con la tarjeta
     N->>S: Lecturas BLE por MQTT
-    S-->>A: El gemelo muestra a A-0143 «en Sala de espera · hace 5 min»
+    S-->>A: «A-0143 en Sala de espera · hace 5 min»
     P->>N: Pasa al consultorio
-    S-->>A: Cambia a «En consulta»; la espera se detiene (RN-06)
+    S-->>A: «En consulta»: la espera se detiene
     A->>S: Escanea la tarjeta al salir → atención cerrada con sus tiempos
 ```
 
 </details>
 
-## 📸 Capturas
+> Si no hay nodos instalados, el modo **Simulación** muestra el gemelo y el historial con pacientes ficticios, marcados
+> en morado, para presentar el sistema sin hardware.
+
+---
+
+## 🖥️ Componentes del sistema
+
+### 📡 Hardware IoT
+
+| Elemento | Cantidad (piloto) | Función |
+|---|---|---|
+| **Nodo receptor** ESP32-C3 | 3 | Escaneo BLE pasivo en su zona; envía lecturas y latidos por MQTT con su propia cuenta |
+| **Tarjeta emisora** ESP32-C3 | 10 | Anuncio BLE con un identificador; se entrega al paciente en admisión |
+
+El acuerdo entre el firmware y el servidor está en el [contrato con los nodos](docs/contrato-integracion-nodos.md).
+
+### ⚙️ Servidor
+
+API **.NET 10** organizada en módulos (Identidad, Gemelo, Dispositivos, Atenciones, Monitoreo, Reportes, Auditoría y
+Mensajería), con **SQL Server** como base de datos y **Mosquitto** como broker MQTT.
+
+### 🖥️ Aplicación web
+
+Angular 22, pensada para usarse sin scroll en una pantalla de 1280 × 720.
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/img/gemelo.png" alt="Gemelo en vivo"><br><b>Gemelo en vivo.</b> Cada zona pintada por su ocupación sobre la maqueta 3D, los indicadores del día y la lista de pacientes.</td>
-    <td width="50%"><img src="docs/img/admision.png" alt="Admisión"><br><b>Admisión.</b> Un solo campo: el sistema sabe si la tarjeta se entrega o se devuelve.</td>
+    <td width="50%"><img src="docs/img/admision.png" alt="Admisión" /><br/><b>Admisión.</b> Un solo campo: el sistema sabe si la tarjeta se entrega o se devuelve.</td>
+    <td width="50%"><img src="docs/img/historial.png" alt="Historial" /><br/><b>Historial.</b> ¿Cuándo se llena cada zona? Mapa día × hora, medianas y exportación CSV.</td>
   </tr>
   <tr>
-    <td><img src="docs/img/historial.png" alt="Historial"><br><b>Historial.</b> ¿Cuándo se llena cada zona? Mapa día × hora, medianas de espera y exportación CSV.</td>
-    <td><img src="docs/img/auditoria.png" alt="Auditoría"><br><b>Auditoría.</b> Quién hizo qué y cuándo, con el antes y el después y un sello de integridad.</td>
+    <td><img src="docs/img/auditoria.png" alt="Auditoría" /><br/><b>Auditoría.</b> Quién hizo qué y cuándo, con el antes y el después y un sello de integridad.</td>
+    <td><img src="docs/img/configuracion.png" alt="Configuración" /><br/><b>Configuración.</b> Sedes, pisos, zonas, aforos y parámetros, sin programar.</td>
   </tr>
   <tr>
-    <td><img src="docs/img/configuracion.png" alt="Configuración"><br><b>Configuración.</b> Sedes, pisos, zonas, aforos y parámetros, sin programar.</td>
-    <td><img src="docs/img/dispositivos.png" alt="Dispositivos"><br><b>Dispositivos.</b> Nodos y tarjetas por excepción: primero lo que requiere atención.</td>
+    <td colspan="2" align="center"><img src="docs/img/dispositivos.png" alt="Dispositivos" width="600" /><br/><b>Dispositivos.</b> Nodos y tarjetas por excepción: primero lo que requiere atención.</td>
   </tr>
 </table>
 
-<sub>Las capturas del gemelo y del historial usan el modo <b>Simulación</b> (datos ficticios, marcados en morado) porque los nodos reales aún no están instalados.</sub>
+---
 
 ## 👥 Roles y pantallas
 
@@ -112,96 +249,78 @@ sequenceDiagram
 | Alertas y zona fuera de servicio | ✅ | | ✅ |
 | Historial y reportes (CSV) | ✅ | 👁️ | ✅ |
 | Detalle de una atención | ✅ | 👁️ | ✅ |
-| Dispositivos (nodos y tarjetas) | | | ✅ |
-| Usuarios | | | ✅ |
-| Auditoría | | | ✅ |
-| Configuración | | | ✅ |
+| Dispositivos, Usuarios, Auditoría y Configuración | | | ✅ |
 
-👁️ = solo lectura. Las reglas se aplican en el servidor, no solo en la pantalla.
+👁️ = solo lectura. Los permisos se comprueban en el servidor, no solo en la pantalla.
 
 <details>
 <summary><b>¿Qué hace cada rol en un día normal?</b></summary>
 
-- **Operador (recepción):** entrega una tarjeta a cada paciente que llega, mira el gemelo para saber a quién
-  hacer pasar, atiende las alertas (esperas largas, tarjetas sin señal) y recibe la tarjeta al salir.
-- **Gerencia:** revisa los indicadores en vivo de cualquier piso y el historial para decidir horarios y
-  refuerzos. No modifica nada.
-- **Administrador:** configura sedes, pisos, zonas y aforos; registra nodos y tarjetas; crea usuarios y
-  revisa la auditoría.
+- **Operador (recepción):** entrega una tarjeta a cada paciente que llega, mira el gemelo para saber a quién hacer
+  pasar, atiende las alertas y recibe la tarjeta al salir.
+- **Gerencia:** revisa los indicadores en vivo de cualquier piso y el historial para decidir horarios y refuerzos.
+- **Administrador:** configura sedes, pisos, zonas y aforos; registra nodos y tarjetas; gestiona usuarios y revisa la
+  auditoría.
 
 </details>
+
+---
 
 ## 🛠️ Tecnologías
 
 | Capa | Tecnología | Para qué |
 |---|---|---|
-| Backend | **.NET 10** · ASP.NET Core · EF Core 10 | API REST, monolito modular (Identidad, Gemelo, Dispositivos, Atenciones, Monitoreo, Reportes, Auditoría, Mensajería) |
-| Base de datos | **SQL Server 2022** | Datos, catálogos y bitácora; todo en UTC |
+| Backend | **.NET 10** · ASP.NET Core · EF Core 10 | API REST, monolito modular |
+| Base de datos | **SQL Server 2022** | Datos, catálogos y bitácora (todo en UTC) |
 | Tiempo real | **SignalR** | El gemelo se actualiza sin recargar |
-| Mensajería IoT | **MQTT** · Mosquitto 2 · MQTTnet | Una cuenta por nodo, con sus propios temas y límites |
-| Frontend | **Angular 22** · Signals · SCSS | Pantallas por rol, sin scroll a 1280 × 720 |
-| 3D | **Three.js** | Maqueta del piso generada desde los planos (`tools/generador-modelo-3d`) |
-| Hardware | **ESP32-C3** | 3 nodos receptores (escaneo BLE pasivo, RSSI) y 10 tarjetas emisoras BLE |
-| Calidad | xUnit · Vitest · GitHub Actions · OWASP ZAP · k6 | Pruebas, integración continua y pruebas de seguridad |
+| IoT | **MQTT** · Mosquitto 2 · MQTTnet | Una cuenta por nodo, con sus propios temas y límites |
+| Frontend | **Angular 22** · Signals · SCSS | Pantallas por rol |
+| 3D | **Three.js** | Maqueta generada desde el plano del piso ([generador](tools/generador-modelo-3d/README.md)) |
+| Hardware | **ESP32-C3** | Nodos receptores y tarjetas BLE |
+| Calidad | xUnit · Vitest · GitHub Actions · OWASP ZAP · k6 | Pruebas, integración continua y seguridad |
 
-## 🧱 Arquitectura
+---
 
-```mermaid
-flowchart TB
-    subgraph Web["frontend/flowtwin-web (Angular)"]
-      F1[features/ · una carpeta por pantalla]
-      F2[gemelo-render/ · escena Three.js]
-    end
-    subgraph Api["backend (.NET 10)"]
-      A1[FlowTwin.Api · seguridad, errores, límites]
-      A2[Modules/ · cada uno con Domain, Application, Contracts]
-      A3[FlowTwin.Persistence · EF Core, migraciones, interceptor de registro]
-    end
-    Web -- "/api · /hubs" --> A1 --> A2 --> A3
-    A3 --> SQL[(SQL Server)]
-    MQ[(Mosquitto)] --> A2
-```
+## 🔒 Privacidad y seguridad
 
-- **Monolito modular:** cada módulo solo usa los `Contracts` de otro; las pruebas de arquitectura lo verifican
-  en cada compilación.
-- **Decisiones registradas:** cada decisión importante tiene su ADR en [`docs/adr/`](docs/adr/README.md). Las
-  anteriores al ADR‑21 están en el documento de arquitectura del proyecto.
+- 🕶️ **Pacientes anónimos:** solo un código como `A-0143`; ningún nombre ni documento entra al sistema (Ley 29733).
+- 🔑 **Acceso por rol:** cada pantalla y cada acción se autoriza en el servidor; Gerencia es de solo lectura.
+- 🛡️ **Contra abusos:** límite de peticiones en toda la API y bloqueo tras 5 intentos de contraseña.
+- 📜 **Auditoría sellada:** cada cambio queda registrado con su antes y después, y una cadena de sellos revela si
+  alguien alteró la bitácora directamente en la base.
+- 📡 **Nodos con cuenta propia:** cada ESP32 solo puede publicar en sus temas MQTT.
 
-<details>
-<summary><b>Estructura del repositorio</b></summary>
+| Prueba | Resultado |
+|---|---|
+| Escaneo OWASP ZAP de toda la API | 0 fallos y 0 advertencias en 213 URL |
+| Avalancha de peticiones (k6) | más de 1 millón en 30 s; el usuario normal fue atendido el 100 % de las veces |
+| Dependencias | 0 vulnerabilidades conocidas (.NET y npm) |
+| Pruebas automáticas | 223 unitarias · 18 de arquitectura · 119 de integración · 196 del frontend |
 
-```
-backend/                 API .NET, pruebas, docker-compose (SQL Server y Mosquitto), simulador de nodos
-frontend/flowtwin-web/   Aplicación web Angular
-maquetas/piso-1/         Maqueta 3D del Piso 1 (en el repositorio solo para la demo; ver ADR-28)
-tools/generador-modelo-3d/  Genera la maqueta 3D desde el plano del piso
-tools/seguridad/         Pruebas de seguridad repetibles (OWASP ZAP y k6)
-docs/                    ADR, contrato con el hardware, pantallas e informe de seguridad
-```
+Detalle y evidencia en el [informe de seguridad](docs/seguridad/informe-seguridad.md) (OWASP ASVS nivel 1).
 
-</details>
+---
 
-## 🚀 Cómo correrlo
+## 🚀 Instalación y uso
 
-**Necesitas:** Git, Docker, [.NET SDK 10](https://dotnet.microsoft.com/download) y Node.js 24.15 (con
-[nvm](https://github.com/nvm-sh/nvm)).
+### Requisitos
 
-<details open>
-<summary><b>1. Base de datos y broker MQTT</b></summary>
+- Git y Docker
+- [.NET SDK 10](https://dotnet.microsoft.com/download)
+- Node.js 24.15 (con [nvm](https://github.com/nvm-sh/nvm))
+
+### 1. Base de datos y broker MQTT
 
 ```bash
-cd backend
-cp .env.example .env        # y pon tus propias contraseñas en .env
+git clone https://github.com/Emmy-Abigail/FlowTwin-CREO.git
+cd FlowTwin-CREO/backend
+cp .env.example .env        # completar con tus propias contraseñas
 docker compose up -d        # SQL Server y Mosquitto (o docker-compose up -d)
-docker compose ps           # espera «(healthy)» en los dos
 ```
 
-</details>
+### 2. Secretos de la API (solo la primera vez)
 
-<details open>
-<summary><b>2. Secretos de la API (solo la primera vez)</b></summary>
-
-Se guardan fuera del repositorio, en tu usuario. **Cada persona genera los suyos; nunca se comparten.**
+Se guardan fuera del repositorio. **Cada persona genera los suyos; nunca se comparten.**
 
 ```bash
 SA=$(grep MSSQL_SA_PASSWORD .env | cut -d= -f2)
@@ -213,10 +332,7 @@ dotnet user-secrets set "Mqtt:ClaveAdmin" "$(grep MQTT_ADMIN_CLAVE .env | cut -d
 dotnet user-secrets set "Auditoria:ClaveSello" "$(openssl rand -base64 48 | tr -d '\n')" --project src/FlowTwin.Api
 ```
 
-</details>
-
-<details open>
-<summary><b>3. API</b></summary>
+### 3. API
 
 ```bash
 dotnet tool restore
@@ -225,10 +341,7 @@ dotnet run --project src/FlowTwin.Api     # http://localhost:5080
 
 La primera vez crea la base, aplica las migraciones y siembra los datos de demostración.
 
-</details>
-
-<details open>
-<summary><b>4. Web</b></summary>
+### 4. Aplicación web
 
 ```bash
 cd ../frontend/flowtwin-web
@@ -237,10 +350,7 @@ npm install
 npm start                                 # http://localhost:4200
 ```
 
-</details>
-
-Entra en <http://localhost:4200> con un usuario de demostración. La contraseña es `demo123`, y estos usuarios
-solo existen en desarrollo:
+Entra con un usuario de demostración (contraseña `demo123`; solo existen en desarrollo):
 
 | Rol | Correo |
 |---|---|
@@ -248,34 +358,36 @@ solo existen en desarrollo:
 | Operador | `operador@creo.pe` |
 | Gerencia | `gerencia@creo.pe` |
 
-En el menú, **Simulación** muestra el gemelo y el historial con pacientes ficticios, para presentar el sistema
-sin hardware. La maqueta 3D del Piso 1 ya viene en `maquetas/piso-1/`.
-
-<details>
-<summary><b>Más: pruebas, migraciones y simulador de nodos</b></summary>
+### 5. Pruebas
 
 ```bash
-cd backend && dotnet test                         # unitarias, de arquitectura y de integración
-cd frontend/flowtwin-web && npx ng test           # frontend
+cd backend && dotnet test                  # unitarias, de arquitectura y de integración
+cd frontend/flowtwin-web && npx ng test    # frontend
 ```
 
-El detalle técnico del backend (cuentas MQTT, administrador inicial, migraciones y el simulador que publica
-lecturas como los ESP32) está en [`backend/README.md`](backend/README.md).
+El detalle técnico (cuentas MQTT, administrador inicial, migraciones y el simulador que publica lecturas como los
+ESP32) está en el [README del backend](backend/README.md).
 
-</details>
+---
 
-## ✅ Calidad y seguridad
+## 🗂️ Estructura del repositorio
 
-| | |
-|---|---|
-| Pruebas automáticas | 223 unitarias · 18 de arquitectura · 119 de integración (contra SQL Server real) · 195 del frontend |
-| Integración continua | Cada pull request compila y prueba todo; solo se une en verde |
-| Escaneo OWASP ZAP | 0 fallos y 0 advertencias en 213 URL de la API, con sesión de Administrador |
-| Prueba de carga (k6) | Un abusador con más de 1 millón de peticiones en 30 s no afectó a un usuario normal (100 % atendido, p95 = 9,9 ms) |
-| Dependencias | 0 vulnerabilidades conocidas (.NET y npm) |
-| Privacidad | Pacientes anónimos (Ley 29733); la bitácora se sella contra alteraciones |
+```
+├── backend/                     # API .NET 10, pruebas, docker-compose (SQL Server y Mosquitto)
+│   ├── src/FlowTwin.Api/        # Arranque, seguridad, errores
+│   ├── src/Modules/             # Identidad, Gemelo, Dispositivos, Atenciones, Monitoreo, Reportes, Auditoría, Mensajería
+│   ├── src/FlowTwin.Persistence/# EF Core y migraciones
+│   ├── tests/                   # Unitarias, de integración y de arquitectura
+│   └── tools/FlowTwin.Simulador/# Simula los nodos ESP32 por MQTT
+├── frontend/flowtwin-web/       # Aplicación web Angular (una carpeta por pantalla)
+├── maquetas/piso-1/             # Maqueta 3D del Piso 1 (en el repositorio solo para la demo)
+├── tools/
+│   ├── generador-modelo-3d/     # Genera la maqueta 3D desde el plano
+│   └── seguridad/               # Pruebas de seguridad repetibles (OWASP ZAP y k6)
+└── docs/                        # ADR, contrato con los nodos, pantallas e informe de seguridad
+```
 
-Detalle, evidencia y pendientes en el [informe de seguridad](docs/seguridad/informe-seguridad.md) (OWASP ASVS nivel 1).
+---
 
 ## 📚 Documentación
 
@@ -283,11 +395,39 @@ Detalle, evidencia y pendientes en el [informe de seguridad](docs/seguridad/info
 |---|---|
 | [Pantallas y flujos](docs/prototipo/version-final-pantallas.md) | Qué hace cada pantalla y cada rol |
 | [Contrato con los nodos](docs/contrato-integracion-nodos.md) | Equipo de hardware (firmware de los ESP32) |
-| [Decisiones de arquitectura (ADR)](docs/adr/README.md) | Equipo técnico |
+| [Decisiones de arquitectura (ADR)](docs/adr/README.md) | Equipo técnico; las anteriores al ADR-21 están en el documento de arquitectura |
 | [Informe de seguridad](docs/seguridad/informe-seguridad.md) | Evaluación y auditoría |
 | [Backend](backend/README.md) · [Generador 3D](tools/generador-modelo-3d/README.md) | Desarrollo |
 
-## 👩‍💻 Equipo
+---
+
+## 🛣️ Hoja de ruta
+
+- [x] Admisión con tarjetas BLE anónimas
+- [x] Ingesta de los nodos por MQTT, con una cuenta por nodo
+- [x] Gemelo en vivo sobre la maqueta 3D del Piso 1
+- [x] Alertas contra la fatiga y zona fuera de servicio
+- [x] Historial con mapa día × hora y exportación CSV
+- [x] Pantallas del Administrador: dispositivos, usuarios, auditoría y configuración
+- [x] Endurecimiento de seguridad e informe con OWASP ZAP y k6
+- [ ] Demostración en la nube para la clínica
+- [ ] Instalación de los nodos y las tarjetas en la clínica (MQTT con TLS)
+- [ ] Contraseñas según OWASP ASVS (12 caracteres, sin composición obligatoria)
+- [ ] Respaldos automáticos y despliegue en la nube de la clínica
+- [ ] Nivel de batería de las tarjetas
+
+---
+
+## 💡 ¿Qué nos impulsa?
+
+Nos motiva que el tiempo de un paciente en la clínica se respete. Detrás de cada espera larga hay una persona que ya
+llega preocupada por su salud. Queremos que el personal de la clínica tenga una herramienta simple y confiable para
+ver lo que hoy es invisible, actuar a tiempo y mejorar con datos reales.
+
+## 🧑‍💻 ¿Quiénes somos?
+
+Somos un equipo de estudiantes de la **Facultad de Ciencias e Ingeniería** de la **Universidad Peruana Cayetano
+Heredia**, en el curso **Proyectos de Ingeniería II** (8.º ciclo, 2026).
 
 | Integrante | Rol |
 |---|---|
@@ -295,11 +435,8 @@ Detalle, evidencia y pendientes en el [informe de seguridad](docs/seguridad/info
 | Vanesa Rioja | Gestión del proyecto y Calidad |
 | Juan Aquino | Hardware IoT |
 
-Desarrollado para la **Clínica Renal y Oncológica CREO+**.
-
 ---
 
-<div align="center">
-<sub>© 2026 Equipo CREO FlowTwin · Universidad Peruana Cayetano Heredia. Todos los derechos reservados.
-Ver <a href="LICENSE">LICENSE</a>.</sub>
-</div>
+<p align="center">
+  <sub>© 2026 Equipo CREO FlowTwin · Universidad Peruana Cayetano Heredia. Todos los derechos reservados. Ver <a href="LICENSE">LICENSE</a>.</sub>
+</p>
