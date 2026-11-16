@@ -44,10 +44,19 @@ public class GemeloHubTests(ApiFixture api)
     [Fact]
     public async Task No_se_puede_mirar_un_piso_que_no_se_tiene_asignado_RN24()
     {
-        await using var conexion = Conexion(await TokenDeAsync("gerencia@creo.pe"));   // solo tiene el piso 1
+        await using var conexion = Conexion(await TokenDeAsync("operador@creo.pe"));   // solo tiene el piso 1
         await conexion.StartAsync();
 
         await Assert.ThrowsAsync<HubException>(() => conexion.InvokeAsync("UnirsePiso", 2));
+    }
+
+    [Fact]
+    public async Task Gerencia_puede_mirar_cualquier_piso_sin_tenerlo_asignado_ADR29()
+    {
+        await using var conexion = Conexion(await TokenDeAsync("gerencia@creo.pe"));
+        await conexion.StartAsync();
+
+        await conexion.InvokeAsync("UnirsePiso", 2);   // no lanza: Gerencia ve todos los pisos (solo lectura)
     }
 
     [Fact]
