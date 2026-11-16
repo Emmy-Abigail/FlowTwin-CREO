@@ -16,6 +16,15 @@
     </nav>
 
     <div class="abajo">
+      @if (alertas.disponible()) {
+        @let n = alertas.lista().length;
+        <button class="item alertas" type="button" (click)="panelAlertas.set(true)" [class.sonando]="sonando()"
+                [attr.aria-label]="n ? 'Alertas: ' + n : 'Alertas: ninguna'" [attr.title]="colapsada() ? 'Alertas' : null">
+          <span class="campana"><app-icono nombre="bell" [tamano]="22" /></span>
+          <span class="texto">Alertas</span>
+          @if (n) { <span class="contador" aria-hidden="true">{{ n }}</span> }
+        </button>
+      }
       @if (modo.puedeSimular()) {
         <button class="item simulacion" type="button" (click)="alternarSimulacion()" [attr.aria-pressed]="modo.simulacion()"
                 [attr.title]="colapsada() ? (modo.simulacion() ? 'Salir de la simulación' : 'Simulación') : null">
@@ -68,3 +77,5 @@
     <p>Ábrelo en una PC o laptop para ver el gemelo y los reportes completos.</p>
   </div>
 </div>
+
+@if (panelAlertas()) { <app-alertas-panel (cerrar)="panelAlertas.set(false)" /> }

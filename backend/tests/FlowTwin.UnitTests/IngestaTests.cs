@@ -26,46 +26,6 @@ public class IngestaTests
         Assert.Equal("b14c70f2-314c-41eb-b11a-93fa9c7ace90-1-7", EmisorBle.Identificador(major: 1, minor: 7));
     }
 
-    [Fact]
-    public void Un_lote_reenviado_se_reconoce_como_duplicado()
-    {
-        var registro = new RegistroSecuencias();
-
-        Assert.True(registro.Registrar(nodoId: 1, secuencia: 18342));
-        Assert.False(registro.Registrar(nodoId: 1, secuencia: 18342));
-        Assert.True(registro.Registrar(nodoId: 2, secuencia: 18342));   // otro nodo, otra cuenta
-    }
-
-    [Fact]
-    public void Tras_reiniciarse_el_nodo_su_secuencia_vuelve_a_0_y_se_acepta()
-    {
-        var registro = new RegistroSecuencias();
-        for (var s = 500; s < 510; s++) registro.Registrar(1, s);
-
-        Assert.True(registro.Registrar(1, 0));   // con la regla "rechazar lo menor" se perdería todo
-        Assert.True(registro.Registrar(1, 1));
-    }
-
-    [Fact]
-    public void Solo_recuerda_las_ultimas_secuencias_para_no_crecer_sin_limite()
-    {
-        var registro = new RegistroSecuencias();
-        for (var s = 0; s <= RegistroSecuencias.Capacidad; s++) registro.Registrar(1, s);
-
-        Assert.True(registro.Registrar(1, 0));   // la 0 ya salió de la ventana
-    }
-
-    [Fact]
-    public void Si_guardar_fallo_la_secuencia_se_olvida_y_el_reintento_entra()
-    {
-        var registro = new RegistroSecuencias();
-        registro.Registrar(1, 77);
-
-        registro.Olvidar(1, 77);
-
-        Assert.True(registro.Registrar(1, 77));
-    }
-
     [Theory]
     [InlineData(5, 100)]          // RSSI positivo
     [InlineData(-61, -1)]         // edad negativa

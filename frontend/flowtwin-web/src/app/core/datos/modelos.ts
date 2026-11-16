@@ -111,7 +111,7 @@ export interface Alerta {
   leida: boolean;
 }
 
-/** Zona con el seguimiento pausado (P7, Fase B). */
+/** Zona fuera de servicio en la simulación (RF09, ADR-25). motivo: código del catálogo (LIMPIEZA…). */
 export interface PausaZona {
   motivo: string;
   por: string;

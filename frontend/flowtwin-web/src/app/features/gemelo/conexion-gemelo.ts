@@ -4,7 +4,7 @@ import { AuthService } from '../../core/auth/auth.service';
 
 /** Los mensajes que envía el hub /hubs/gemelo (backend: Diferencias.Entre). */
 export interface ManejadoresGemelo {
-  ocupacionZona(m: { zonaId: number; ocupacion: number; aforo: number | null; nivel: string; pausada: boolean }): void;
+  ocupacionZona(m: { zonaId: number; ocupacion: number; aforo: number | null; nivel: string; pausada: boolean; motivoPausa?: string | null }): void;
   atencion(m: { id: number; codigo: string; zonaActual: number | null; estado: string; inicioEn: string; esperaMin: number; zonaDesdeEn?: string | null }): void;
   kpis(m: { enClinica: number; enEspera: number; esperaPromMin: number | null; consultaPromMin: number | null }): void;
   nodo(m: { nodoId: number; codigo: string; estado: string; ultimoLatidoEn: string | null }): void;

@@ -53,7 +53,11 @@ que se pueda desincronizar.
 - ✅ Cumple el alcance: Mosquitto como broker pub/sub y nodos desacoplados del backend.
 - ✅ Revocación inmediata: regenerar la clave o dar de baja desconecta al nodo en ese instante.
 - ✅ No se pierden lecturas si la API se reinicia (sesión persistente, QoS 1) ni si el nodo pierde Wi-Fi
-  (búfer de 10 minutos del contrato); la `secuencia` evita guardar dos veces.
+  (búfer de 10 minutos del contrato); la `secuencia` evita guardar dos veces. Las últimas secuencias de
+  cada nodo se guardan en `ope.LoteNodo` **en la misma transacción que sus lecturas**: un lote que el
+  broker vuelve a entregar tras un reinicio de la API se reconoce como duplicado (antes vivían en memoria
+  y se olvidaban al reiniciar).
+- ✅ `GET /api/v1/salud` dice si la base y el broker responden (503 si alguno no), sin detalles internos.
 - ✅ Más eficiente: una conexión abierta por nodo en vez de una petición HTTP cada 2 s.
 - ⚠️ Una pieza más que operar: el contenedor de Mosquitto, con su volumen (`flowtwin-mqttdata`, que
   guarda las cuentas y los mensajes pendientes) y su respaldo.

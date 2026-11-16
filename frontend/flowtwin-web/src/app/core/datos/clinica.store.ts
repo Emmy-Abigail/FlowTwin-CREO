@@ -175,6 +175,17 @@ export class ClinicaStore {
     this.nodos.update(lista => lista.map(n => (n.estado === 'En línea' ? { ...n, ultimoLatido: t } : n)));
   }
 
+  /** RF09 en la simulación: la zona queda fuera de servicio con su motivo (código del catálogo). */
+  ponerFueraDeServicio(zonaId: number, motivo: string, nombreZona: string, quien: Actor): void {
+    this.pausas.update(p => ({ ...p, [zonaId]: { motivo, por: quien.nombre, t: this.ahora() } }));
+    this.auditar('Gemelo', 'Puso fuera de servicio', nombreZona, motivo, quien);
+  }
+
+  ponerEnServicio(zonaId: number, nombreZona: string, quien: Actor): void {
+    this.pausas.update(p => { const resto = { ...p }; delete resto[zonaId]; return resto; });
+    this.auditar('Gemelo', 'Puso en servicio', nombreZona, '', quien);
+  }
+
   auditar(tipo: TipoAuditoria, accion: string, elemento: string, detalle: string, quien: Actor): void {
     const entrada: EntradaAuditoria = { t: this.ahora(), usuario: quien.nombre, rol: quien.rol, tipo, accion, elemento, detalle };
     this.auditoria.update(lista => [entrada, ...lista]);

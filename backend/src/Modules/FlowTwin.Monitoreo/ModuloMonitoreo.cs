@@ -1,3 +1,6 @@
+using FlowTwin.SharedKernel;
+using FlowTwin.Monitoreo.Domain;
+using Microsoft.Extensions.Configuration;
 using FlowTwin.Monitoreo.Application;
 using FlowTwin.Monitoreo.Endpoints;
 using Microsoft.AspNetCore.Builder;
@@ -9,8 +12,9 @@ namespace FlowTwin.Monitoreo;
 
 public static class ModuloMonitoreo
 {
-    public static IServiceCollection AddModuloMonitoreo(this IServiceCollection services)
+    public static IServiceCollection AddModuloMonitoreo(this IServiceCollection services, IConfiguration config)
     {
+        services.Configure<OpcionesAlertas>(config.GetSection("Alertas"));
         services.AddSignalR();
         services.AddScoped<EstadoPisoServicio>();
         services.AddSingleton<SuscripcionesPiso>();
@@ -31,6 +35,10 @@ public static class ModuloMonitoreo
             .RequireAuthorization().WithTags("Monitoreo")
             .WithSummary("Atenciones terminadas hoy en la sede del piso (sin las anuladas)");
 
+        app.MapGet("/api/v1/pisos/{id:int}/alertas", async (int id, EstadoPisoServicio s, CancellationToken ct) =>
+                Results.Ok(await s.AlertasAsync(id, ct)))
+            .RequireAuthorization(Politicas.OperadorOAdmin).WithTags("Monitoreo")
+            .WithSummary("Alertas del piso ahora: espera larga, sin lecturas y nodo sin señal (ADR-25)");
         app.MapHub<GemeloHub>("/hubs/gemelo");
     }
 }

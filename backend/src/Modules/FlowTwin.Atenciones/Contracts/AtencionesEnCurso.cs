@@ -3,8 +3,12 @@ namespace FlowTwin.Atenciones.Contracts;
 /// <summary>Una estadía en una zona (ope.EventoZona). SalidaEn nula: está ahí ahora.</summary>
 public sealed record EstadiaInfo(int ZonaId, DateTime EntradaEn, DateTime? SalidaEn);
 
-/// <summary>Una atención abierta (tarjeta En uso) con su recorrido hasta ahora.</summary>
-public sealed record AtencionEnCurso(long Id, string Codigo, int SedeId, DateTime InicioEn, IReadOnlyList<EstadiaInfo> Estadias);
+/// <summary>
+/// Una atención abierta (tarjeta En uso) con su recorrido hasta ahora. UltimaLecturaEn: la última vez que
+/// un nodo la vio (se actualiza como mucho cada 30 s); nula si nunca se la detectó.
+/// </summary>
+public sealed record AtencionEnCurso(long Id, string Codigo, int SedeId, DateTime InicioEn, IReadOnlyList<EstadiaInfo> Estadias,
+    DateTime? UltimaLecturaEn = null, int TarjetaId = 0);
 
 /// <summary>Lo que Monitoreo necesita de Atenciones para el estado del piso (F-11).</summary>
 public interface IAtencionesEnCurso
