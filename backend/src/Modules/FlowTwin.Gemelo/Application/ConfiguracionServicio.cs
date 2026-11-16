@@ -132,7 +132,7 @@ public sealed class ConfiguracionServicio(IGemeloDb db, INodosDeZonas nodos, IAu
         return Dto(zona);
     }
 
-    /// <summary>Nombre, tipo y aforo. Cambiar a un tipo sin aforo (consultorio) lo quita.</summary>
+    /// <summary>Nombre, tipo y aforo. Cambiar a un tipo sin aforo (Tránsito o Salida) lo quita.</summary>
     public async Task<ZonaConfigDto> EditarZonaAsync(int id, ZonaRequest req, CancellationToken ct)
     {
         var zona = await db.Zonas.SingleOrDefaultAsync(z => z.Id == id, ct) ?? throw new NoEncontradoException("La zona no existe.");

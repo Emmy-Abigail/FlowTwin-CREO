@@ -9,7 +9,7 @@ public sealed record PisoInfo(int Id, string Nombre, int SedeId);
 /// <summary>Una zona tal como aparece en el recorrido de una atención. Tipo: como en ZonaSemaforo.</summary>
 public sealed record ZonaRecorrido(int Id, string Nombre, string Tipo, int PisoId);
 
-/// <summary>Una zona publicada con lo que hace falta para su semáforo. Tipo: INGRESO, ESPERA, TRIAJE, SERVICIO, TRANSITO o SALIDA. Aforo solo en Ingreso y Espera (ADR-27).</summary>
+/// <summary>Una zona publicada con lo que hace falta para su semáforo. Tipo: INGRESO, ESPERA, TRIAJE, SERVICIO, TRANSITO o SALIDA. Aforo en todas menos Tránsito y Salida (ADR-27).</summary>
 public sealed record ZonaSemaforo(int Id, string Nombre, string Tipo, short? Aforo);
 
 /// <summary>Consultas de zonas para otros módulos (por ejemplo, Dispositivos al registrar un nodo, RN-19).</summary>

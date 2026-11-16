@@ -1,6 +1,6 @@
-# ADR-27. Configuración por datos en vez de «Construcción del gemelo»; aforo solo donde la gente se acumula
+# ADR-27. Configuración por datos en vez de «Construcción del gemelo»; aforo donde el paciente permanece
 
-**Estado:** Aceptada · **Fecha:** 16/11/2026 · **Reemplaza:** P8 Construcción del gemelo · **Precisa:** RN-13
+**Estado:** Aceptada (revisada el 16/11/2026, punto 3) · **Fecha:** 16/11/2026 · **Reemplaza:** P8 Construcción del gemelo · **Precisa:** RN-13
 
 ## Contexto
 
@@ -18,13 +18,22 @@ de jornada estaban fijos en `appsettings`, aunque la pantalla decía que los cam
 1. **Pantalla «Configuración»** (última opción del menú del Administrador), sin dibujo:
    - **Sedes** (nombre, dirección, letra única de sus códigos de atención) y **pisos** (nombre, nivel). Un piso
      nace en **borrador** y se **publica** cuando tiene zonas (RN-15).
-   - **Zonas** como datos: nombre, tipo y aforo. Se dan de baja (RN-28), no si tienen nodos.
+   - **Zonas** como datos: nombre, tipo y aforo. El aforo se ve en la tabla y se cambia solo con ⋯ → Editar
+     (una sola forma, sin cambios por accidente). Se dan de baja (RN-28), no si tienen nodos.
    - **Parámetros** en la base (`gem.ParametrosSistema`, una fila): alerta y alerta crítica de espera, minutos
      sin lecturas, hora del cierre de jornada y el ámbar del semáforo.
 2. **La maqueta 3D no se gestiona aquí**: la instala el equipo técnico (como el servicio profesional de los
    sistemas investigados).
-3. **Aforo solo en Ingreso y Espera** (RN-13 precisada): es donde la gente se acumula. En un consultorio o en
-   triaje un % no sirve (1 o 2 personas); lo útil es libre / ocupado / fuera de servicio.
+3. **Aforo en toda zona donde el paciente permanece** (RN-13 precisada); Tránsito y Salida nunca. Empieza
+   «por definir» y lo carga el Administrador.
+   - En **Ingreso y Espera** es cuántas personas caben (el aforo oficial).
+   - En **Triaje y Consulta** es el **número de puestos de atención** (1 médico, 4 camillas): la capacidad del
+     servicio. En teoría de colas, el cuello de botella es el servicio que trabaja más cerca de su capacidad;
+     sin este número el gemelo no puede mostrar que un servicio está saturado.
+   - Con el mismo semáforo, un consultorio de 1 puesto se lee solo: 0/1 verde (libre), 1/1 ámbar (sin
+     espacio), 2/1 rojo (más pacientes que puestos). No hace falta un estado «libre/ocupado» aparte.
+   - *Revisión:* la primera versión dejaba el aforo solo en Ingreso y Espera («en un consultorio un % no
+     sirve»). Se corrigió porque ocultaba justo el cuello de botella que el sistema debe mostrar.
 4. **Semáforo con umbral general**: verde por debajo del ámbar (80 % por defecto, editable), ámbar hasta el
    aforo y **rojo al superarlo**. El aforo que se carga es el oficial (en Perú, el del certificado ITSE), así
    que el rojo marca un límite real. El 80 % es criterio, no un estándar clínico: por eso es editable.
@@ -45,5 +54,5 @@ de jornada estaban fijos en `appsettings`, aunque la pantalla decía que los cam
 - ✅ Los «valores por defecto» que mostraba la app ahora sí los cambia el Administrador.
 - ⚠️ Las zonas nuevas guardan un rectángulo mínimo del plano 2D anterior, que el 3D no usa; esas columnas se
   quitan en la limpieza de muros y `planoUrl`.
-- ⚠️ Pendiente: que el gemelo muestre consultorios y triaje como libre / ocupado / fuera de servicio, y que
-  la maqueta de cada piso la entregue el servidor desde su carpeta (sin escribirla en el código).
+- ✅ El gemelo muestra la saturación de consultorios, triaje y tópicos con la misma leyenda de siempre.
+- ⚠️ Pendiente: que la maqueta de cada piso la entregue el servidor desde su carpeta (sin escribirla en el código).

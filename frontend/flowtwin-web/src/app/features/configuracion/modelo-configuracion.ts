@@ -5,12 +5,15 @@ export interface SedeConfig { id: number; nombre: string; direccion: string | nu
 export interface ZonaConfig { id: number; nombre: string; tipo: string; aforo: number | null; tieneAforo: boolean }
 export interface Parametros { esperaAltaMin: number; esperaCriticaMin: number; sinLecturasMin: number; horaCierre: number; semaforoAmbarPct: number }
 
-/** Los tipos en palabras de la clínica. Solo Ingreso y Espera llevan aforo (donde la gente se acumula). */
+/**
+ * Los tipos en palabras de la clínica. Llevan aforo donde el paciente permanece (RN-13, ADR-27): en Triaje y
+ * Consulta es el número de puestos de atención. Paso y Salida, nunca.
+ */
 export const TIPOS_ZONA: { codigo: string; texto: string; aforo: boolean }[] = [
   { codigo: 'ESPERA', texto: 'Espera', aforo: true },
   { codigo: 'INGRESO', texto: 'Ingreso', aforo: true },
-  { codigo: 'TRIAJE', texto: 'Triaje', aforo: false },
-  { codigo: 'SERVICIO', texto: 'Consulta', aforo: false },
+  { codigo: 'TRIAJE', texto: 'Triaje', aforo: true },
+  { codigo: 'SERVICIO', texto: 'Consulta', aforo: true },
   { codigo: 'TRANSITO', texto: 'Paso', aforo: false },
   { codigo: 'SALIDA', texto: 'Salida', aforo: false },
 ];

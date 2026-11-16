@@ -34,9 +34,9 @@ public class ConfiguracionGemeloTests(ApiFixture api)
         Assert.Equal("PISO_SIN_ZONAS", (await Json(sinZonas)).GetProperty("codigo").GetString());
 
         var sala = await Json(await admin.PostAsJsonAsync($"/api/v1/configuracion/pisos/{pisoId}/zonas", new { nombre = "Sala de espera", tipo = "ESPERA", aforo = 20 }));
-        var consultorio = await Json(await admin.PostAsJsonAsync($"/api/v1/configuracion/pisos/{pisoId}/zonas", new { nombre = "Consultorio 1", tipo = "SERVICIO", aforo = 4 }));
+        var consultorio = await Json(await admin.PostAsJsonAsync($"/api/v1/configuracion/pisos/{pisoId}/zonas", new { nombre = "Consultorio 1", tipo = "SERVICIO", aforo = 1 }));
         Assert.Equal(20, sala.GetProperty("aforo").GetInt32());
-        Assert.Equal(JsonValueKind.Null, consultorio.GetProperty("aforo").ValueKind);   // un consultorio no tiene aforo: se ignora
+        Assert.Equal(1, consultorio.GetProperty("aforo").GetInt32());   // un consultorio: su número de puestos (ADR-27)
 
         Assert.Equal(HttpStatusCode.NoContent, (await admin.PostAsync($"/api/v1/configuracion/pisos/{pisoId}/publicar", null)).StatusCode);
         var arbol = await Json(await admin.GetAsync("/api/v1/configuracion/arbol"));

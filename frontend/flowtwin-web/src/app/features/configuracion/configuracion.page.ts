@@ -155,20 +155,6 @@ export class ConfiguracionPage {
     });
   }
 
-  /** Aforo en la misma fila: se guarda al salir del campo o con Enter. */
-  protected async guardarAforo(z: ZonaConfig, texto: string): Promise<void> {
-    const aforo = aforoDesdeTexto(texto);
-    if (aforo === undefined) { this.toast.mostrar('El aforo debe ser un número entero de 1 o más', 'warn'); this.recarga.update(n => n + 1); return; }
-    if (aforo === z.aforo) return;
-    try {
-      await firstValueFrom(this.http.put(`${API}/configuracion/zonas/${z.id}`, { nombre: z.nombre, tipo: z.tipo, aforo }));
-      this.toast.mostrar(aforo === null ? `${z.nombre}: aforo por definir` : `${z.nombre}: aforo ${aforo}`);
-      this.recarga.update(n => n + 1);
-    } catch (e) {
-      this.toast.mostrar(mensajeDe(problemaDe(e)), 'bad');
-    }
-  }
-
   // ---------- Parámetros
 
   protected cambiar<K extends keyof Parametros>(campo: K, valor: number): void {

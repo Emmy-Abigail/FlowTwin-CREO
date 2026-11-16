@@ -26,9 +26,8 @@
 .tbl td { padding: 8px 12px; }
 .nom { font-weight: 700; }
 .gris { color: var(--gris); }
-.aforo { width: 104px; border: 1.5px solid var(--linea-2); border-radius: 8px; padding: 6px 9px; font-family: var(--f-mono); font-weight: 600; text-align: right; }
-.aforo::placeholder { font-family: var(--f-body); font-weight: 700; color: var(--ambar-t); text-align: left; }
-.aforo:focus-visible { outline: 3px solid var(--rojo); outline-offset: 1px; }
+.aforo { font-family: var(--f-mono); font-weight: 600; font-variant-numeric: tabular-nums; }
+.por-definir { font-weight: 700; color: var(--ambar-t); }
 .acc { width: 48px; text-align: right; }
 .menu { position: relative; display: inline-block; }
 .mas { width: 32px; height: 32px; border: 0; border-radius: 8px; background: none; font-weight: 700; color: var(--gris-2); display: inline-grid; place-items: center; }

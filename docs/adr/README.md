@@ -12,4 +12,4 @@ atrás. Los ADR-01 a ADR-20 están en el documento de arquitectura (v2); desde e
 | [ADR-24](0024-nodos-por-mqtt-con-mosquitto.md) | Los nodos envían sus datos por MQTT a un broker Mosquitto | Aceptada |
 | [ADR-25](0025-alertas-y-zona-fuera-de-servicio.md) | Alertas del Operador, cierre de jornada y zona «fuera de servicio» en vez de P7 | Aceptada |
 | [ADR-26](0026-triaje-no-detiene-la-espera.md) | El triaje no detiene la espera | Aceptada |
-| [ADR-27](0027-configuracion-sin-editor-de-planos.md) | Configuración por datos en vez de «Construcción del gemelo»; aforo solo donde la gente se acumula | Aceptada |
+| [ADR-27](0027-configuracion-sin-editor-de-planos.md) | Configuración por datos en vez de «Construcción del gemelo»; aforo donde el paciente permanece | Aceptada |

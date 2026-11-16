@@ -41,10 +41,10 @@
                 <td class="nom">{{ z.nombre }}</td>
                 <td class="gris">{{ textoTipo(z.tipo) }}</td>
                 <td>
-                  @if (z.tieneAforo) {
-                    <input class="aforo" inputmode="numeric" maxlength="4" placeholder="Por definir" [attr.aria-label]="'Aforo de ' + z.nombre"
-                           [value]="z.aforo ?? ''" (change)="guardarAforo(z, $any($event.target).value)" (keydown.enter)="$any($event.target).blur()">
-                  } @else { <span class="gris">—</span> }
+                  <!-- Solo lectura: se edita con ⋯ → Editar (una sola forma de cambiarlo, sin cambios por accidente) -->
+                  @if (!z.tieneAforo) { <span class="gris">—</span> }
+                  @else if (z.aforo === null) { <span class="por-definir">Por definir</span> }
+                  @else { <span class="aforo">{{ z.aforo }}</span> }
                 </td>
                 <td class="acc">
                   <div class="menu">
