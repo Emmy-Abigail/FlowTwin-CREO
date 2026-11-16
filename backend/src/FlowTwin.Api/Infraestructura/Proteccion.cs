@@ -70,7 +70,7 @@ public static class Proteccion
     /// otra página, y sin caché (los datos son de la clínica). /scalar (solo en desarrollo) queda sin CSP para que
     /// su documentación funcione.
     /// </summary>
-    public static IApplicationBuilder UseCabecerasSeguridad(this IApplicationBuilder app) =>
+    public static IApplicationBuilder UseCabecerasSeguridad(this IApplicationBuilder app, bool sirveWeb = false) =>
         app.Use(async (http, siguiente) =>
         {
             http.Response.OnStarting(() =>
@@ -88,6 +88,11 @@ public static class Proteccion
                     h.ContentSecurityPolicy = "default-src 'none'; frame-ancestors 'none'";
                     // Las maquetas ponen su propia caché (ETag); el resto de la API no se guarda en ningún lado
                     if (!h.ContainsKey("Cache-Control")) h.CacheControl = "no-store";
+                }
+                else if (sirveWeb)
+                {
+                    // La web que sirve esta misma API (contenedor): solo código propio (WebEstatica.PoliticaContenido)
+                    h.ContentSecurityPolicy = WebEstatica.PoliticaContenido;
                 }
                 return Task.CompletedTask;
             });
