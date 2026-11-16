@@ -9,3 +9,4 @@ atrás. Los ADR-01 a ADR-20 están en el documento de arquitectura (v2); desde e
 | [ADR-21](0021-base-de-datos-como-cola-del-motor.md) | La base de datos es la cola del motor de presencia | Aceptada |
 | [ADR-22](0022-simulacion-temporal-en-el-frontend.md) | Simulación en el frontend: temporal, separada y siempre a la vista | Aceptada (temporal) |
 | [ADR-23](0023-aforo-por-definir.md) | El aforo de una zona puede quedar «por definir» | Aceptada |
+| [ADR-24](0024-nodos-por-mqtt-con-mosquitto.md) | Los nodos envían sus datos por MQTT a un broker Mosquitto | Aceptada |

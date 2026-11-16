@@ -1,191 +1,228 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { HttpClient, HttpResourceRef, httpResource } from '@angular/common/http';
+import { DestroyRef, Injectable, Signal, computed, effect, inject, linkedSignal, signal } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
+import { API, mensajeDe, problemaDe } from '../../core/api/problema';
 import { AuthService } from '../../core/auth/auth.service';
-import { consulta, espera, total, zonaDeConsulta } from '../../core/datos/calculos';
 import { ClinicaStore } from '../../core/datos/clinica.store';
-import { HORA_APERTURA, HORAS_REPORTE, ZONAS } from '../../core/datos/clinica.config';
 import { GeometriaService } from '../../core/datos/geometria.service';
-import { Atencion } from '../../core/datos/modelos';
-import { DIA, MIN, diaCorto, duracion, fechaCorta, hhmm, inicioDelDia, isoFecha, promedio } from '../../core/utils/tiempo';
+import { ModoDatosService } from '../../core/datos/modo-datos.service';
+import { PisoActualService } from '../../core/datos/piso-actual.service';
+import { isoFecha } from '../../core/utils/tiempo';
+import {
+  FilaDatos, OcupacionApi, PaginaApi, PaginaDatos, PeriodoId, Rango, ResumenApi, TAMANO_PAGINA,
+  filaDesdeApi, paginar, problemaRango, rangoDe, resumenDe,
+} from './modelo-historial';
+import { filasSimuladas, ocupacionSimulada } from './simulacion-historial';
 
-export type Rango = 'hoy' | '7' | 'custom';
+export type Pestana = 'ocupacion' | 'atenciones';
 
-export const POR_PAGINA = 10;
+/** Si el periodo incluye hoy, cada cuánto se vuelve a pedir: el historial de hoy sigue creciendo. */
+const REFRESCO_MS = 60_000;
 
-/** Fila de la tabla de atenciones, ya formateada. */
-export interface FilaAtencion {
-  id: string;
-  fecha: string;
-  ingreso: string;
-  atendidoEn: string;
-  espera: string;
-  consulta: string;
-  total: string;
-  activa: boolean;
-  cierre: string;
-}
+/** Los filtros se recuerdan en la pestaña del navegador: al volver del detalle (P6) se ve lo mismo. */
+const CLAVE_FILTROS = 'flowtwin.historial';
+
+interface Filtros { periodo: PeriodoId; elegido: Rango | null; pestana: Pestana; zonaId: number | null; codigo: string; pagina: number }
 
 /**
- * Estado de Historial y reportes (P5): filtros, KPI del periodo, aforo histórico por
- * hora, mapa día × hora y tabla de atenciones. La ocupación se calcula a partir de los
- * recorridos reales de las atenciones (no es un número aparte), así todo cuadra.
+ * Estado del Historial (P5): periodo, pestaña, zona, búsqueda y página. Real: tres GET a
+ * /pisos/{id}/reportes/... que se vuelven a pedir solos al cambiar un filtro (httpResource cancela la
+ * petición anterior). Simulación (ADR-22): las mismas respuestas calculadas en el navegador.
  */
 @Injectable()
 export class HistorialStore {
+  private http = inject(HttpClient);
+  private modo = inject(ModoDatosService);
   private clinica = inject(ClinicaStore);
   private geo = inject(GeometriaService);
+  private pisos = inject(PisoActualService);
   private auth = inject(AuthService);
 
-  readonly rango = signal<Rango>('7');
-  readonly desde = signal('');
-  readonly hasta = signal('');
-  readonly zonaId = signal<number>(ZONAS.sala);
-  readonly busqueda = signal('');
-  readonly pagina = signal(0);
+  readonly periodo = signal<PeriodoId>('7');
+  readonly elegido = signal<Rango | null>(null);
+  readonly pestana = signal<Pestana>('ocupacion');
+  readonly zonaId = signal<number | null>(null);
+  readonly codigo = signal('');
+  readonly pagina = signal(1);
+  readonly exportando = signal(false);
 
-  readonly zonas = this.geo.zonas;
-  readonly zona = computed(() => this.geo.zona(this.zonaId()));
-  private hoy0 = computed(() => inicioDelDia(this.clinica.ahora()));
+  /** La hora del navegador, al minuto: así «Hoy» cambia solo a medianoche sin recargar. */
+  private reloj = signal(Date.now());
+  private ahora = computed(() => this.modo.simulacion() ? this.clinica.ahora() : this.reloj());
+  readonly hoy = computed(() => isoFecha(this.ahora()));
+  readonly rango = computed(() => rangoDe(this.periodo(), this.hoy(), this.elegido()));
+  /** Un rango elegido con algo mal no se consulta: se explica junto a las fechas. */
+  readonly problema = computed(() => this.periodo() === 'elegir' ? problemaRango(this.rango(), this.hoy()) : null);
+  readonly pisoId = computed(() => this.pisos.piso()?.id ?? null);
 
-  /** [inicio, fin) del rango elegido, en ms. */
-  readonly intervalo = computed<[number, number]>(() => {
-    const hoy0 = this.hoy0();
-    if (this.rango() === 'hoy') return [hoy0, hoy0 + DIA];
-    if (this.rango() === 'custom' && this.desde() && this.hasta()) {
-      const a = new Date(this.desde() + 'T00:00').getTime();
-      const b = new Date(this.hasta() + 'T00:00').getTime() + DIA;
-      return [Math.min(a, b), Math.max(a, b)];
+  // ---------- Real
+  private base = computed(() => {
+    const piso = this.pisoId();
+    if (this.modo.simulacion() || piso === null || this.problema()) return undefined;
+    return { url: `${API}/pisos/${piso}/reportes`, desde: this.rango().desde, hasta: this.rango().hasta };
+  });
+
+  private resumenReal = httpResource<ResumenApi>(() => {
+    const b = this.base();
+    return b && { url: `${b.url}/resumen`, params: { desde: b.desde, hasta: b.hasta } };
+  });
+
+  private ocupacionReal = httpResource<OcupacionApi>(() => {
+    const b = this.base();
+    if (!b || this.pestana() !== 'ocupacion') return undefined;
+    const z = this.zonaId();
+    return { url: `${b.url}/ocupacion`, params: { desde: b.desde, hasta: b.hasta, ...(z === null ? {} : { zonaId: z }) } };
+  });
+
+  private paginaReal = httpResource<PaginaApi>(() => {
+    const b = this.base();
+    if (!b || this.pestana() !== 'atenciones') return undefined;
+    return { url: `${b.url}/atenciones`, params: { desde: b.desde, hasta: b.hasta, codigo: this.codigo(), pagina: this.pagina(), tamano: TAMANO_PAGINA } };
+  });
+
+  // ---------- Simulación
+  private zonaSim = (id: number) => ({ nombre: this.geo.nombreZona(id), tipo: this.geo.zona(id)?.tipo ?? 'DESCONOCIDO' });
+  private filasSim = computed<FilaDatos[]>(() => this.modo.simulacion()
+    ? filasSimuladas([...this.clinica.historial(), ...this.clinica.atenciones()], this.rango(), this.clinica.ahora(), this.zonaSim)
+    : []);
+
+  // ---------- Lo que ve la pantalla (mientras llega la respuesta nueva, se sigue viendo la anterior)
+  readonly resumen: Signal<ResumenApi | null> = this.ultimo(this.resumenReal, () => resumenDe(this.filasSim()));
+
+  readonly ocupacion: Signal<OcupacionApi | null> = this.ultimo(this.ocupacionReal, () => ocupacionSimulada(
+    [...this.clinica.historial(), ...this.clinica.atenciones()], this.rango(), this.clinica.ahora(),
+    this.geo.zonas().map(z => ({ id: z.id, nombre: z.nombre, tipo: z.tipo, aforo: z.aforo ?? null })),
+    new Set(this.clinica.nodos().filter(n => n.estado !== 'Baja').map(n => n.zonaId)), this.zonaId()));
+
+  readonly atenciones: Signal<PaginaDatos | null> = this.ultimo(this.paginaReal,
+    () => paginar(this.filasSim(), this.codigo(), this.pagina()),
+    (p: PaginaApi) => ({ ...p, filas: p.filas.map(filaDesdeApi) }));
+
+  readonly paginas = computed(() => { const p = this.atenciones(); return p ? Math.max(1, Math.ceil(p.total / p.tamano)) : 1; });
+
+  readonly cargando = computed(() => !this.modo.simulacion()
+    && (this.resumenReal.isLoading() || this.ocupacionReal.isLoading() || this.paginaReal.isLoading()));
+
+  /** El primer error de las tres consultas, ya en palabras para la persona. */
+  readonly error = computed(() => {
+    if (this.modo.simulacion()) return null;
+    const e = this.resumenReal.error() ?? this.ocupacionReal.error() ?? this.paginaReal.error();
+    return e ? mensajeDe(problemaDe(e)) : null;
+  });
+
+  constructor() {
+    const guardados = leerFiltros();
+    if (guardados) {
+      this.periodo.set(guardados.periodo);
+      this.elegido.set(guardados.elegido);
+      this.pestana.set(guardados.pestana);
+      this.zonaId.set(guardados.zonaId);
+      this.codigo.set(guardados.codigo);
+      this.pagina.set(guardados.pagina);
     }
-    return [hoy0 - 6 * DIA, hoy0 + DIA];
-  });
+    effect(() => guardarFiltros({
+      periodo: this.periodo(), elegido: this.elegido(), pestana: this.pestana(),
+      zonaId: this.zonaId(), codigo: this.codigo(), pagina: this.pagina(),
+    }));
 
-  private todas = computed(() => [...this.clinica.historial(), ...this.clinica.atenciones()]);
+    const intervalo = setInterval(() => {
+      this.reloj.set(Date.now());
+      if (this.base() && this.rango().hasta === this.hoy()) {
+        this.resumenReal.reload();
+        this.ocupacionReal.reload();
+        this.paginaReal.reload();
+      }
+    }, REFRESCO_MS);
+    inject(DestroyRef).onDestroy(() => clearInterval(intervalo));
+  }
 
-  /** Atenciones del periodo que pasaron por la zona elegida, más recientes primero. */
-  readonly atenciones = computed(() => {
-    const [a, b] = this.intervalo();
-    const zona = this.zonaId();
-    return this.todas()
-      .filter(x => x.inicio >= a && x.inicio < b && x.eventos.some(e => e.zonaId === zona))
-      .sort((x, y) => y.inicio - x.inicio);
-  });
+  // ---------- Acciones (cada filtro nuevo vuelve a la página 1)
+  cambiarPeriodo(p: PeriodoId): void {
+    if (p === 'elegir' && !this.elegido()) this.elegido.set(rangoDe('7', this.hoy(), null));
+    this.periodo.set(p);
+    this.pagina.set(1);
+  }
 
-  readonly filtradas = computed(() => {
-    const q = this.busqueda().trim().toLowerCase();
-    return q ? this.atenciones().filter(a => a.id.toLowerCase().includes(q)) : this.atenciones();
-  });
+  elegirFecha(campo: keyof Rango, valor: string): void {
+    this.elegido.set({ ...(this.elegido() ?? rangoDe('7', this.hoy(), null)), [campo]: valor });
+    this.pagina.set(1);
+  }
 
-  readonly paginas = computed(() => Math.max(1, Math.ceil(this.filtradas().length / POR_PAGINA)));
+  buscar(codigo: string): void {
+    this.codigo.set(codigo.trim());
+    this.pagina.set(1);
+  }
 
-  readonly filas = computed<FilaAtencion[]>(() => {
-    const ahora = this.clinica.ahora();
-    const pagina = Math.min(this.pagina(), this.paginas() - 1);
-    return this.filtradas()
-      .slice(pagina * POR_PAGINA, pagina * POR_PAGINA + POR_PAGINA)
-      .map(a => this.fila(a, ahora));
-  });
-
-  readonly kpis = computed(() => {
-    const ahora = this.clinica.ahora();
-    const lista = this.atenciones();
-    return {
-      espera: promedio(lista.map(espera)),
-      consulta: promedio(lista.map(a => consulta(a, ahora))),
-      total: lista.length,
-    };
-  });
+  /** Descarga el CSV de las atenciones del periodo (con la búsqueda). Real: lo arma el backend y lo registra en la auditoría. */
+  async exportarCsv(): Promise<{ archivo: string } | { error: string }> {
+    const r = this.rango();
+    if (this.modo.simulacion()) {
+      const filas = paginar(this.filasSim(), this.codigo(), 1, Number.MAX_SAFE_INTEGER).filas;
+      const archivo = `atenciones_simulacion_${r.desde}_${r.hasta}.csv`;
+      descargar(new Blob([csvSimulado(filas)], { type: 'text/csv;charset=utf-8' }), archivo);
+      this.clinica.auditar('Reportes', 'Exportó reporte', archivo, 'CSV', this.auth.actor());
+      return { archivo };
+    }
+    const b = this.base();
+    if (!b) return { error: this.problema() ?? 'Elige un piso para exportar.' };
+    this.exportando.set(true);
+    try {
+      const resp = await firstValueFrom(this.http.get(`${b.url}/atenciones.csv`,
+        { params: { desde: b.desde, hasta: b.hasta, codigo: this.codigo() }, responseType: 'blob', observe: 'response' }));
+      const archivo = nombreDe(resp.headers.get('Content-Disposition')) ?? `atenciones_${r.desde}_${r.hasta}.csv`;
+      descargar(resp.body!, archivo);
+      return { archivo };
+    } catch (e) {
+      return { error: mensajeDe(problemaDe(e)) };
+    } finally {
+      this.exportando.set(false);
+    }
+  }
 
   /**
-   * Ocupación promedio por hora de la zona: matriz de 7 días × 12 horas (07:00 a 18:59).
-   * Cada celda = minutos-paciente en esa hora / 60. Las horas que aún no llegan son null.
+   * Lo que se muestra de una consulta: en Simulación, lo calculado; en real, la última respuesta que llegó.
+   * Así, al cambiar un filtro, la pantalla no parpadea en blanco mientras llega la nueva.
    */
-  readonly matriz = computed(() => {
-    const zona = this.zonaId();
-    const hoy0 = this.hoy0();
-    const ahora = this.clinica.ahora();
-    const dia0 = hoy0 - 6 * DIA;
-    const minutosPaciente = Array.from({ length: 7 }, () => new Array<number>(HORAS_REPORTE).fill(0));
-    for (const a of this.todas()) {
-      for (const e of a.eventos) {
-        if (e.zonaId !== zona) continue;
-        acumular(minutosPaciente, dia0, e.entrada, e.salida ?? ahora);
-      }
-    }
-    return minutosPaciente.map((fila, d) => ({
-      dia: dia0 + d * DIA,
-      etiqueta: diaCorto(dia0 + d * DIA),
-      valores: fila.map((m, h): number | null => {
-        const inicioHora = dia0 + d * DIA + (HORA_APERTURA + h) * 60 * MIN;
-        return inicioHora > ahora ? null : Math.round((m / 60) * 10) / 10;
-      }),
-    }));
-  });
-
-  /** Serie del gráfico: promedio de cada hora entre los días del rango. */
-  readonly serie = computed(() => {
-    const [a, b] = this.intervalo();
-    const dias = this.matriz().filter(f => f.dia >= a && f.dia < b);
-    return Array.from({ length: HORAS_REPORTE }, (_, h) => {
-      const v = dias.map(f => f.valores[h]).filter((x): x is number => x != null);
-      return v.length ? Math.round((v.reduce((s, x) => s + x, 0) / v.length) * 10) / 10 : null;
+  private ultimo<A, V = A>(res: HttpResourceRef<A | undefined>, simulado: () => V, convertir: (a: A) => V = a => a as unknown as V): Signal<V | null> {
+    const real = linkedSignal<A | undefined, V | null>({
+      source: () => res.hasValue() ? res.value() : undefined,
+      computation: (v, previo) => v !== undefined ? convertir(v) : (previo?.value ?? null),
     });
-  });
-
-  readonly maximo7Dias = computed(() =>
-    Math.max(0, ...this.matriz().flatMap(f => f.valores.filter((x): x is number => x != null))));
-
-  readonly hoyIso = computed(() => isoFecha(this.hoy0()));
-  readonly haceSeisIso = computed(() => isoFecha(this.hoy0() - 6 * DIA));
-
-  cambiarFiltro(aplicar: () => void): void {
-    aplicar();
-    this.pagina.set(0);
-  }
-
-  /** CSV con las atenciones filtradas (todas las páginas). */
-  generarCsv(): { nombre: string; contenido: string; filas: number } {
-    const ahora = this.clinica.ahora();
-    const filas = this.filtradas().map(a => this.fila(a, ahora));
-    const encabezado = ['ID', 'Fecha', 'Ingreso', 'Atendido en', 'Espera', 'Consulta', 'Total', 'Cierre'];
-    const csv = [encabezado, ...filas.map(f => [f.id, f.fecha, f.ingreso, f.atendidoEn, f.espera, f.consulta, f.activa ? 'En curso' : f.total, f.cierre])]
-      .map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(','))
-      .join('\n');
-    return { nombre: this.nombreArchivo('csv'), contenido: '﻿' + csv, filas: filas.length };
-  }
-
-  nombreArchivo(extension: string): string {
-    const zona = (this.zona()?.nombre ?? 'zona').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w]+/g, '');
-    return `reporte_Piso1_${zona}_${isoFecha(this.hoy0())}.${extension}`;
-  }
-
-  registrarExportacion(archivo: string, formato: string): void {
-    this.clinica.auditar('Reportes', 'Exportó reporte', archivo, formato, this.auth.actor());
-  }
-
-  private fila(a: Atencion, ahora: number): FilaAtencion {
-    return {
-      id: a.id,
-      fecha: fechaCorta(a.inicio),
-      ingreso: hhmm(a.inicio),
-      atendidoEn: this.geo.nombreZona(zonaDeConsulta(a)),
-      espera: duracion(espera(a)),
-      consulta: duracion(consulta(a, ahora)),
-      total: duracion(total(a, ahora)),
-      activa: a.estado === 'activa',
-      cierre: a.motivo ?? '—',
-    };
+    return computed(() => this.modo.simulacion() ? simulado() : (this.base() ? real() : null));
   }
 }
 
-/** Reparte los minutos de una estancia [desde, hasta) en las celdas día × hora. */
-function acumular(matriz: number[][], dia0: number, desde: number, hasta: number): void {
-  let t = desde;
-  while (t < hasta) {
-    const d = Math.floor((t - dia0) / DIA);
-    const inicioDia = dia0 + d * DIA;
-    const h = Math.floor((t - inicioDia) / (60 * MIN)) - HORA_APERTURA;
-    const finHora = inicioDia + (HORA_APERTURA + h + 1) * 60 * MIN;
-    const tramo = Math.min(hasta, finHora) - t;
-    if (d >= 0 && d < 7 && h >= 0 && h < HORAS_REPORTE) matriz[d][h] += tramo / MIN;
-    t += tramo;
-  }
+/** Comodidad, no estado importante: sin almacenamiento (ventana privada, bloqueado) simplemente no se recuerda. */
+function leerFiltros(): Filtros | null {
+  try {
+    const f = JSON.parse(sessionStorage.getItem(CLAVE_FILTROS) ?? 'null') as Filtros | null;
+    return f && ['hoy', '7', '30', 'elegir'].includes(f.periodo) ? f : null;
+  } catch { return null; }
 }
+
+function guardarFiltros(f: Filtros): void {
+  try { sessionStorage.setItem(CLAVE_FILTROS, JSON.stringify(f)); } catch { /* no se recuerda */ }
+}
+
+function descargar(blob: Blob, archivo: string): void {
+  const url = URL.createObjectURL(blob);
+  Object.assign(document.createElement('a'), { href: url, download: archivo }).click();
+  setTimeout(() => URL.revokeObjectURL(url), 1_000);
+}
+
+/** «attachment; filename=a.csv; filename*=UTF-8''a.csv» → «a.csv». */
+function nombreDe(cabecera: string | null): string | null {
+  const m = /filename\*=UTF-8''([^;]+)/i.exec(cabecera ?? '') ?? /filename="?([^";]+)"?/i.exec(cabecera ?? '');
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
+/** Las mismas columnas que el CSV del backend. */
+function csvSimulado(filas: FilaDatos[]): string {
+  const hora = (t: number | null) => t === null ? '' : new Date(t).toTimeString().slice(0, 5);
+  const lineas = [
+    ['Código', 'Fecha', 'Entrega', 'Fin', 'Estado', 'Cierre', 'Espera (min)', 'Consulta (min)', 'Total (min)'],
+    ...filas.map(f => [f.codigo, f.fecha, hora(f.inicio), hora(f.fin), f.estado, f.motivo ?? '', String(f.esperaMin), f.consultaMin?.toString() ?? '', String(f.totalMin)]),
+  ];
+  return '﻿' + lineas.map(l => l.join(',')).join('\r\n') + '\r\n';
+}
+

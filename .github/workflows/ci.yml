@@ -60,6 +60,23 @@ jobs:
       - name: Clave JWT de prueba
         run: echo "Jwt__Clave=$(openssl rand -base64 48)" >> "$GITHUB_ENV"
 
+      # Mosquitto con la MISMA configuración del repositorio (ADR-24), después del checkout porque monta
+      # mosquitto.conf e iniciar.sh. La clave del administrador es aleatoria y solo vive en esta corrida.
+      - name: Broker MQTT de prueba
+        run: |
+          CLAVE=$(openssl rand -hex 24)
+          echo "::add-mask::$CLAVE"
+          echo "Mqtt__ClaveAdmin=$CLAVE" >> "$GITHUB_ENV"
+          docker run -d --name flowtwin-mosquitto -p 1883:1883 -e MQTT_ADMIN_CLAVE="$CLAVE" \
+            -v "$PWD/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro" \
+            -v "$PWD/mosquitto/iniciar.sh:/iniciar.sh:ro" \
+            --entrypoint /bin/sh eclipse-mosquitto:2.0.20 /iniciar.sh
+          for i in $(seq 1 30); do
+            docker exec flowtwin-mosquitto mosquitto_pub -h localhost -t salud -m x 2>&1 | grep -qi 'not authori' && exit 0
+            sleep 1
+          done
+          docker logs flowtwin-mosquitto; exit 1
+
       - name: Restaurar
         run: dotnet restore
 

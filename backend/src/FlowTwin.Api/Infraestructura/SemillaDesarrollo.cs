@@ -22,7 +22,7 @@ public static class SemillaDesarrollo
     public const string ClaveDemo = "demo123";
 
     /// <summary>Clave de desarrollo de un nodo: «nk_dev_N-01». Nunca se usa fuera de desarrollo.</summary>
-    public static string ClaveNodoDemo(string codigo) => $"{ClaveNodo.Prefijo}dev_{codigo}";
+    public static string ClaveNodoDemo(string codigo) => ClaveNodo.Demo(codigo);
 
     public static async Task SembrarAsync(IServiceProvider servicios, CancellationToken ct = default)
     {

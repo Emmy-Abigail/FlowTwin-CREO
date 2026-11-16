@@ -7,6 +7,7 @@ using FlowTwin.Gemelo;
 using FlowTwin.Identidad;
 using FlowTwin.Identidad.Application;
 using FlowTwin.Identidad.Endpoints;
+using FlowTwin.Mensajeria;
 using FlowTwin.Monitoreo;
 using FlowTwin.Reportes;
 using FlowTwin.Persistence;
@@ -69,6 +70,7 @@ builder.Services.AddModuloAtenciones(builder.Configuration);
 builder.Services.AddModuloAuditoria();
 builder.Services.AddModuloMonitoreo();
 builder.Services.AddModuloReportes();
+builder.Services.AddModuloMensajeria(builder.Configuration);
 
 // ---- Autenticación JWT y políticas por rol (sección Seguridad)
 var jwt = builder.Configuration.GetSection("Jwt").Get<OpcionesJwt>() ?? new OpcionesJwt();
@@ -105,12 +107,10 @@ builder.Services.AddAuthorizationBuilder()
 
 // ---- Límite de peticiones en /auth: frena a quien intenta adivinar contraseñas
 var porMinuto = builder.Configuration.GetValue("LimitePeticiones:AuthPorMinuto", 20);
-var ingestaPorMinuto = builder.Configuration.GetValue("LimitePeticiones:IngestaPorMinuto", 600);
 builder.Services.AddRateLimiter(o =>
 {
     o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    // Retry-After (estándar HTTP) le dice al cliente cuántos segundos esperar: el ESP32 lo usa
-    // en vez de adivinar (docs/contrato-integracion-nodos.md)
+    // Retry-After (estándar HTTP) le dice al cliente cuántos segundos esperar en vez de adivinar
     o.OnRejected = (contexto, _) =>
     {
         var segundos = contexto.Lease.TryGetMetadata(MetadataName.RetryAfter, out var espera) ? (int)Math.Ceiling(espera.TotalSeconds) : 60;
@@ -120,12 +120,7 @@ builder.Services.AddRateLimiter(o =>
     o.AddPolicy("auth", http => RateLimitPartition.GetFixedWindowLimiter(
         http.Connection.RemoteIpAddress?.ToString() ?? "desconocida",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = porMinuto, Window = TimeSpan.FromMinutes(1) }));
-    // Ingesta, por IP (en la clínica cada ESP32 tiene la suya). No por la clave de la cabecera: quien
-    // inventa una clave distinta en cada petición tendría un límite nuevo cada vez. Un nodo normal hace
-    // ~32 peticiones/min; el margen cubre el reenvío de 10 minutos de lotes tras un corte de Wi-Fi.
-    o.AddPolicy("ingesta", http => RateLimitPartition.GetFixedWindowLimiter(
-        http.Connection.RemoteIpAddress?.ToString() ?? "desconocida",
-        _ => new FixedWindowRateLimiterOptions { PermitLimit = ingestaPorMinuto, Window = TimeSpan.FromMinutes(1) }));
+    // Los nodos ya no usan HTTP: su límite por nodo está en la mensajería MQTT (ADR-24)
 });
 
 var app = builder.Build();

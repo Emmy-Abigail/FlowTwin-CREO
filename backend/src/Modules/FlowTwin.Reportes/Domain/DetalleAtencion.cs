@@ -34,16 +34,28 @@ public static class CalculoDetalle
                 null, null, null, estadias);
 
         bool esServicio(int zonaId) => porId.GetValueOrDefault(zonaId)?.Tipo == ReglaTiempos.Servicio;
+        var t = Tiempos(a, esServicio, ahora);
+        return new(a.Id, a.Codigo, a.Fecha, sede, tarjeta, a.InicioEn, a.FinEn, t.Estado, a.Motivo,
+            t.EsperaMin, t.ConsultaMin, t.TotalMin, estadias);
+    }
+
+    /// <summary>
+    /// Estado y minutos de una atención no anulada (RN-06). Lo usan el detalle (P6) y el historial (P5): la
+    /// fila de la tabla y su detalle siempre muestran los mismos números. Abierta: todo corre hasta «ahora».
+    /// </summary>
+    public static TiemposFila Tiempos(AtencionDetalleInfo a, Func<int, bool> esServicio, DateTime ahora)
+    {
         var hasta = a.FinEn ?? ahora;
         var t = ReglaTiempos.Calcular(a.Estadias, a.InicioEn, hasta, esServicio);
         var estado = a.FinEn is not null
             ? EstadoAtencion.Finalizada
             : ReglaTiempos.EstadoAbierta(a.Estadias.LastOrDefault(e => e.SalidaEn is null), t.PrimeraConsulta, esServicio);
-
-        return new(a.Id, a.Codigo, a.Fecha, sede, tarjeta, a.InicioEn, a.FinEn, estado, a.Motivo,
+        return new TiemposFila(estado,
             EsperaMin: ReglaTiempos.Minutos(t.Espera),
             ConsultaMin: t.PrimeraConsulta is null ? null : ReglaTiempos.Minutos(t.Consulta),
-            TotalMin: ReglaTiempos.Minutos(hasta - a.InicioEn),
-            estadias);
+            TotalMin: ReglaTiempos.Minutos(hasta - a.InicioEn));
     }
 }
+
+/// <summary>Estado y minutos de una atención. ConsultaMin nula: nunca entró a una zona Servicio.</summary>
+public sealed record TiemposFila(string Estado, int EsperaMin, int? ConsultaMin, int TotalMin);

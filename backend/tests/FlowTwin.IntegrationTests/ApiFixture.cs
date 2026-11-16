@@ -17,6 +17,8 @@ namespace FlowTwin.IntegrationTests;
 /// </summary>
 public sealed class ApiFixture : IAsyncLifetime
 {
+    public const string PrefijoMqtt = "flowtwin-pruebas";
+
     public WebApplicationFactory<Program> Fabrica { get; private set; } = null!;
 
     public async Task InitializeAsync()
@@ -35,7 +37,9 @@ public sealed class ApiFixture : IAsyncLifetime
         Environment.SetEnvironmentVariable("BaseDatos__MigrarAlIniciar", "true");
         Environment.SetEnvironmentVariable("BaseDatos__SembrarDemo", "true");
         Environment.SetEnvironmentVariable("LimitePeticiones__AuthPorMinuto", "1000");
-        Environment.SetEnvironmentVariable("LimitePeticiones__IngestaPorMinuto", "10000");
+        // Broker MQTT de desarrollo (docker-compose up -d mosquitto), con un prefijo propio: las pruebas
+        // solo crean y borran SUS cuentas y temas, nunca los de la API de trabajo o del simulador
+        Environment.SetEnvironmentVariable("Mqtt__Prefijo", PrefijoMqtt);
         // El motor no corre solo: las pruebas lo llaman a mano (ProcesarAsync) para controlar el tiempo
         Environment.SetEnvironmentVariable("Presencia__MotorActivo", "false");
         // Las pruebas verifican la regla F-02 encendida (en appsettings está apagada por ahora)

@@ -11,7 +11,7 @@ namespace FlowTwin.ArchitectureTests;
 public class ReglasDeDependenciaTests
 {
     private static readonly string[] Modulos =
-        ["Identidad", "Gemelo", "Dispositivos", "Atenciones", "Monitoreo", "Reportes", "Auditoria"];
+        ["Identidad", "Gemelo", "Dispositivos", "Atenciones", "Monitoreo", "Reportes", "Auditoria", "Mensajeria"];
 
     private static Assembly Ensamblado(string modulo) => Assembly.Load($"FlowTwin.{modulo}");
 

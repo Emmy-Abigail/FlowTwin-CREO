@@ -42,9 +42,8 @@ public class EstadoPisoTests(ApiFixture api)
     public async Task Un_paciente_en_Modulo_2_con_su_nodo_en_linea_se_ve_en_el_estado()
     {
         // N-03 (Módulo 2) envía un latido: queda En línea
-        var nodo = api.Fabrica.CreateClient();
-        nodo.DefaultRequestHeaders.Add("X-Node-Key", SemillaDesarrollo.ClaveNodoDemo("N-03"));
-        await nodo.PostAsJsonAsync("/api/v1/ingesta/latidos", new { mac = "02:00:00:00:00:03" });
+        await using (var nodo = await NodoMqtt.ConectarCuandoExistaAsync("02:00:00:00:00:03", SemillaDesarrollo.ClaveNodoDemo("N-03")))
+            Assert.Equal("GUARDADO", (await nodo.EnviarAsync("latidos", new { })).GetProperty("estado").GetString());
 
         // Se entrega una tarjeta y el motor lo ubicó en Módulo 2 hace 3 minutos
         var operador = await api.ClienteDeAsync("operador@creo.pe");
