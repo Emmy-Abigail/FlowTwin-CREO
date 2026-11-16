@@ -45,7 +45,7 @@ describe('ShellComponent', () => {
         },
         { provide: ModoDatosService, useValue: { cargar: vi.fn(), puedeSimular, simulacion, activar: vi.fn(), salir: vi.fn() } },
         { provide: PisoActualService, useValue: { cargar: vi.fn() } },
-        { provide: AlertasService, useValue: { disponible: alertasDisponibles, lista: alertas, pulso, silencio: signal(false), ahora: signal(0) } },
+        { provide: AlertasService, useValue: { disponible: alertasDisponibles, lista: alertas, pendientes: alertas, pulso, silencio: signal(false), ahora: signal(0) } },
       ],
     }).compileComponents();
   });
