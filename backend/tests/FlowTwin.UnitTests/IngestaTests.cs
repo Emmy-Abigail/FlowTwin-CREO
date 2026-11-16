@@ -74,7 +74,7 @@ public class IngestaTests
     {
         var validador = new LoteLecturasValidador(Options.Create(new OpcionesIngesta()));
 
-        var r = validador.Validate(new LoteLecturasRequest("02:00:00:00:00:01", 1, [new("uuid", rssi, edadMs)]));
+        var r = validador.Validate(new LoteLecturasRequest(1, [new("uuid", rssi, edadMs)]));
 
         Assert.False(r.IsValid);
     }
@@ -85,7 +85,7 @@ public class IngestaTests
         var validador = new LoteLecturasValidador(Options.Create(new OpcionesIngesta { MaxLecturasPorLote = 2 }));
         var lecturas = Enumerable.Range(0, 3).Select(i => new LecturaRequest($"uuid-{i}", -60, 100)).ToList();
 
-        Assert.False(validador.Validate(new LoteLecturasRequest("02:00:00:00:00:01", 1, lecturas)).IsValid);
+        Assert.False(validador.Validate(new LoteLecturasRequest(1, lecturas)).IsValid);
     }
 
     [Fact]
@@ -93,6 +93,6 @@ public class IngestaTests
     {
         var validador = new LoteLecturasValidador(Options.Create(new OpcionesIngesta()));
 
-        Assert.True(validador.Validate(new LoteLecturasRequest("02:00:00:00:00:01", 1, [])).IsValid);
+        Assert.True(validador.Validate(new LoteLecturasRequest(1, [])).IsValid);
     }
 }

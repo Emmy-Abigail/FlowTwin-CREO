@@ -1,8 +1,8 @@
 using FlowTwin.Dispositivos.Application;
 using FlowTwin.Dispositivos.Contracts;
 using FlowTwin.Gemelo.Contracts;
+using FlowTwin.Mensajeria.Contracts;
 using FluentValidation;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using FlowTwin.SharedKernel;
 using Microsoft.AspNetCore.Builder;
@@ -19,7 +19,9 @@ public static class ModuloDispositivos
         services.Configure<OpcionesNodos>(config.GetSection("Presencia"));
         services.AddValidatorsFromAssemblyContaining<LatidoValidador>(ServiceLifetime.Singleton);
         services.AddScoped<IngestaNodosServicio>();
-        services.AddScoped<IAutenticacionNodos>(sp => sp.GetRequiredService<IngestaNodosServicio>());
+        services.AddScoped<INodosIngesta>(sp => sp.GetRequiredService<IngestaNodosServicio>());
+        services.AddScoped<IManejadorNodo, ManejadorLatidos>();
+        services.AddHostedService<SincronizacionCuentasBroker>();
         services.AddHostedService<VigilanteLatidos>();
         services.AddScoped<IPresenciaDispositivos, PresenciaDispositivos>();
         services.AddScoped<TarjetasServicio>();
@@ -88,15 +90,5 @@ public static class ModuloDispositivos
                 Results.Ok(await s.DarDeBajaAsync(id, ct)))
             .RequireAuthorization(Politicas.SoloAdmin)
             .WithSummary("Retira el nodo e invalida su clave");
-
-        // Ingesta: la llaman los ESP32, no personas. No usa JWT: se autentica con X-Node-Key (sección Seguridad → Nodos)
-        app.MapPost("/api/v1/ingesta/latidos", async (
-                [FromHeader(Name = "X-Node-Key")] string? clave, LatidoRequest req, IngestaNodosServicio s, CancellationToken ct) =>
-            {
-                await s.RegistrarLatidoAsync(clave, req, ct);
-                return Results.Accepted();
-            })
-            .WithTags("Ingesta").AllowAnonymous().RequireRateLimiting("ingesta")
-            .WithSummary("Latido del nodo cada 30 s (F-15)");
     }
 }

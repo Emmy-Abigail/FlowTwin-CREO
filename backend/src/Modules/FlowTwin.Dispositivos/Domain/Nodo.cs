@@ -113,6 +113,12 @@ public static class ClaveNodo
         Prefijo + Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 
     public static byte[] Hash(string clave) => SHA256.HashData(Encoding.UTF8.GetBytes(clave));
+
+    /// <summary>
+    /// Clave de los nodos de demostración de la semilla («nk_dev_N-01»). Solo existe con BaseDatos:SembrarDemo;
+    /// en la clínica cada nodo tiene una clave aleatoria.
+    /// </summary>
+    public static string Demo(string codigo) => $"{Prefijo}dev_{codigo}";
 }
 
 /// <summary>dis.EventoNodo: historial de estados del nodo. Inmutable; FechaRegistro dice cuándo.</summary>

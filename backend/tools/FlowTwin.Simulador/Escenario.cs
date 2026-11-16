@@ -12,6 +12,20 @@ public sealed record Rango(double Min, double Max)
 public sealed record NodoSimulado(string Codigo, string Mac, string Clave);
 
 /// <summary>
+/// El broker MQTT y el prefijo de temas y cuentas (contrato v2.0). El prefijo separa entornos que comparten
+/// broker: el simulador usa «flowtwin-sim», el de la API del perfil «simulador».
+/// </summary>
+public sealed record ConexionMqtt(string Servidor, int Puerto, string Prefijo)
+{
+    /// <summary>El prefijo de la API de trabajo: el simulador no publica ahí salvo que se pida a propósito.</summary>
+    public const string PrefijoDeTrabajo = "flowtwin";
+
+    private static string Segmento(string mac) => mac.Replace(":", "").ToLowerInvariant();
+    public string Usuario(string mac) => $"{Prefijo}-{Segmento(mac)}";
+    public string Raiz(string mac) => $"{Prefijo}/v1/nodos/{Segmento(mac)}";
+}
+
+/// <summary>
 /// Escenario de simulación, leído de escenarios/*.json. Los tiempos están en minutos para que una demo
 /// rápida sea solo otro archivo, sin tocar código.
 /// </summary>
@@ -32,6 +46,7 @@ public sealed record Escenario(
     int MaxPacientes,
     double RuidoDb,
     int? Semilla,
+    ConexionMqtt Mqtt,
     List<NodoSimulado> Nodos)
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { ReadCommentHandling = JsonCommentHandling.Skip };
@@ -44,7 +59,8 @@ public sealed record Escenario(
     public const int PuertoApiDeTrabajo = 5080;
 
     public bool ApuntaALaApiDeTrabajo =>
-        Uri.TryCreate(Api, UriKind.Absolute, out var u) && u.IsLoopback && u.Port == PuertoApiDeTrabajo;
+        (Uri.TryCreate(Api, UriKind.Absolute, out var u) && u.IsLoopback && u.Port == PuertoApiDeTrabajo)
+        || Mqtt.Prefijo == ConexionMqtt.PrefijoDeTrabajo;
 
     public static Escenario Leer(string ruta) =>
         JsonSerializer.Deserialize<Escenario>(File.ReadAllText(ruta), Json)

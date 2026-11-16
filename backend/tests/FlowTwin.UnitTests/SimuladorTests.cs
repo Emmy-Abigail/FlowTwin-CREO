@@ -38,9 +38,9 @@ public class SimuladorTests
         Assert.Equal(EmisorBle.Identificador(major: 1, minor: 7), escenario.UuidBle(7));
     }
 
-    private static Escenario Con(string api) => new(
+    private static Escenario Con(string api, string prefijoMqtt = "flowtwin-sim") => new(
         api, "operador@creo.pe", "demo123", 1, "uuid", 1, new(1, 2), new(1, 2), new(1, 2), new(1, 2),
-        1, 3, 7, 10, 0, 1, []);
+        1, 3, 7, 10, 0, 1, new ConexionMqtt("localhost", 1883, prefijoMqtt), []);
 
     [Theory]
     [InlineData("http://localhost:5080", true)]
@@ -49,6 +49,21 @@ public class SimuladorTests
     [InlineData("http://servidor-demo:5080", false)]
     public void Reconoce_la_API_de_la_base_de_trabajo(string api, bool esLaDeTrabajo) =>
         Assert.Equal(esLaDeTrabajo, Con(api).ApuntaALaApiDeTrabajo);
+
+    [Fact]
+    public void Los_temas_MQTT_de_trabajo_tambien_cuentan_como_base_de_trabajo() =>
+        Assert.True(Con("http://localhost:5090", prefijoMqtt: "flowtwin").ApuntaALaApiDeTrabajo);
+
+    [Fact]
+    public void El_simulador_arma_el_usuario_y_los_temas_igual_que_el_backend()
+    {
+        // Repetidos a propósito en el simulador (caja negra): esta prueba vigila que coincidan con el backend
+        var simulador = new ConexionMqtt("localhost", 1883, "flowtwin-sim");
+        var backend = new FlowTwin.Mensajeria.Application.TemasMqtt("flowtwin-sim").CuentaDe("A4:CF:12:9B:3E:03");
+
+        Assert.Equal(backend.Usuario, simulador.Usuario("A4:CF:12:9B:3E:03"));
+        Assert.Equal(backend.TemaLecturas, simulador.Raiz("A4:CF:12:9B:3E:03") + "/lecturas");
+    }
 
     [Fact]
     public void Los_escenarios_incluidos_apuntan_a_la_API_del_simulador()

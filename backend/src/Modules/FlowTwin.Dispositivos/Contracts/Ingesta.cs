@@ -1,19 +1,19 @@
 namespace FlowTwin.Dispositivos.Contracts;
 
-/// <summary>El nodo que envió la petición, ya verificado.</summary>
+/// <summary>
+/// Un nodo activo (no dado de baja) que envía datos. Su identidad ya la comprobó el broker MQTT: solo la
+/// cuenta de ese nodo puede publicar en el tema de su MAC (ADR-24).
+/// </summary>
 public sealed record NodoAutenticado(int Id, string Codigo, int ZonaId, short AjusteRssiDb);
 
-/// <summary>
-/// Autenticación de los ESP32 para la ingesta (sección Seguridad → Nodos). La usa Atenciones al recibir
-/// lecturas; los nodos son de Dispositivos, así que Atenciones no lee dis.Nodo directamente.
-/// </summary>
-public interface IAutenticacionNodos
+/// <summary>Lo que la ingesta de lecturas (Atenciones) necesita saber del nodo que publicó.</summary>
+public interface INodosIngesta
 {
     /// <summary>
-    /// Verifica que la clave (cabecera X-Node-Key) sea la de ese nodo y que no esté de baja.
-    /// Si algo no coincide lanza NoAutenticadoException (401) sin decir qué falló.
+    /// El nodo con esa MAC si está registrado y no está de baja; null si no. Es una segunda barrera:
+    /// al dar de baja un nodo también se borra su cuenta del broker, pero no se confía solo en eso.
     /// </summary>
-    Task<NodoAutenticado> AutenticarAsync(string? clave, string? mac, CancellationToken ct = default);
+    Task<NodoAutenticado?> ActivoPorMacAsync(string mac, CancellationToken ct = default);
 }
 
 /// <summary>
