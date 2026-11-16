@@ -53,6 +53,20 @@ public sealed class AuditoriaConfig : IEntityTypeConfiguration<RegistroAuditoria
     }
 }
 
+/// <summary>aud.Sello: un sello de integridad por fila de auditoría (cadena de HMAC). Solo inserciones: sellar no edita la bitácora.</summary>
+public sealed class SelloConfig : IEntityTypeConfiguration<RegistroSello>
+{
+    public void Configure(EntityTypeBuilder<RegistroSello> b)
+    {
+        b.ToTable("Sello", "aud", t => t.HasCheckConstraint("CK_Sello_Hash", "DATALENGTH([Hash]) = 32"));
+        b.HasKey(s => s.AuditoriaId);
+        b.Property(s => s.AuditoriaId).ValueGeneratedNever();
+        b.Property(s => s.Hash).HasColumnType("varbinary(32)").IsRequired();
+        // Restrict: borrar una fila sellada de la bitácora exige borrar antes su sello, y eso rompe la cadena
+        b.HasOne<RegistroAuditoria>().WithOne().HasForeignKey<RegistroSello>(s => s.AuditoriaId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 /// <summary>
 /// ope.LecturaBle: la tabla de más volumen (~1 millón de filas por jornada, ver PurgaLecturasServicio).
 /// Índice por LeidaEn para el motor y la purga; por (UuidBle, LeidaEn) para seguir un emisor y detectar

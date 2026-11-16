@@ -1,0 +1,111 @@
+<header class="cabecera">
+  <h1>Auditoría</h1>
+  <div class="acciones">
+    <button type="button" class="btn btn-o" [disabled]="trabajando() || !!problema()" (click)="verificar()"><app-icono nombre="escudo" [tamano]="16" />Verificar integridad</button>
+    <button type="button" class="btn btn-o" [disabled]="trabajando() || !!problema()" (click)="exportar()"><app-icono nombre="dl" [tamano]="16" />Exportar CSV</button>
+  </div>
+</header>
+
+<section class="card panel">
+  <div class="barra">
+    <select class="inp corto" aria-label="Período" (change)="periodo.set($any($event.target).value)">
+      <option value="hoy" [selected]="periodo() === 'hoy'">Hoy</option>
+      <option value="7" [selected]="periodo() === '7'">Últimos 7 días</option>
+      <option value="30" [selected]="periodo() === '30'">Últimos 30 días</option>
+      <option value="elegir" [selected]="periodo() === 'elegir'">Elegir fechas</option>
+    </select>
+    @if (periodo() === 'elegir') {
+      <input class="inp fecha" type="date" aria-label="Desde" [max]="hoy()" [value]="elegido().desde" (change)="elegirFecha('desde', $any($event.target).value)">
+      <input class="inp fecha" type="date" aria-label="Hasta" [max]="hoy()" [value]="elegido().hasta" (change)="elegirFecha('hasta', $any($event.target).value)">
+    }
+    <select class="inp corto" aria-label="Usuario" (change)="usuarioId.set($any($event.target).value ? +$any($event.target).value : null)">
+      <option value="" [selected]="usuarioId() === null">Todos los usuarios</option>
+      <option value="1" [selected]="usuarioId() === 1">Sistema</option>
+      @for (u of usuarios(); track u.id) { <option [value]="u.id" [selected]="usuarioId() === u.id">{{ u.nombre }}</option> }
+    </select>
+    <div class="buscar">
+      <app-icono nombre="search" [tamano]="16" />
+      <input class="inp" type="search" maxlength="60" aria-label="Buscar en la bitácora" placeholder="Buscar por nombre o código"
+             (input)="escribir($any($event.target).value)">
+    </div>
+  </div>
+
+  <div class="filtros" role="group" aria-label="Categoría">
+    <button type="button" [class.on]="categoria() === null" [attr.aria-pressed]="categoria() === null" (click)="categoria.set(null)">Todo<b>{{ totalTodo() }}</b></button>
+    @for (c of categorias; track c.id) {
+      <button type="button" [class.on]="categoria() === c.id" [attr.aria-pressed]="categoria() === c.id" (click)="categoria.set(c.id)">
+        {{ c.texto }}<b>{{ datos()?.conteos?.[c.id] ?? 0 }}</b>
+      </button>
+    }
+  </div>
+
+  @if (problema(); as p) {
+    <p class="vacio">{{ p }}</p>
+  } @else if (error(); as e) {
+    <app-estado-vacio titulo="No se pudo cargar" [texto]="e" />
+  } @else if (datos(); as d) {
+    <div class="lista">
+      <table class="tbl">
+        <thead><tr><th>Cuándo</th><th>Quién</th><th>Qué hizo</th><th>Sobre</th></tr></thead>
+        <tbody>
+          @for (f of d.filas; track f.id) {
+            <tr tabindex="0" [attr.aria-label]="f.accionTexto + ' · ' + textoEntidad(f.entidad) + ', ver detalle'" (click)="abrir(f)" (keydown.enter)="abrir(f)">
+              <td class="hora">{{ cuandoTexto(f) }}</td>
+              <td class="quien">{{ f.usuario }}</td>
+              <td [class.alerta]="f.accion === 'INICIO_FALLIDO' || f.accion === 'CUENTA_BLOQUEADA'">{{ f.accionTexto }}</td>
+              <td><b class="ent">{{ textoEntidad(f.entidad) }}</b>@if (f.objeto) {<small>{{ f.objeto }}</small>}</td>
+            </tr>
+          } @empty {
+            <tr><td colspan="4"><p class="vacio">Sin registros</p></td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (d.total > d.tamano) {
+      <div class="pie">
+        <span>Página {{ d.pagina }} de {{ paginas() }}</span>
+        <span class="paginas">
+          <button type="button" class="btn btn-o btn-sm" [disabled]="d.pagina <= 1" (click)="pagina.set(d.pagina - 1)">Anterior</button>
+          <button type="button" class="btn btn-o btn-sm" [disabled]="d.pagina >= paginas()" (click)="pagina.set(d.pagina + 1)">Siguiente</button>
+        </span>
+      </div>
+    }
+  } @else {
+    <p class="vacio"><span class="spin"></span> Cargando…</p>
+  }
+</section>
+
+<!-- Detalle: antes y después -->
+@if (detalle(); as d) {
+  <app-modal variante="panel" [titulo]="d.fila.accionTexto + (d.fila.objeto ? ' · ' + d.fila.objeto : '')" [antetitulo]="textoEntidad(d.fila.entidad)" (cerrar)="detalle.set(null)">
+    <dl class="meta">
+      <dt>Cuándo</dt><dd>{{ fechaCompleta(d.fila.cuando) }}</dd>
+      <dt>Quién</dt><dd>{{ d.fila.usuario }}</dd>
+      <dt>Desde</dt><dd>{{ d.ip ?? '—' }}</dd>
+      @if (d.traceId) { <dt>Seguimiento</dt><dd><code>{{ d.traceId }}</code></dd> }
+    </dl>
+    @if (cambiosDetalle().length) {
+      <table class="dif">
+        <thead><tr><th>Campo</th><th>Antes</th><th>Después</th></tr></thead>
+        <tbody>
+          @for (c of cambiosDetalle(); track c.campo) {
+            <tr [class.igual]="!c.cambio"><td>{{ c.campo }}</td><td class="a">{{ c.antes }}</td><td class="d">{{ c.despues }}</td></tr>
+          }
+        </tbody>
+      </table>
+    } @else {
+      <p class="vacio">Sin datos adicionales</p>
+    }
+    <div pie><button type="button" class="btn btn-p" (click)="detalle.set(null)">Cerrar</button></div>
+  </app-modal>
+}
+
+<!-- Resultado de la verificación -->
+@if (textoIntegridad(); as t) {
+  <app-modal [titulo]="t.titulo" (cerrar)="integridad.set(null)">
+    <p class="resultado" [class]="'resultado ' + t.tono" role="status">
+      <app-icono [nombre]="t.tono === 'ok' ? 'check' : 'alert'" [tamano]="20" />{{ t.texto }}
+    </p>
+    <div pie><button type="button" class="btn btn-p" (click)="integridad.set(null)">Listo</button></div>
+  </app-modal>
+}

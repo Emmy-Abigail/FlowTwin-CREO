@@ -367,6 +367,34 @@ namespace FlowTwin.Persistence.Migraciones
                         });
                 });
 
+            modelBuilder.Entity("FlowTwin.Auditoria.Domain.RegistroSello", b =>
+                {
+                    b.Property<long>("AuditoriaId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<byte[]>("Hash")
+                        .IsRequired()
+                        .HasColumnType("varbinary(32)");
+
+                    b.Property<int>("UsuarioRegistroId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
+                    b.HasKey("AuditoriaId");
+
+                    b.ToTable("Sello", "aud", t =>
+                        {
+                            t.HasCheckConstraint("CK_Sello_Hash", "DATALENGTH([Hash]) = 32");
+                        });
+                });
+
             modelBuilder.Entity("FlowTwin.Dispositivos.Domain.EventoNodo", b =>
                 {
                     b.Property<long>("Id")
@@ -2390,6 +2418,24 @@ namespace FlowTwin.Persistence.Migraciones
                             FechaRegistro = new DateTime(2026, 10, 27, 0, 0, 0, 0, DateTimeKind.Utc),
                             Nombre = "Regeneró la clave",
                             UsuarioRegistroId = 1
+                        },
+                        new
+                        {
+                            Id = 21,
+                            Codigo = "INICIO_FALLIDO",
+                            EstadoRegistro = true,
+                            FechaRegistro = new DateTime(2026, 10, 27, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Nombre = "Intento de ingreso fallido",
+                            UsuarioRegistroId = 1
+                        },
+                        new
+                        {
+                            Id = 22,
+                            Codigo = "CUENTA_BLOQUEADA",
+                            EstadoRegistro = true,
+                            FechaRegistro = new DateTime(2026, 10, 27, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Nombre = "Cuenta bloqueada",
+                            UsuarioRegistroId = 1
                         });
                 });
 
@@ -2477,6 +2523,15 @@ namespace FlowTwin.Persistence.Migraciones
                     b.HasOne("FlowTwin.SharedKernel.Catalogo<FlowTwin.SharedKernel.AccionAuditoria>", null)
                         .WithMany()
                         .HasForeignKey("AccionAuditoriaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("FlowTwin.Auditoria.Domain.RegistroSello", b =>
+                {
+                    b.HasOne("FlowTwin.Auditoria.Domain.RegistroAuditoria", null)
+                        .WithOne()
+                        .HasForeignKey("FlowTwin.Auditoria.Domain.RegistroSello", "AuditoriaId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

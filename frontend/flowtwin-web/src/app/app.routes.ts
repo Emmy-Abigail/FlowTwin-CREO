@@ -62,8 +62,8 @@ export const routes: Routes = [
       {
         path: 'auditoria',
         canActivate: [rolGuard(PERMISOS.auditoria)],
-        data: { titulo: 'Auditoría', descripcion: 'Bitácora de solo lectura de todas las acciones (P11).' },
-        loadComponent: proximamente,
+        title: 'Auditoría · CREO FlowTwin',
+        loadComponent: () => import('./features/auditoria/auditoria.page').then(m => m.AuditoriaPage),
       },
       {
         path: 'configuracion',
