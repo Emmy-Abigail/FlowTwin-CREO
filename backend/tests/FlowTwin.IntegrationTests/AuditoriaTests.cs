@@ -81,6 +81,10 @@ public class AuditoriaTests(ApiFixture api)
         var conteos = pagina.GetProperty("conteos");
         foreach (var c in new[] { "ACCESOS", "USUARIOS", "CONFIGURACION", "DISPOSITIVOS", "OPERACION" }) Assert.True(conteos.TryGetProperty(c, out _));
         Assert.Equal("Prueba", detalle.GetProperty("antes").GetProperty("apellidos").GetString());
+        // El código técnico de una fila la encuentra (exacto): es lo que un técnico copia de los registros del servidor
+        var codigo = detalle.GetProperty("traceId").GetString()!;
+        var porCodigo = await Json(await admin.GetAsync($"/api/v1/auditoria?{Periodo}&buscar={codigo}"));
+        Assert.Equal(edicion.GetProperty("id").GetInt64(), Assert.Single(porCodigo.GetProperty("filas").EnumerateArray()).GetProperty("id").GetInt64());
         Assert.Equal("Editada", detalle.GetProperty("despues").GetProperty("apellidos").GetString());
     }
 

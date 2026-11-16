@@ -104,7 +104,9 @@ public sealed class AuditoriaConsultaServicio(
         if (f.Buscar is { Length: > 0 } texto)
         {
             var patron = $"%{EscaparLike(texto)}%";
-            consulta = consulta.Where(a => EF.Functions.Like(a.EntidadId!, patron, "\\")
+            // El código técnico (TraceId) identifica UNA petición: se busca exacto, para que un técnico encuentre
+            // ese registro a partir de lo que vio en los registros del servidor
+            consulta = consulta.Where(a => a.TraceId == texto || EF.Functions.Like(a.EntidadId!, patron, "\\")
                 || EF.Functions.Like(a.ValorDespues!, patron, "\\") || EF.Functions.Like(a.ValorAntes!, patron, "\\"));
         }
         return consulta;

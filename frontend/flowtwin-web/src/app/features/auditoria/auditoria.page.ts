@@ -45,6 +45,8 @@ export class AuditoriaPage {
   protected usuarioId = signal<number | null>(null);
   protected categoria = signal<string | null>(null);
   protected buscar = signal('');
+  /** Lo que se ve escrito en el buscador (la búsqueda se aplica 300 ms después de dejar de escribir). */
+  protected textoBuscar = signal('');
   protected pagina = linkedSignal({ source: () => [this.rango(), this.usuarioId(), this.categoria(), this.buscar()], computation: () => 1 });
 
   /** Los filtros tal como los recibe la API (sin la página). */
@@ -92,6 +94,7 @@ export class AuditoriaPage {
   }
 
   protected escribir(texto: string): void {
+    this.textoBuscar.set(texto);
     clearTimeout(this.temporizador);
     this.temporizador = setTimeout(() => this.buscar.set(texto.trim()), ESPERA_BUSQUEDA_MS);
   }
@@ -106,6 +109,19 @@ export class AuditoriaPage {
     } catch (e) {
       this.toast.mostrar(mensajeDe(problemaDe(e)), 'bad');
     }
+  }
+
+  /** Desde el detalle: todo lo que hizo esa persona ese día, en cualquier categoría. */
+  protected verDiaDe(f: FilaAuditoria): void {
+    const dia = isoFecha(Date.parse(f.cuando));
+    clearTimeout(this.temporizador);
+    this.usuarioId.set(f.usuarioId);
+    this.elegido.set({ desde: dia, hasta: dia });
+    this.periodo.set('elegir');
+    this.categoria.set(null);
+    this.buscar.set('');
+    this.textoBuscar.set('');
+    this.detalle.set(null);
   }
 
   protected async exportar(): Promise<void> {
