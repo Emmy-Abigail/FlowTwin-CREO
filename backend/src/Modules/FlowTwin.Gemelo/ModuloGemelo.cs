@@ -4,14 +4,18 @@ using FlowTwin.Gemelo.Contracts;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace FlowTwin.Gemelo;
 
 public static class ModuloGemelo
 {
-    public static IServiceCollection AddModuloGemelo(this IServiceCollection services)
+    public static IServiceCollection AddModuloGemelo(this IServiceCollection services, IConfiguration config)
     {
+        services.Configure<OpcionesMaquetas>(config.GetSection("Maquetas"));
+        services.AddSingleton<IAlmacenMaquetas, AlmacenMaquetasEnDisco>();
+        services.AddScoped<MaquetasServicio>();
         services.AddScoped<GemeloServicio>();
         services.AddScoped<ISedesConsultas>(sp => sp.GetRequiredService<GemeloServicio>());
         services.AddScoped<IZonasConsultas, ZonasConsultas>();
@@ -30,6 +34,14 @@ public static class ModuloGemelo
         var pisos = app.MapGroup("/api/v1/pisos").WithTags("Gemelo").RequireAuthorization();
         pisos.MapGet("/{id:int}/geometria", async (int id, GemeloServicio s, CancellationToken ct) => Results.Ok(await s.GeometriaAsync(id, ct)))
             .WithSummary("Geometría publicada del piso para las vistas 2D y 3D (F-11)");
+
+        // Maqueta 3D (ADR-28): desde la carpeta del servidor y con sesión, no desde los archivos públicos del frontend
+        pisos.MapGet("/{id:int}/maqueta", async (int id, MaquetasServicio s, CancellationToken ct) => Results.Ok(await s.InfoAsync(id, ct)))
+            .WithSummary("Si el piso tiene maqueta 3D y qué ambientes pinta cada zona");
+        pisos.MapGet("/{id:int}/maqueta/modelo.glb", (int id, MaquetasServicio s, CancellationToken ct) => Archivo(id, ArchivoMaqueta.Modelo, s, ct))
+            .WithSummary("El modelo 3D del piso (.glb)");
+        pisos.MapGet("/{id:int}/maqueta/ambientes.json", (int id, MaquetasServicio s, CancellationToken ct) => Archivo(id, ArchivoMaqueta.Ambientes, s, ct))
+            .WithSummary("Los ambientes del plano que contiene el modelo");
 
         // Configuración (ADR-27): solo el Administrador
         var config = app.MapGroup("/api/v1/configuracion").WithTags("Configuración").RequireAuthorization(Politicas.SoloAdmin);
@@ -56,5 +68,24 @@ public static class ModuloGemelo
         config.MapPut("/parametros", async (ParametrosRequest req, ConfiguracionServicio s, CancellationToken ct) =>
             Results.Ok(await s.GuardarParametrosAsync(req, ct)))
             .WithSummary("Alertas, cierre de jornada y semáforo de las salas de espera");
+    }
+
+    /// <summary>
+    /// Results.Stream con ETag y fecha: si el navegador ya tiene esa versión responde 304 sin reenviar el
+    /// archivo. «private»: puede guardarlo el navegador del usuario, no un proxy compartido (requiere sesión).
+    /// </summary>
+    private static async Task<IResult> Archivo(int id, ArchivoMaqueta archivo, MaquetasServicio s, CancellationToken ct)
+    {
+        var a = await s.ArchivoAsync(id, archivo, ct);
+        return new ConCache(Results.Stream(a.Contenido, a.TipoMime, lastModified: a.Modificado, entityTag: a.Etiqueta));
+    }
+
+    private sealed class ConCache(IResult interno) : IResult
+    {
+        public Task ExecuteAsync(HttpContext http)
+        {
+            http.Response.Headers.CacheControl = "private, no-cache";
+            return interno.ExecuteAsync(http);
+        }
     }
 }

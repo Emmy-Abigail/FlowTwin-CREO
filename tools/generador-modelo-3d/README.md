@@ -32,13 +32,34 @@ pip install -r requirements.txt
 python generar.py --pdf "../../PLANOS_COMPLETOS/A07_PISO 01.pdf" --salida salida
 ```
 
-Tarda unos 15 segundos. Después, copia el modelo y su JSON al frontend:
+Tarda unos 15 segundos. El mapa de ambientes sirve para revisar los rótulos:
 
 ```bash
-cp salida/clinica-piso1.glb             ../../frontend/flowtwin-web/public/models/
-cp salida/clinica-piso1-ambientes.json  ../../frontend/flowtwin-web/public/models/ambientes-piso1.json
-cp salida/clinica-piso1-mapa.png        ../../docs/mapa-ambientes-piso1.png
+cp salida/clinica-piso1-mapa.png ../../docs/mapa-ambientes-piso1.png
 ```
+
+## Instalar la maqueta de un piso (ADR-28)
+
+La API entrega la maqueta con sesión desde la carpeta `Maquetas:Ruta` del servidor (en desarrollo,
+`maquetas/` en la raíz del proyecto, que está en `.gitignore`). **Nunca en `public/` del frontend:** ahí
+la descarga cualquiera sin iniciar sesión. Una subcarpeta por piso, con el **id** del piso (el de
+Configuración):
+
+```
+maquetas/piso-1/
+  maqueta.glb       ← salida/clinica-piso1-final.glb (con el acabado de abajo)
+  ambientes.json    ← salida/clinica-piso1-ambientes.json
+  zonas.json        ← qué ambientes pinta cada zona del sistema (lo escribe el equipo técnico)
+```
+
+`zonas.json` enlaza cada zona (por su id) con los rótulos del plano, tal como están en `ambientes.json`:
+
+```json
+{ "zonas": { "3": ["Sala de esperas"], "7": ["Módulo 2"] } }
+```
+
+Una zona puede pintarse sobre varios ambientes (basta listar varios rótulos). Solo se rotulan en el 3D las zonas; el resto de ambientes se ve sin nombre. Si un rótulo no existe en la maqueta, la consola del navegador lo avisa. Para cambiar la maqueta basta con
+reemplazar los archivos: el navegador detecta la versión nueva (ETag) sin reiniciar nada.
 
 ## Acabado realista (materiales, texturas y sombras horneadas)
 
