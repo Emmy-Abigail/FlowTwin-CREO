@@ -28,12 +28,20 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ---- Logs técnicos con Serilog: consola y un archivo por día en logs/ (30 días)
-builder.Host.UseSerilog((ctx, log) => log
-    .ReadFrom.Configuration(ctx.Configuration)
-    .Enrich.FromLogContext()
-    .WriteTo.Console()
-    .WriteTo.File("logs/flowtwin-.log", rollingInterval: RollingInterval.Day, retainedFileCountLimit: 30));
+// ---- Plataformas como Render indican el puerto en la variable PORT: si existe, se escucha ahí, en todas las
+// interfaces (0.0.0.0). Sin PORT manda la configuración normal (ASPNETCORE_HTTP_PORTS, launchSettings).
+if (Environment.GetEnvironmentVariable("PORT") is { Length: > 0 } puerto && int.TryParse(puerto, out var numero))
+    builder.WebHost.UseUrls($"http://0.0.0.0:{numero}");
+
+// ---- Logs técnicos con Serilog: consola y, si Registro:Archivo no está vacío, un archivo por día (30 días).
+// En un contenedor se deja vacío: los logs van a la consola, que la plataforma guarda (el disco del contenedor se pierde)
+var archivoLogs = builder.Configuration["Registro:Archivo"] ?? "logs/flowtwin-.log";
+builder.Host.UseSerilog((ctx, log) =>
+{
+    log.ReadFrom.Configuration(ctx.Configuration).Enrich.FromLogContext().WriteTo.Console();
+    if (!string.IsNullOrWhiteSpace(archivoLogs))
+        log.WriteTo.File(archivoLogs, rollingInterval: RollingInterval.Day, retainedFileCountLimit: 30);
+});
 
 // ---- Servicios comunes
 builder.Services.AddHttpContextAccessor();
@@ -140,7 +148,8 @@ builder.Services.AddRateLimiter(o =>
 var app = builder.Build();
 if (!app.Environment.IsDevelopment()) Proteccion.ExigirSecretos(app.Configuration);
 
-// ---- Base de datos en desarrollo: aplica las migraciones y siembra los datos de demostración
+// ---- Base de datos: espera a que responda (Azure la pausa sin uso), aplica las migraciones y siembra la demo
+await EsperaBaseDatos.HastaQueRespondaAsync(app.Services, app.Configuration);
 if (app.Configuration.GetValue<bool>("BaseDatos:MigrarAlIniciar"))
 {
     using var scope = app.Services.CreateScope();
@@ -155,10 +164,13 @@ await AdminInicial.AsegurarAsync(app.Services);
 // El registro de peticiones va PRIMERO (el más externo): así anota el estado que de verdad recibe el
 // cliente. Si estuviera después del manejador de errores, vería la excepción antes de que se traduzca y
 // registraría «500» en errores que en realidad son 400 o 404 (alarmas falsas en producción).
+// La web (build de Angular) desde la misma API, solo si se configuró Web:Ruta (contenedor). Ver WebEstatica
+var carpetaWeb = WebEstatica.Carpeta(app.Configuration, app.Environment);
 app.UseSerilogRequestLogging();
-app.UseCabecerasSeguridad();          // también en las respuestas de error y de límite
+app.UseCabecerasSeguridad(carpetaWeb is not null);   // también en las respuestas de error y de límite
 if (!app.Environment.IsDevelopment()) app.UseHsts();   // el navegador solo vuelve a entrar por HTTPS
 app.UseCuerpoMaximo(proteccion.CuerpoMaximoBytes);
+if (carpetaWeb is not null) app.UseWebEstatica(carpetaWeb);
 app.UseExceptionHandler();
 app.UseStatusCodePages();             // cuerpo ProblemDetails para 401/403/413/429 sin cuerpo
 app.UseAuthentication();
@@ -194,6 +206,7 @@ app.MapDispositivos();
 app.MapAtenciones();
 app.MapMonitoreo();
 app.MapReportes();
+if (carpetaWeb is not null) app.MapWebEstatica(carpetaWeb);
 
 app.Run();
 

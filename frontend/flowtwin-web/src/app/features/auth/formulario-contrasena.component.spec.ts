@@ -44,7 +44,7 @@ describe('FormularioContrasenaComponent', () => {
   });
 
   it('no muestra errores mientras se escribe por primera vez, pero sí marca los requisitos cumplidos', async () => {
-    await escribir('nueva', 'abc');
+    await escribir('nueva', 'abcd');   // variada, pero aún corta
 
     expect(error('nueva')).toBeNull();
     expect(pagina().querySelectorAll('.requisitos li.ok').length).toBe(1);
@@ -54,7 +54,7 @@ describe('FormularioContrasenaComponent', () => {
     await escribir('nueva', 'clinica1');
     await salir('nueva');
 
-    expect(error('nueva')).toBe('Le falta: una letra mayúscula, un símbolo (# $ % & * ! ?).');
+    expect(error('nueva')).toBe('Debe tener al menos 12 caracteres. Puede ser una frase con espacios.');
   });
 
   it('pasar con Tab por un campo vacío no es un error', async () => {
