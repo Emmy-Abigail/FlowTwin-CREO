@@ -11,7 +11,7 @@ public enum MotivoCierreAtencion
     [Catalogo("ANULADA", "Anulada")] Anulada = 4,
 }
 
-/// <summary>Catálogo cat.MotivoPausa (las pausas de zona llegan en el Avance 3).</summary>
+/// <summary>Catálogo cat.MotivoPausa: por qué una zona está fuera de servicio (ADR-25).</summary>
 public enum MotivoPausa
 {
     [Catalogo("LIMPIEZA", "Limpieza")] Limpieza = 1,
@@ -67,6 +67,18 @@ public class Atencion : EntidadConActualizacion
             throw new ReglaNegocioException("RN04_DESHACER_VENCIDO",
                 "Ya pasaron los 30 segundos para deshacer esta entrega.");
         Cerrar(MotivoCierreAtencion.Anulada, ahora);
+    }
+
+    /// <summary>
+    /// Cierre sin devolución (el Operador lo decide ante la alerta «sin lecturas», o el cierre de jornada):
+    /// termina cuando se vio al paciente por última vez, no en la hora del cierre, para no inflar el
+    /// tiempo total. Si nunca se le detectó, termina en la entrega (no hay con qué estimarlo).
+    /// </summary>
+    public DateTime CerrarSinDevolucion(MotivoCierreAtencion motivo, DateTime? ultimaEstadiaSalida)
+    {
+        var fin = new[] { UltimaLecturaEn, ultimaEstadiaSalida, InicioEn }.Max()!.Value;
+        Cerrar(motivo, fin);
+        return fin;
     }
 
     public int TotalMinutos(DateTime ahora) => (int)Math.Round(((FinEn ?? ahora) - InicioEn).TotalMinutes);

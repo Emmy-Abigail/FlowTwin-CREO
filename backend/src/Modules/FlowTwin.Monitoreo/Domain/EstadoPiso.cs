@@ -15,7 +15,8 @@ public static class Nivel
     public const string Baja = "BAJA", Media = "MEDIA", Alta = "ALTA", Ninguno = "NINGUNO", SinDatos = "SIN_DATOS";
 }
 
-public sealed record ZonaEstado(int ZonaId, int Ocupacion, short? Aforo, string Nivel, bool Pausada);
+/// <summary>Pausada: fuera de servicio (ADR-25); MotivoPausa es el código del catálogo (LIMPIEZA…).</summary>
+public sealed record ZonaEstado(int ZonaId, int Ocupacion, short? Aforo, string Nivel, bool Pausada, string? MotivoPausa = null);
 
 /// <summary>
 /// ZonaActual nula: no se le detecta en ninguna zona del piso ahora (sin zona, o en otro piso).
@@ -44,8 +45,9 @@ public sealed record EstadoPiso(int PisoId, DateTime GeneradoEn, IReadOnlyList<Z
 public static class CalculoEstado
 {
     public static EstadoPiso Calcular(int pisoId, IReadOnlyList<ZonaSemaforo> zonas, IReadOnlyList<NodoZona> nodos,
-        IReadOnlyList<AtencionEnCurso> atenciones, DateTime ahora)
+        IReadOnlyList<AtencionEnCurso> atenciones, DateTime ahora, IReadOnlyList<PausaInfo>? pausas = null)
     {
+        var pausaDe = (pausas ?? []).Where(p => p.FinEn is null).ToDictionary(p => p.ZonaId);
         var tipoDe = zonas.ToDictionary(z => z.Id, z => z.Tipo);
         var zonasConDatos = nodos.Where(n => n.EnLinea).Select(n => n.ZonaId).ToHashSet();
 
@@ -56,7 +58,8 @@ public static class CalculoEstado
         var estadoZonas = zonas.Select(z =>
         {
             var personas = ocupacion.GetValueOrDefault(z.Id);
-            return new ZonaEstado(z.Id, personas, z.Aforo, NivelDe(z, personas, zonasConDatos.Contains(z.Id)), Pausada: false);
+            var pausa = pausaDe.GetValueOrDefault(z.Id);
+            return new ZonaEstado(z.Id, personas, z.Aforo, NivelDe(z, personas, zonasConDatos.Contains(z.Id)), pausa is not null, pausa?.Motivo);
         }).ToList();
 
         var esperas = porAtencion.Select(a => a.EsperaMin).ToList();
@@ -133,7 +136,7 @@ public static class Diferencias
 
         var zonasAntes = antes?.Zonas.ToDictionary(z => z.ZonaId) ?? [];
         foreach (var z in ahora.Zonas.Where(z => zonasAntes.GetValueOrDefault(z.ZonaId) != z))
-            mensajes.Add(new("OcupacionZonaCambiada", new { zonaId = z.ZonaId, ocupacion = z.Ocupacion, aforo = z.Aforo, nivel = z.Nivel, pausada = z.Pausada }));
+            mensajes.Add(new("OcupacionZonaCambiada", new { zonaId = z.ZonaId, ocupacion = z.Ocupacion, aforo = z.Aforo, nivel = z.Nivel, pausada = z.Pausada, motivoPausa = z.MotivoPausa }));
 
         var atencionesAntes = antes?.Atenciones.ToDictionary(a => a.Codigo) ?? [];
         foreach (var a in ahora.Atenciones)

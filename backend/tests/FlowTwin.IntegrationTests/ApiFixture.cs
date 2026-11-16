@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Hosting;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -42,6 +43,8 @@ public sealed class ApiFixture : IAsyncLifetime
         Environment.SetEnvironmentVariable("Mqtt__Prefijo", PrefijoMqtt);
         // El motor no corre solo: las pruebas lo llaman a mano (ProcesarAsync) para controlar el tiempo
         Environment.SetEnvironmentVariable("Presencia__MotorActivo", "false");
+        // Ni el cierre de jornada: si las pruebas se corren después de las 22:00 cerraría sus atenciones
+        Environment.SetEnvironmentVariable("Jornada__CierreActivo", "false");
         // Las pruebas verifican la regla F-02 encendida (en appsettings está apagada por ahora)
         Environment.SetEnvironmentVariable("Contrasenas__ExigirCambioPrimerIngreso", "true");
 
@@ -57,6 +60,17 @@ public sealed class ApiFixture : IAsyncLifetime
         Fabrica.Dispose();
         return Task.CompletedTask;
     }
+
+    /// <summary>
+    /// Otra instancia de la API con algunos ajustes distintos, sobre la misma base. Con MQTT APAGADO: si
+    /// arrancara su propio suscriptor, usaría la misma cuenta de ingesta y desconectaría al principal.
+    /// </summary>
+    public WebApplicationFactory<Program> ConAjustes(params (string Clave, string Valor)[] ajustes) =>
+        Fabrica.WithWebHostBuilder(b =>
+        {
+            b.UseSetting("Mqtt:Activo", "false");
+            foreach (var (clave, valor) in ajustes) b.UseSetting(clave, valor);
+        });
 
     /// <summary>Un HttpClient con la sesión iniciada del usuario indicado (contraseña demo123).</summary>
     public async Task<HttpClient> ClienteDeAsync(string correo, string clave = "demo123")

@@ -85,3 +85,20 @@
   .aviso-movil p { margin: 0; color: var(--gris); }
 }
 
+
+/* ---------- Campana de alertas (F5) ---------- */
+.item.alertas { position: relative; }
+.contador {
+  margin-left: auto; min-width: 22px; height: 22px; padding: 0 7px; border-radius: 999px; background: var(--alta); color: #fff;
+  font-family: var(--f-mono); font-size: 12px; font-weight: 700; display: grid; place-items: center;
+}
+.colapsada .contador { position: absolute; top: 4px; right: 6px; min-width: 18px; height: 18px; font-size: 11px; padding: 0 5px; }
+.item.alertas.sonando .campana { animation: campana 1s ease-in-out; transform-origin: 50% 0; }
+.item.alertas.sonando .contador { animation: rebote .5s ease-out; }
+@keyframes campana {
+  0%, 100% { transform: rotate(0); } 15% { transform: rotate(16deg); } 30% { transform: rotate(-14deg); }
+  45% { transform: rotate(10deg); } 60% { transform: rotate(-6deg); } 75% { transform: rotate(3deg); }
+}
+@keyframes rebote { 0% { transform: scale(.6); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
+.campana { display: inline-flex; }
+@media (prefers-reduced-motion: reduce) { .item.alertas.sonando .campana, .item.alertas.sonando .contador { animation: none; } }

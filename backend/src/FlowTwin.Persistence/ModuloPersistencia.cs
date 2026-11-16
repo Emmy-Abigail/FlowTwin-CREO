@@ -36,6 +36,7 @@ public static class ModuloPersistencia
         services.AddScoped<IAuditoriaDb>(sp => sp.GetRequiredService<FlowTwinDbContext>());
         // Para los módulos sin tablas propias (Reportes) que solo guardan su fila de auditoría
         services.AddScoped<IUnidadDeTrabajo>(sp => sp.GetRequiredService<FlowTwinDbContext>());
+        services.AddHealthChecks().AddCheck<SaludBaseDatos>("baseDatos");
         return services;
     }
 }

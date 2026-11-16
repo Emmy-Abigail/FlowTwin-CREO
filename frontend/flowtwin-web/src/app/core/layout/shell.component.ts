@@ -1,8 +1,10 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs';
 import { IconoComponent } from '../../shared/componentes/icono.component';
+import { AlertasPanelComponent } from '../alertas/alertas-panel.component';
+import { AlertasService } from '../alertas/alertas.service';
 import { AuthService } from '../auth/auth.service';
 import { ModoDatosService } from '../datos/modo-datos.service';
 import { PisoActualService } from '../datos/piso-actual.service';
@@ -18,7 +20,7 @@ const CLAVE_COLAPSADA = 'flowtwin.menuColapsado';
  */
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, IconoComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, IconoComponent, AlertasPanelComponent],
   templateUrl: './shell.component.html',
   styleUrl: './shell.component.scss',
   host: {
@@ -42,6 +44,12 @@ export class ShellComponent {
 
   protected colapsada = signal(leerColapsada());
 
+  protected alertas = inject(AlertasService);
+  protected panelAlertas = signal(false);
+  /** Mientras es true, la campana se mueve: llegó una alerta nueva. */
+  protected sonando = signal(false);
+  private finSonando?: ReturnType<typeof setTimeout>;
+
   private router = inject(Router);
   private url = toSignal(this.router.events.pipe(filter(e => e instanceof NavigationEnd), map(() => this.router.url)),
     { initialValue: this.router.url });
@@ -52,7 +60,13 @@ export class ShellComponent {
     this.modo.cargar();
     inject(PisoActualService).cargar();
     // Al salir del sistema (cerrar sesión, sesión vencida) la simulación se apaga: nunca queda prendida
-    inject(DestroyRef).onDestroy(() => this.modo.salir());
+    inject(DestroyRef).onDestroy(() => { this.modo.salir(); clearTimeout(this.finSonando); });
+    effect(() => {
+      if (!this.alertas.pulso()) return;
+      this.sonando.set(true);
+      clearTimeout(this.finSonando);
+      this.finSonando = setTimeout(() => this.sonando.set(false), 1_200);
+    });
   }
 
   protected alternarColapsada(): void {

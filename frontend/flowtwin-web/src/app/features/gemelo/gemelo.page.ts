@@ -1,4 +1,10 @@
+import { HttpClient } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
+import { API, mensajeDe, problemaDe } from '../../core/api/problema';
+import { AuthService } from '../../core/auth/auth.service';
+import { ClinicaStore } from '../../core/datos/clinica.store';
+import { ToastService } from '../../core/ui/toast.service';
 import { RouterLink } from '@angular/router';
 import { ModoDatosService } from '../../core/datos/modo-datos.service';
 import { PisoActualService } from '../../core/datos/piso-actual.service';
@@ -15,6 +21,7 @@ import { ConexionGemelo } from './conexion-gemelo';
 import { GemeloEnVivoStore } from './gemelo-en-vivo.store';
 import { GemeloSimuladoStore } from './gemelo-simulado.store';
 import {
+  MOTIVOS_FUERA, textoMotivo,
   EstadoPaciente, FuenteGemelo, PacienteVista, detallePaciente, etiquetaZona, ocupacionParaRender, pacientesPorPestana, resumenZona, textoConexion,
 } from './modelo-gemelo';
 
@@ -48,6 +55,10 @@ const PRESENTACION: Record<EstadoPaciente, { texto: string; tono: string; icono:
 export class GemeloPage {
   protected modo = inject(ModoDatosService);
   protected pisos = inject(PisoActualService);
+  private http = inject(HttpClient);
+  private auth = inject(AuthService);
+  private clinica = inject(ClinicaStore);
+  private toast = inject(ToastService);
   private enVivo = inject(GemeloEnVivoStore);
   private simulado = inject(GemeloSimuladoStore);
 
@@ -119,5 +130,47 @@ export class GemeloPage {
     if (!n) return 'Sin nodo en esta zona';
     if (!n.enLinea) return `Nodo ${n.codigo} · sin señal${n.ultimoLatido ? ` (último latido ${this.hace(n.ultimoLatido)})` : ''}`;
     return `Nodo ${n.codigo} · en línea`;
+  }
+
+  // ------------------------------------------------------------------ zona fuera de servicio (RF09, ADR-25)
+
+  /** Gerencia solo mira: el interruptor es del Operador y del Administrador. */
+  protected puedeCambiarServicio = computed(() => this.auth.rol() === 'Operador' || this.auth.rol() === 'Administrador');
+  protected readonly motivos = MOTIVOS_FUERA;
+  protected readonly textoMotivo = textoMotivo;
+  /** Al apagar el interruptor se eligen el motivo (y el detalle si es «Otro») antes de confirmar. */
+  protected eligiendo = signal(false);
+  protected motivo = signal('LIMPIEZA');
+  protected detalleOtro = signal('');
+  protected guardandoServicio = signal(false);
+
+  protected cerrarZona(): void {
+    this.zonaSeleccionada.set(null);
+    this.eligiendo.set(false);
+  }
+
+  protected async ponerFuera(zonaId: number, nombre: string): Promise<void> {
+    if (this.motivo() === 'OTRO' && !this.detalleOtro().trim()) return;
+    await this.cambiarServicio(async () => {
+      if (this.modo.simulacion()) this.clinica.ponerFueraDeServicio(zonaId, this.motivo(), nombre, this.auth.actor());
+      else await firstValueFrom(this.http.post(`${API}/zonas/${zonaId}/pausas`, { motivo: this.motivo(), detalle: this.detalleOtro().trim() || null }));
+      this.eligiendo.set(false);
+      this.detalleOtro.set('');
+    });
+  }
+
+  protected async ponerEnServicio(zonaId: number, nombre: string): Promise<void> {
+    await this.cambiarServicio(async () => {
+      if (this.modo.simulacion()) this.clinica.ponerEnServicio(zonaId, nombre, this.auth.actor());
+      else await firstValueFrom(this.http.post(`${API}/zonas/${zonaId}/pausas/actual/finalizar`, null));
+    });
+  }
+
+  /** El gemelo se actualiza solo por el hub; aquí solo se avisa si falló. */
+  private async cambiarServicio(accion: () => Promise<void>): Promise<void> {
+    this.guardandoServicio.set(true);
+    try { await accion(); }
+    catch (e) { this.toast.mostrar(mensajeDe(problemaDe(e)), 'bad'); }
+    finally { this.guardandoServicio.set(false); }
   }
 }

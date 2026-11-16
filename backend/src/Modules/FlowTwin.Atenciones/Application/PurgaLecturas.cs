@@ -35,7 +35,19 @@ public sealed class PurgaLecturasServicio(IAtencionesDb db, IReloj reloj, IOptio
             total += borradas;
         } while (borradas == TamanoLote);
 
-        if (total > 0) log.LogInformation("Purga: {Total} lecturas anteriores a {Limite:yyyy-MM-dd HH:mm} UTC", total, limite);
+        // Los lotes recibidos tienen la misma retención que sus lecturas (solo sirven para detectar reenvíos)
+        var lotes = 0;
+        do
+        {
+            borradas = await db.LotesNodo
+                .Where(l => l.FechaRegistro < limite)
+                .OrderBy(l => l.Id)
+                .Take(TamanoLote)
+                .ExecuteDeleteAsync(ct);
+            lotes += borradas;
+        } while (borradas == TamanoLote);
+
+        if (total > 0) log.LogInformation("Purga: {Total} lecturas y {Lotes} lotes anteriores a {Limite:yyyy-MM-dd HH:mm} UTC", total, lotes, limite);
         return total;
     }
 }

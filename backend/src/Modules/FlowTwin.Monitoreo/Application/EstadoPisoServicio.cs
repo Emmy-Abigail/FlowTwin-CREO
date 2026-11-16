@@ -3,6 +3,7 @@ using FlowTwin.Dispositivos.Contracts;
 using FlowTwin.Gemelo.Contracts;
 using FlowTwin.Monitoreo.Domain;
 using FlowTwin.SharedKernel;
+using Microsoft.Extensions.Options;
 
 namespace FlowTwin.Monitoreo.Application;
 
@@ -13,7 +14,8 @@ namespace FlowTwin.Monitoreo.Application;
 /// </summary>
 public sealed class EstadoPisoServicio(
     IZonasConsultas zonas, IPresenciaDispositivos dispositivos, IAtencionesEnCurso atenciones,
-    IAtencionesCerradas cerradas, IUsuarioActual usuario, IReloj reloj, ZonaHoraria zona)
+    IAtencionesCerradas cerradas, IPausasZonas pausas, IUsuarioActual usuario, IReloj reloj, ZonaHoraria zona,
+    IOptions<OpcionesAlertas> opcionesAlertas)
 {
     /// <summary>GET /pisos/{id}/estado (F-11): con permiso del piso (RN-24).</summary>
     public async Task<EstadoPiso> ParaUsuarioAsync(int pisoId, CancellationToken ct)
@@ -26,13 +28,28 @@ public sealed class EstadoPisoServicio(
     /// <summary>Sin revisar permisos: lo usa el notificador, que ya filtró quién está suscrito. null si el piso no existe.</summary>
     public async Task<EstadoPiso?> CalcularAsync(int pisoId, CancellationToken ct)
     {
+        var datos = await DatosAsync(pisoId, ct);
+        return datos?.Estado;
+    }
+
+    /// <summary>GET /pisos/{id}/alertas (ADR-25): Operador y Administrador, de sus pisos (RN-24).</summary>
+    public async Task<IReadOnlyList<AlertaPiso>> AlertasAsync(int pisoId, CancellationToken ct)
+    {
+        if (!usuario.PuedeVerPiso(pisoId)) throw new SinPermisoException("No tienes asignado este piso.");
+        var datos = await DatosAsync(pisoId, ct)
+            ?? throw new NoEncontradoException($"No existe el piso {pisoId} o aún no está publicado.");
+        return CalculoAlertas.Calcular(datos.Estado, datos.Atenciones, opcionesAlertas.Value, reloj.AhoraUtc);
+    }
+
+    private async Task<(EstadoPiso Estado, IReadOnlyList<AtencionEnCurso> Atenciones)?> DatosAsync(int pisoId, CancellationToken ct)
+    {
         var piso = await zonas.PisoAsync(pisoId, ct);
         if (piso is null) return null;
-        return CalculoEstado.Calcular(pisoId,
-            await zonas.DelPisoAsync(pisoId, ct),
-            await dispositivos.NodosAsync(ct),
-            await atenciones.DeSedeAsync(piso.SedeId, ct),
-            reloj.AhoraUtc);
+        var zonasPiso = await zonas.DelPisoAsync(pisoId, ct);
+        var enCurso = await atenciones.DeSedeAsync(piso.SedeId, ct);
+        var estado = CalculoEstado.Calcular(pisoId, zonasPiso, await dispositivos.NodosAsync(ct), enCurso, reloj.AhoraUtc,
+            await pausas.AbiertasAsync([.. zonasPiso.Select(z => z.Id)], ct));
+        return (estado, enCurso);
     }
 
     /// <summary>GET /pisos/{id}/atendidas-hoy: las atenciones terminadas hoy en la sede del piso (RN-24).</summary>

@@ -28,6 +28,11 @@ public static class CatalogoExtensiones
     /// <summary>El texto que ve el usuario ("En uso").</summary>
     public static string Nombre<TEnum>(this TEnum valor) where TEnum : struct, Enum => Atributo(valor).Nombre;
 
+    /// <summary>El valor del enum con ese Codigo («LIMPIEZA» → MotivoPausa.Limpieza), sin distinguir mayúsculas. Null si no existe.</summary>
+    public static TEnum? DesdeCodigo<TEnum>(string? codigo) where TEnum : struct, Enum =>
+        Enum.GetValues<TEnum>().Cast<TEnum?>()
+            .FirstOrDefault(v => string.Equals(Atributo(v!.Value).Codigo, codigo?.Trim(), StringComparison.OrdinalIgnoreCase));
+
     private static CatalogoAttribute Atributo<TEnum>(TEnum valor) where TEnum : struct, Enum =>
         typeof(TEnum).GetField(valor.ToString())!
             .GetCustomAttributes(typeof(CatalogoAttribute), false)

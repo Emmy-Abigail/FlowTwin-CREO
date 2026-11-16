@@ -58,6 +58,32 @@ public sealed class AuditoriaConfig : IEntityTypeConfiguration<RegistroAuditoria
 /// Índice por LeidaEn para el motor y la purga; por (UuidBle, LeidaEn) para seguir un emisor y detectar
 /// los no registrados (F-16).
 /// </summary>
+public sealed class PausaZonaConfig : IEntityTypeConfiguration<PausaZona>
+{
+    public void Configure(EntityTypeBuilder<PausaZona> b)
+    {
+        b.ToTable("PausaZona", "ope", t => t.HasCheckConstraint("CK_PausaZona_Fin", "[FinEn] IS NULL OR [FinEn] >= [InicioEn]"));
+        b.Property(p => p.Detalle).HasMaxLength(PausaZona.DetalleMaximo);
+        b.HasOne<Zona>().WithMany().HasForeignKey(p => p.ZonaId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<Catalogo<MotivoPausa>>().WithMany().HasForeignKey(p => p.MotivoPausaId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<Usuario>().WithMany().HasForeignKey(p => p.UsuarioId).OnDelete(DeleteBehavior.Restrict);
+        // RN-18: una sola pausa abierta por zona, garantizado por la base aunque dos personas pulsen a la vez
+        b.HasIndex(p => p.ZonaId).IsUnique().HasFilter("[FinEn] IS NULL").HasDatabaseName("UX_PausaZona_Abierta");
+        b.HasIndex(p => new { p.ZonaId, p.InicioEn });   // historial: pausas de una zona en un periodo
+    }
+}
+
+public sealed class LoteNodoConfig : IEntityTypeConfiguration<LoteNodo>
+{
+    public void Configure(EntityTypeBuilder<LoteNodo> b)
+    {
+        b.ToTable("LoteNodo", "ope");
+        b.HasOne<Nodo>().WithMany().HasForeignKey(l => l.NodoId).OnDelete(DeleteBehavior.Restrict);
+        b.HasIndex(l => new { l.NodoId, l.Id });   // las últimas secuencias de un nodo (duplicados)
+        b.HasIndex(l => l.FechaRegistro);           // purga
+    }
+}
+
 public sealed class LecturaBleConfig : IEntityTypeConfiguration<LecturaBle>
 {
     public void Configure(EntityTypeBuilder<LecturaBle> b)

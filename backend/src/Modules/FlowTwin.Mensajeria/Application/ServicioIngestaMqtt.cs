@@ -40,6 +40,11 @@ public sealed class ServicioIngestaMqtt(
     /// <summary>Se completa con la primera conexión. Lo usan las pruebas para no publicar antes de que haya quien reciba.</summary>
     public Task Conectado => conectado.Task;
 
+    private volatile bool escuchando;
+
+    /// <summary>True mientras está conectado al broker y suscrito: lo informa /salud.</summary>
+    public bool Escuchando => escuchando;
+
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
         if (!o.Activo)
@@ -64,13 +69,16 @@ public sealed class ServicioIngestaMqtt(
                 await cliente.SubscribeAsync(suscripcion.Build(), ct);
                 log.LogInformation("Conectado al broker MQTT {Servidor}:{Puerto}; escuchando {Temas}", o.Servidor, o.Puerto, string.Join(", ", tipos.Select(temas.Filtro)));
                 conectado.TrySetResult();
+                escuchando = true;
                 espera = TimeSpan.FromSeconds(1);
                 await desconectado.Task.WaitAsync(ct);
+                escuchando = false;
                 log.LogWarning("Se perdió la conexión con el broker MQTT; reintentando");
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
             catch (Exception e)
             {
+                escuchando = false;
                 log.LogError("No se pudo conectar al broker MQTT {Servidor}:{Puerto} ({Error}); reintento en {Espera} s",
                     o.Servidor, o.Puerto, e.Message, espera.TotalSeconds);
                 try { await Task.Delay(espera, ct); } catch (OperationCanceledException) { break; }

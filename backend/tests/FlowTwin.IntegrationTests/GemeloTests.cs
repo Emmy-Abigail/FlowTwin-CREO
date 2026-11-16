@@ -75,7 +75,7 @@ public class GemeloTests(ApiFixture api)
         var temporal = creado.GetProperty("contrasenaTemporal").GetString()!;
 
         // Sin la regla F-02, para entrar directo con la temporal
-        using var app = api.Fabrica.WithWebHostBuilder(b => b.UseSetting("Contrasenas:ExigirCambioPrimerIngreso", "false"));
+        using var app = api.ConAjustes(("Contrasenas:ExigirCambioPrimerIngreso", "false"));
         var lucia = app.CreateClient();
         var login = await Json(await lucia.PostAsJsonAsync("/api/v1/auth/login", new { correo = "lucia.paredes@creo.pe", clave = temporal }));
         lucia.DefaultRequestHeaders.Authorization = new("Bearer", login.GetProperty("accessToken").GetString());

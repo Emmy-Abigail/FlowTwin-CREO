@@ -36,7 +36,7 @@ Varias pantallas son **la misma para varios roles**, pero muestran u ocultan acc
 | P4 | **Gemelo en vivo** (dashboard) | ✓ sus pisos | ✓ todos | ✓ todos | 4 KPI arriba. Gemelo 3D/2D del piso con un ícono de persona por zona coloreado por concentración y su número (8/20), más la leyenda. Hover o clic sobre una zona muestra su detalle. Selector de piso (oculto si hay uno solo). Feed en vivo a la derecha con chips Activos · Atendidos · Todos. |
 | P5 | **Historial y reportes** | ✓ sus pisos | ✓ lectura | ✓ | Filtros: fecha, piso, zona. Gráfico de aforo histórico por hora, mapa día × hora, tabla de atenciones y búsqueda por ID anónimo. Botones **Exportar CSV** y **Exportar PDF**. |
 | P6 | **Detalle de atención** | ✓ | ✓ lectura | ✓ | Línea de tiempo de una atención (Admisión → Sala → Consultorio → Salida) con los minutos de cada tramo. Se llega desde el feed (P4) o desde el historial (P5). |
-| P7 | **Seguimiento** | ✓ | — | — | Las zonas asignadas con interruptor **Activo / Pausado** y motivo (RF09). Debajo, el estado de cada nodo ESP32 de esas zonas: en línea o sin señal, y el último latido. |
+| P7 | ~~Seguimiento~~ | — | — | — | **Eliminada (ADR-25).** RF09 se cumple con el interruptor «Fuera de servicio» en la ventana de zona del gemelo; las alertas (espera larga, sin lecturas, nodo sin señal) llegan por la campana del menú. |
 
 ### Administración (solo Admin)
 | # | Pantalla | Qué hace |
@@ -54,7 +54,7 @@ Varias pantallas son **la misma para varios roles**, pero muestran u ocultan acc
 | M3 | Nueva sede | P8 |
 | M4 | Asistente "Nuevo piso" (4 pasos) | P8 |
 | M5 | Crear / editar usuario | P10 |
-| M6 | Pausar zona (con motivo) | P7 |
+| M6 | Fuera de servicio (con motivo) | P4, ventana de zona |
 
 ---
 
@@ -65,7 +65,7 @@ OPERADOR                    GERENCIA                    ADMINISTRADOR
 ├─ Admisión        (inicio) ├─ Gemelo en vivo  (inicio) ├─ Gemelo en vivo        (inicio)
 ├─ Gemelo en vivo           └─ Historial y reportes     ├─ Historial y reportes
 ├─ Historial y reportes                                 ├─ Construcción del gemelo
-└─ Seguimiento                                          ├─ Dispositivos
+                                                        ├─ Dispositivos
                                                         ├─ Usuarios
                                                         └─ Auditoría
 ```
@@ -88,7 +88,7 @@ El Detalle de atención (P6) no está en el menú: se abre desde el feed o desde
           │                    │                         │
      P4 Gemelo ──clic tarjeta del feed──> P6 Detalle de atención <──clic fila── P5 Historial
           │                                                                     
-     P7 Seguimiento                                P8 Construcción ── P9 Dispositivos
+                                                   P8 Construcción ── P9 Dispositivos
                                                    P10 Usuarios ──── P11 Auditoría
 ```
 
@@ -124,9 +124,9 @@ El Detalle de atención (P6) no está en el menú: se abre desde el feed o desde
 | Un código que no existe | "Tarjeta no registrada. Pide al Administrador que la registre." |
 | La misma tarjeta dos veces seguidas por error | "Deshacer" disponible durante 30 s. |
 
-### F5. Tarjeta no devuelta (automático)
-1. Si una tarjeta En uso no se detecta durante X min (configurable), la atención **se cierra sola** con el motivo "sin lecturas".
-2. La tarjeta aparece en P3 › **Pendientes de devolución** y en la campana de alertas.
+### F5. Tarjeta no devuelta · ADR-25
+1. Si una tarjeta En uso no se detecta durante 30 min (configurable), aparece una alerta en la **campana**. No se cierra sola: en el piloto hay zonas sin nodo donde un paciente que sigue en la clínica no se detecta.
+2. El Operador pulsa **«No devolvió la tarjeta»**: la atención se cierra como «sin lecturas» y la tarjeta aparece en P3 › **Sin devolver**. Al cierre de la jornada (22:00, configurable) se cierran solas las que quedaron abiertas.
 3. El Operador puede **"Marcar extraviada"**. Si luego aparece, se escanea y pasa a Por desinfectar (F4).
 
 ### F6. Monitorear en vivo (Operador, Gerencia, Admin)
@@ -141,10 +141,10 @@ El Detalle de atención (P6) no está en el menú: se abre desde el feed o desde
 3. Busca una atención por ID anónimo → P6.
 4. Pulsa **Exportar CSV** o **Exportar PDF** (respeta los filtros).
 
-### F8. Pausar el seguimiento de una zona (Operador)
-1. P7: apaga el interruptor de "Consultorio piloto" → M6 pide el motivo (limpieza, mantenimiento, sin atención).
-2. En el gemelo esa zona se ve **gris, "seguimiento pausado"**, y esos minutos no cuentan en las métricas.
-3. Queda registrado en la auditoría. Al reactivarla vuelve a medir.
+### F8. Poner una zona fuera de servicio (Operador) · ADR-25
+1. P4: clic en la zona → en su ventana apaga «En servicio» y elige el motivo (limpieza, mantenimiento, sin atención u otro).
+2. En el gemelo esa zona se ve **gris, «Fuera de servicio»**. Los pacientes se siguen detectando; el historial marca esas horas.
+3. Queda registrado en la auditoría. Vuelve sola a «En servicio» al cierre de la jornada.
 
 ### F9. Construir el gemelo (Admin)
 1. P8 → **"+ Nueva sede"** (M3): nombre y dirección → "Clínica CREO+".
