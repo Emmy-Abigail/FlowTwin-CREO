@@ -45,7 +45,7 @@ public sealed record EstadoPiso(int PisoId, DateTime GeneradoEn, IReadOnlyList<Z
 public static class CalculoEstado
 {
     public static EstadoPiso Calcular(int pisoId, IReadOnlyList<ZonaSemaforo> zonas, IReadOnlyList<NodoZona> nodos,
-        IReadOnlyList<AtencionEnCurso> atenciones, DateTime ahora, IReadOnlyList<PausaInfo>? pausas = null)
+        IReadOnlyList<AtencionEnCurso> atenciones, DateTime ahora, IReadOnlyList<PausaInfo>? pausas = null, int semaforoAmbarPct = 80)
     {
         var pausaDe = (pausas ?? []).Where(p => p.FinEn is null).ToDictionary(p => p.ZonaId);
         var tipoDe = zonas.ToDictionary(z => z.Id, z => z.Tipo);
@@ -59,7 +59,7 @@ public static class CalculoEstado
         {
             var personas = ocupacion.GetValueOrDefault(z.Id);
             var pausa = pausaDe.GetValueOrDefault(z.Id);
-            return new ZonaEstado(z.Id, personas, z.Aforo, NivelDe(z, personas, zonasConDatos.Contains(z.Id)), pausa is not null, pausa?.Motivo);
+            return new ZonaEstado(z.Id, personas, z.Aforo, NivelDe(z, personas, zonasConDatos.Contains(z.Id), semaforoAmbarPct), pausa is not null, pausa?.Motivo);
         }).ToList();
 
         var esperas = porAtencion.Select(a => a.EsperaMin).ToList();
@@ -108,15 +108,19 @@ public static class CalculoEstado
     private static Func<int, bool> EsServicio(Dictionary<int, string> tipoDe) =>
         zonaId => tipoDe.GetValueOrDefault(zonaId) == ReglaTiempos.Servicio;
 
-    private static string NivelDe(ZonaSemaforo z, int personas, bool tieneDatos)
+    /// <summary>
+    /// Semáforo (RN-13, ADR-27): verde por debajo del umbral ámbar (Parámetros, 80 % por defecto), ámbar
+    /// hasta llenar el aforo y rojo al SUPERARLO (el aforo es un límite oficial). Solo donde hay aforo.
+    /// </summary>
+    private static string NivelDe(ZonaSemaforo z, int personas, bool tieneDatos, int ambarPct)
     {
         // Tránsito y Salida nunca tienen semáforo (RN-13). En las demás, «sin datos» va antes que
         // «aforo por definir»: un nodo caído no debe esconderse detrás de una configuración pendiente.
         if (z.Tipo is "TRANSITO" or "SALIDA") return Nivel.Ninguno;
         if (!tieneDatos) return Nivel.SinDatos;
-        if (z.Aforo is not short aforo || z.UmbralMediaPct is null || z.UmbralAltaPct is null) return Nivel.Ninguno;
+        if (z.Aforo is not short aforo) return Nivel.Ninguno;
         var porcentaje = personas * 100.0 / aforo;
-        return porcentaje < z.UmbralMediaPct ? Nivel.Baja : porcentaje < z.UmbralAltaPct ? Nivel.Media : Nivel.Alta;
+        return porcentaje > 100 ? Nivel.Alta : porcentaje >= ambarPct ? Nivel.Media : Nivel.Baja;
     }
 }
 

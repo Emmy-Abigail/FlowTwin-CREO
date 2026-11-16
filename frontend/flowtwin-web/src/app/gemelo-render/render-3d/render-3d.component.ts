@@ -1,12 +1,13 @@
 import {
   ChangeDetectionStrategy, Component, ElementRef, OnDestroy, ViewEncapsulation,
-  afterNextRender, effect, input, output, signal, viewChild,
+  afterNextRender, effect, inject, input, output, signal, viewChild,
 } from '@angular/core';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { CSS2DObject, CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
 import { GeometriaPiso, NivelOcupacion, OcupacionZona } from '../geometria';
+import { MaquetasService } from '../../core/datos/maquetas.service';
 import { AmbienteMaqueta, MaquetaPiso, cargarMaqueta, colorear, liberar, objetosPorZona } from '../maqueta';
 
 /** Colores del semáforo (los mismos tokens del CSS). Una zona sin aforo (ninguno) no se tiñe. */
@@ -36,12 +37,9 @@ interface ZonaEnEscena {
   nivel: NivelOcupacion;
 }
 
-/** Nombre de un ambiente que no es zona (Farmacia, Rayos X…): solo para ubicarse, sin datos. */
-interface NombreAmbiente { etiqueta: HTMLDivElement; area: number; }
-
 /**
  * Escena Three.js de un piso: la maqueta 3D de la clínica, con cada zona pintada sobre sus ambientes
- * según su ocupación, su etiqueta (nombre y cifra), el nombre de los demás ambientes y los nodos. Es solo de presentación: recibe la geometría, la maqueta
+ * según su ocupación, su etiqueta (nombre y cifra) y los nodos. Los demás ambientes no llevan nombre: solo se rotulan las zonas. Es solo de presentación: recibe la geometría, la maqueta
  * y la ocupación por input() y avisa por output() qué zona se tocó. No sabe nada de pacientes.
  *
  * Coordenadas: el sistema mide desde la esquina del piso (0..anchoM, 0..fondoM) y la maqueta viene
@@ -65,6 +63,7 @@ export class Render3dComponent implements OnDestroy {
   readonly zonaClic = output<number>();
 
   protected estado = signal<'cargando' | 'lista' | 'error'>('cargando');
+  private maquetas = inject(MaquetasService);
 
   private lienzo = viewChild.required<ElementRef<HTMLDivElement>>('lienzo');
 
@@ -77,8 +76,6 @@ export class Render3dComponent implements OnDestroy {
   private controles?: OrbitControls;
   private zonas: ZonaEnEscena[] = [];
   private mallasZona: THREE.Mesh[] = [];
-  /** De mayor a menor área: cuando no caben todos, se ven primero los ambientes grandes. */
-  private nombres: NombreAmbiente[] = [];
   private observador?: ResizeObserver;
   private raycaster = new THREE.Raycaster();
   private puntero = new THREE.Vector2();
@@ -203,7 +200,8 @@ export class Render3dComponent implements OnDestroy {
   private async cargar(g: GeometriaPiso): Promise<void> {
     const maqueta = this.maqueta();
     try {
-      const { escena, ambientes } = await cargarMaqueta(maqueta);
+      const { glb, ambientes } = await this.maquetas.archivos(maqueta.pisoId);
+      const escena = await cargarMaqueta(glb);
       if (this.destruido) { liberar(escena); return; }   // se salió de la pantalla mientras cargaba
       escena.position.set(g.anchoM / 2, 0, g.fondoM / 2);
       escena.updateMatrixWorld(true);
@@ -213,7 +211,6 @@ export class Render3dComponent implements OnDestroy {
       const { porZona, faltantes } = objetosPorZona(maqueta, ambientes);
       if (faltantes.length) console.warn('[gemelo] Rótulos que no están en la maqueta:', faltantes);
       this.crearZonas(g, porZona);
-      this.crearNombres(ambientes, porZona);
       this.pintarOcupacion(this.ocupacion());
       this.estado.set('lista');
     } catch (e) {
@@ -248,27 +245,6 @@ export class Render3dComponent implements OnDestroy {
       this.zonas.push({ id: z.id, mallas, etiqueta, nivel: 'nd' });
     }
     this.camaraMovida = true;
-  }
-
-  /**
-   * El nombre de cada ambiente que no es zona, en texto discreto: así se ubica uno en el piso
-   * (Farmacia, Rayos X, Escalera N°1…) sin competir con las zonas, que son las que tienen datos.
-   */
-  private crearNombres(ambientes: AmbienteMaqueta[], porZona: Map<number, string[]>): void {
-    const deZonas = new Set([...porZona.values()].flat());
-    for (const a of ambientes) {
-      const malla = deZonas.has(a.id) ? undefined : this.modelo!.getObjectByName(a.id);
-      if (!malla) continue;
-      const centro = new THREE.Box3().setFromObject(malla).getCenter(new THREE.Vector3());
-      const etiqueta = document.createElement('div');
-      etiqueta.className = 'r3d-ambiente';
-      etiqueta.textContent = a.rotulo_en_plano;
-      const objeto = new CSS2DObject(etiqueta);
-      objeto.position.set(centro.x, 0.2, centro.z);
-      this.escena!.add(objeto);
-      this.nombres.push({ etiqueta, area: a.area_m2 });
-    }
-    this.nombres.sort((x, y) => y.area - x.area);
   }
 
   /** Nodos ESP32 como cilindros pequeños (su código se ve en el tooltip y en el detalle). */
@@ -391,26 +367,6 @@ export class Render3dComponent implements OnDestroy {
       }
     }
     etiquetas.forEach((e, k) => (e.style.marginTop = `${Math.round(desplazamiento[k])}px`));
-    // Las de zona tienen prioridad; las que Three.js ocultó (fuera de cámara) miden 0 y no cuentan
-    this.mostrarNombres(cajas.map((c, k) => new DOMRect(c.x, c.y + desplazamiento[k], c.width, c.height)).filter(c => c.width > 0));
-  }
-
-  /**
-   * Muestra los nombres de ambiente que caben sin pisar una etiqueta de zona ni otro nombre, del más
-   * grande al más chico. De lejos se ven los principales; al acercarse aparecen los demás.
-   */
-  private mostrarNombres(ocupadas: DOMRect[]): void {
-    const marco = this.lienzo().nativeElement.getBoundingClientRect();
-    const pisa = (a: DOMRect, b: DOMRect) => a.left < b.right + 3 && b.left < a.right + 3 && a.top < b.bottom + 3 && b.top < a.bottom + 3;
-    const dentro = (a: DOMRect) => a.left >= marco.left && a.right <= marco.right && a.top >= marco.top && a.bottom <= marco.bottom;
-    const cajas = this.nombres.map(n => n.etiqueta.getBoundingClientRect());   // primero leer todo, luego escribir
-    const visibles = this.nombres.map((_, k) => {
-      const c = cajas[k];
-      const cabe = c.width > 0 && dentro(c) && !ocupadas.some(o => pisa(c, o));
-      if (cabe) ocupadas.push(c);
-      return cabe;
-    });
-    this.nombres.forEach((n, k) => (n.etiqueta.style.visibility = visibles[k] ? 'visible' : 'hidden'));
   }
 
   // ------------------------------------------------------------------ limpieza
@@ -436,6 +392,5 @@ export class Render3dComponent implements OnDestroy {
     this.etiquetas?.domElement.remove();
     this.zonas = [];
     this.mallasZona = [];
-    this.nombres = [];
   }
 }

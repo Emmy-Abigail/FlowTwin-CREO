@@ -1,15 +1,10 @@
 import * as THREE from 'three';
-import { AmbienteMaqueta, MaquetaPiso, ambientePorRotulo, colorear, maquetaDe, objetosPorZona } from './maqueta';
+import { AmbienteMaqueta, MaquetaPiso, ambientePorRotulo, colorear, objetosPorZona } from './maqueta';
 
 const amb = (id: string, rotulo: string): AmbienteMaqueta => ({ id, rotulo_en_plano: rotulo, area_m2: 10, centro: [0, 0, 0] });
 const AMBIENTES = [amb('ambiente_51', 'Sala de esperas'), amb('ambiente_50', 'Observación 01'), amb('ambiente_57', 'Observación 02')];
 
 describe('maqueta 3D', () => {
-  it('solo los pisos con maqueta la tienen; el resto muestra «en producción»', () => {
-    expect(maquetaDe(1)?.glb).toBe('models/clinica-piso1-final.glb');
-    expect(maquetaDe(2)).toBeNull();
-  });
-
   it('busca un ambiente por su rótulo, sin importar mayúsculas ni espacios de más', () => {
     expect(ambientePorRotulo(AMBIENTES, 'Sala de esperas')?.id).toBe('ambiente_51');
     expect(ambientePorRotulo(AMBIENTES, '  sala  de ESPERAS ')?.id).toBe('ambiente_51');
@@ -17,7 +12,7 @@ describe('maqueta 3D', () => {
   });
 
   it('una zona puede pintarse sobre varios ambientes; los rótulos que no existen se avisan', () => {
-    const maqueta: MaquetaPiso = { glb: 'x.glb', ambientes: 'x.json', zonas: { 3: ['Sala de esperas'], 8: ['Observación 01', 'Observación 02'], 9: ['Rayos Z'] } };
+    const maqueta: MaquetaPiso = { pisoId: 1, zonas: { 3: ['Sala de esperas'], 8: ['Observación 01', 'Observación 02'], 9: ['Rayos Z'] } };
     const { porZona, faltantes } = objetosPorZona(maqueta, AMBIENTES);
     expect(porZona.get(3)).toEqual(['ambiente_51']);
     expect(porZona.get(8)).toEqual(['ambiente_50', 'ambiente_57']);

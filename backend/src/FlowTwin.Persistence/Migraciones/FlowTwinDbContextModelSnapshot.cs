@@ -724,6 +724,65 @@ namespace FlowTwin.Persistence.Migraciones
                         });
                 });
 
+            modelBuilder.Entity("FlowTwin.Gemelo.Domain.ParametrosSistema", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("int");
+
+                    b.Property<short>("EsperaAltaMin")
+                        .HasColumnType("smallint");
+
+                    b.Property<short>("EsperaCriticaMin")
+                        .HasColumnType("smallint");
+
+                    b.Property<DateTime?>("FechaActualizacion")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<byte>("HoraCierre")
+                        .HasColumnType("tinyint");
+
+                    b.Property<byte>("SemaforoAmbarPct")
+                        .HasColumnType("tinyint");
+
+                    b.Property<short>("SinLecturasMin")
+                        .HasColumnType("smallint");
+
+                    b.Property<int?>("UsuarioActualizacionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UsuarioRegistroId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ParametrosSistema", "gem", t =>
+                        {
+                            t.HasCheckConstraint("CK_ParametrosSistema_Unica", "[Id] = 1");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            EsperaAltaMin = (short)40,
+                            EsperaCriticaMin = (short)60,
+                            FechaRegistro = new DateTime(2026, 10, 27, 0, 0, 0, 0, DateTimeKind.Utc),
+                            HoraCierre = (byte)22,
+                            SemaforoAmbarPct = (byte)80,
+                            SinLecturasMin = (short)30,
+                            UsuarioRegistroId = 1
+                        });
+                });
+
             modelBuilder.Entity("FlowTwin.Gemelo.Domain.Piso", b =>
                 {
                     b.Property<int>("Id")
@@ -957,12 +1016,6 @@ namespace FlowTwin.Persistence.Migraciones
                     b.Property<int>("TipoZonaId")
                         .HasColumnType("int");
 
-                    b.Property<byte?>("UmbralAltaPct")
-                        .HasColumnType("tinyint");
-
-                    b.Property<byte?>("UmbralMediaPct")
-                        .HasColumnType("tinyint");
-
                     b.Property<int?>("UsuarioActualizacionId")
                         .HasColumnType("int");
 
@@ -995,7 +1048,7 @@ namespace FlowTwin.Persistence.Migraciones
 
                     b.ToTable("Zona", "gem", t =>
                         {
-                            t.HasCheckConstraint("CK_Zona_AforoRN13", "([Aforo] IS NULL AND [UmbralMediaPct] IS NULL AND [UmbralAltaPct] IS NULL) OR ([TipoZonaId] IN (1, 2, 3, 6) AND [Aforo] >= 1 AND [UmbralMediaPct] IS NOT NULL AND [UmbralAltaPct] IS NOT NULL AND [UmbralMediaPct] > 0 AND [UmbralMediaPct] <= [UmbralAltaPct] AND [UmbralAltaPct] <= 100)");
+                            t.HasCheckConstraint("CK_Zona_AforoRN13", "[Aforo] IS NULL OR ([TipoZonaId] IN (1, 2, 3, 6) AND [Aforo] >= 1)");
 
                             t.HasCheckConstraint("CK_Zona_Geometria", "[Geometria] IS NULL OR ISJSON([Geometria]) = 1");
 

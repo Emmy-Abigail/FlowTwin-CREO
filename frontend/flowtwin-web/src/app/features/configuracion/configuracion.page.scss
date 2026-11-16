@@ -1,0 +1,56 @@
+/* Configuración (ADR-27). Árbol Sede › Pisos a la izquierda; el detalle del piso a la derecha. */
+:host { display: flex; flex-direction: column; gap: 14px; height: 100%; min-height: 0; }
+.pestanas { display: flex; gap: 4px; border-bottom: 1px solid var(--linea); }
+.pestanas button { border: 0; background: none; padding: 8px 14px; font-weight: 700; font-size: 14.5px; color: var(--gris); border-bottom: 3px solid transparent; margin-bottom: -1px; }
+.pestanas button.on { color: var(--tinta); border-color: var(--rojo); }
+
+.cuerpo { flex: 1; min-height: 0; display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 16px; }
+.arbol { padding: 12px; display: flex; flex-direction: column; gap: 2px; overflow-y: auto; }
+.sede { display: flex; justify-content: space-between; align-items: center; font-weight: 800; padding: 8px 10px 4px; }
+.piso { border: 0; background: none; text-align: left; padding: 8px 10px 8px 24px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; font-size: 14.5px; }
+.piso:hover { background: var(--fondo-2); }
+.piso.on { background: #FBF1F4; color: var(--rojo); font-weight: 700; }
+.piso small, .chip-estado { font-size: 11.5px; font-weight: 700; border-radius: 999px; padding: 2px 9px; background: var(--menta); color: var(--menta-t); }
+.piso small.borrador, .chip-estado.borrador { background: var(--fondo-2); color: var(--gris); }
+.agregar { border: 0; background: none; color: var(--rojo); font-weight: 700; text-align: left; padding: 6px 10px 6px 24px; display: inline-flex; align-items: center; gap: 4px; }
+.agregar.abajo { margin-top: auto; padding-left: 10px; }
+
+.detalle { padding: 14px 18px; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+/* Con muchas zonas solo la lista se desplaza: «+ Zona» siempre a la vista. Encabezado fijo arriba. */
+.lista { flex: 1; min-height: 0; overflow-y: auto; }
+.lista thead th { position: sticky; top: 0; background: #fff; z-index: 1; }
+.cab { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.titulo { display: flex; align-items: center; gap: 10px; }
+.titulo h2 { font-size: 20px; margin: 0; }
+.acciones { display: flex; gap: 8px; }
+.tbl td { padding: 8px 12px; }
+.nom { font-weight: 700; }
+.gris { color: var(--gris); }
+.aforo { font-family: var(--f-mono); font-weight: 600; font-variant-numeric: tabular-nums; }
+.por-definir { font-weight: 700; color: var(--ambar-t); }
+.acc { width: 48px; text-align: right; }
+.menu { position: relative; display: inline-block; }
+.mas { width: 32px; height: 32px; border: 0; border-radius: 8px; background: none; font-weight: 700; color: var(--gris-2); display: inline-grid; place-items: center; }
+.mas:hover, .mas[aria-expanded="true"] { background: var(--fondo-2); color: var(--tinta); }
+.opciones { position: absolute; right: 0; top: 36px; z-index: 5; background: #fff; border: 1px solid var(--linea); border-radius: 12px; box-shadow: 0 12px 30px rgba(0, 0, 0, .12); padding: 6px; min-width: 160px; display: flex; flex-direction: column; animation: aparecer .15s ease-out; }
+.opciones button { border: 0; background: none; text-align: left; padding: 9px 12px; border-radius: 8px; font-weight: 600; }
+.opciones button:hover { background: var(--fondo-2); }
+.opciones .peligro { color: #B3261E; }
+.vacio { text-align: center; color: var(--gris); margin: 24px 0; }
+.pie { display: flex; justify-content: flex-end; margin-top: auto; padding-top: 8px; }
+.pie .btn { display: inline-flex; align-items: center; gap: 6px; }
+
+.parametros { max-width: 760px; padding: 6px 20px 16px; display: flex; flex-direction: column; }
+.fila { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--linea); }
+.fila b { display: block; font-size: 15px; }
+.fila span { display: block; color: var(--gris); font-size: 13px; margin-top: 2px; }
+.valores { display: flex; gap: 14px; align-items: center; }
+.valores label { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 700; color: var(--gris); }
+.num { width: 76px; border: 1.5px solid var(--linea-2); border-radius: 8px; padding: 6px 9px; font-family: var(--f-mono); font-weight: 600; text-align: right; background: #fff; }
+.num.hora { width: 96px; text-align: left; }
+
+.campo { display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; font-weight: 700; color: var(--gris); }
+.dos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.letra { width: 80px; text-transform: uppercase; font-family: var(--f-mono); }
+@media (prefers-reduced-motion: reduce) { .opciones { animation: none; } }
+@media (max-width: 1279px) { :host { height: auto; } .cuerpo { grid-template-columns: 1fr; } }

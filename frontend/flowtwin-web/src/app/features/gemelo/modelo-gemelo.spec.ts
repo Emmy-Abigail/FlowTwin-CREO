@@ -73,7 +73,7 @@ describe('Modelo del gemelo', () => {
   it('la geometría de la API pasa al render: zonas sin aforo con 0 y la sede', () => {
     const g = geometriaDesdeApi({
       pisoId: 1, nombre: 'Piso 1', nivel: 1, anchoM: 40, fondoM: 20, altoMuroM: 2.7,
-      zonas: [{ id: 2, nombre: 'Hall', tipo: 'TRANSITO', x: 0, y: 0, ancho: 5, fondo: 5, aforo: null, umbralMedia: null, umbralAlta: null }],
+      zonas: [{ id: 2, nombre: 'Hall', tipo: 'TRANSITO', x: 0, y: 0, ancho: 5, fondo: 5, aforo: null }],
       nodos: [{ codigo: 'N-01', x: 1, y: 2, zonaId: 2 }],
     }, 'Sede Principal');
     expect(g.zonas[0]).toMatchObject({ id: 2, tipo: 'TRANSITO', aforo: 0 });
