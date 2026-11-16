@@ -42,3 +42,6 @@ tabla de pisos con maqueta (`MAQUETAS`) estaba escrita en el código. Dos proble
 - ⚠️ `zonas.json` lo escribe una persona: si está mal, la API responde `MAQUETA_ZONAS_INVALIDAS` y la pantalla
   lo dice; si un rótulo no existe, la consola lo avisa.
 - ⚠️ En producción hay que configurar `Maquetas:Ruta` y copiar la carpeta en el servidor (y en los respaldos).
+- ⚠️ **Excepción temporal (16/11/2026):** `maquetas/piso-1/` está en el repositorio (público) para que la demo en
+  la nube muestre el 3D; lo decidió el equipo con permiso del sponsor. Cualquiera puede descargarla mientras esté
+  ahí. Al pasar a la nube de la clínica, se saca del repositorio y vuelve a instalarse en la carpeta del servidor.
