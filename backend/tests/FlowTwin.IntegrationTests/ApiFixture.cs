@@ -39,6 +39,9 @@ public sealed class ApiFixture : IAsyncLifetime
         Environment.SetEnvironmentVariable("BaseDatos__MigrarAlIniciar", "true");
         Environment.SetEnvironmentVariable("BaseDatos__SembrarDemo", "true");
         Environment.SetEnvironmentVariable("LimitePeticiones__AuthPorMinuto", "1000");
+        // Todas las pruebas usan los mismos usuarios: sin esto, el límite global de la API las frenaría entre sí
+        Environment.SetEnvironmentVariable("LimitePeticiones__ApiPorMinuto", "100000");
+        Environment.SetEnvironmentVariable("LimitePeticiones__ApiRafaga", "100000");
         // Broker MQTT de desarrollo (docker-compose up -d mosquitto), con un prefijo propio: las pruebas
         // solo crean y borran SUS cuentas y temas, nunca los de la API de trabajo o del simulador
         Environment.SetEnvironmentVariable("Mqtt__Prefijo", PrefijoMqtt);

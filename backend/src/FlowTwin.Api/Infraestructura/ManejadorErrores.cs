@@ -23,6 +23,8 @@ public sealed class ManejadorErrores(IProblemDetailsService problemas, ILogger<M
                 (409, "CONFLICTO", "Otro usuario hizo la misma operación al mismo tiempo. Intenta de nuevo.", null),
             DbUpdateException { InnerException: SqlException { Number: 547 } } =>
                 (400, "REFERENCIA_INVALIDA", "Uno de los datos hace referencia a algo que no existe.", null),
+            // Kestrel trae su propio código: 413 si el cuerpo pasa el límite (Proteccion), 400 si está mal formada
+            BadHttpRequestException { StatusCode: 413 } => (413, "PETICION_MUY_GRANDE", "La petición es demasiado grande.", (object?)null),
             BadHttpRequestException => (400, "VALIDACION", "La petición no tiene el formato esperado.", (object?)null),
             _ => (500, "ERROR_INTERNO", "Ocurrió un error inesperado. Comunica el traceId al equipo técnico.", null),
         };
