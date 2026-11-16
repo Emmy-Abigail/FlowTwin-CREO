@@ -104,13 +104,13 @@ public class GemeloTests(ApiFixture api)
     }
 
     [Fact]
-    public async Task La_base_rechaza_un_aforo_en_un_consultorio_ADR27()
+    public async Task La_base_rechaza_una_salida_con_aforo_ADR27()
     {
         var ex = await Assert.ThrowsAsync<DbUpdateException>(() => api.EnBaseAsync(async db =>
         {
             db.Zonas.Add(new Zona
             {
-                PisoId = 1, TipoZonaId = TipoZona.Servicio, Nombre = "Consultorio (prueba)",
+                PisoId = 1, TipoZonaId = TipoZona.Salida, Nombre = "Salida (prueba)",
                 X = 1, Y = 1, AnchoM = 2, FondoM = 2, Aforo = 4,
             });
             return await db.SaveChangesAsync();

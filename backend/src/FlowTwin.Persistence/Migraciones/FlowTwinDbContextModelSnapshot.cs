@@ -1048,7 +1048,7 @@ namespace FlowTwin.Persistence.Migraciones
 
                     b.ToTable("Zona", "gem", t =>
                         {
-                            t.HasCheckConstraint("CK_Zona_AforoRN13", "[Aforo] IS NULL OR ([TipoZonaId] IN (1, 2) AND [Aforo] >= 1)");
+                            t.HasCheckConstraint("CK_Zona_AforoRN13", "[Aforo] IS NULL OR ([TipoZonaId] IN (1, 2, 3, 6) AND [Aforo] >= 1)");
 
                             t.HasCheckConstraint("CK_Zona_Geometria", "[Geometria] IS NULL OR ISJSON([Geometria]) = 1");
 

@@ -1,8 +1,8 @@
 import { aforoDesdeTexto, llevaAforo, textoTipo } from './modelo-configuracion';
 
 describe('Configuración', () => {
-  it('solo espera e ingreso llevan aforo, y los tipos se dicen como en la clínica', () => {
-    expect(['ESPERA', 'INGRESO', 'TRIAJE', 'SERVICIO', 'TRANSITO'].map(llevaAforo)).toEqual([true, true, false, false, false]);
+  it('llevan aforo las zonas donde el paciente permanece, no las de paso, y los tipos se dicen como en la clínica', () => {
+    expect(['ESPERA', 'INGRESO', 'TRIAJE', 'SERVICIO', 'TRANSITO', 'SALIDA'].map(llevaAforo)).toEqual([true, true, true, true, false, false]);
     expect(textoTipo('SERVICIO')).toBe('Consulta');
   });
 

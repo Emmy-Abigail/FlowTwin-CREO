@@ -19,9 +19,10 @@ public class Zona : EntidadEditable
     /// <summary>Polígono libre en JSON (fase 2); si existe, manda sobre el rectángulo.</summary>
     public string? Geometria { get; set; }
     /// <summary>
-    /// Personas que caben: el aforo oficial del ambiente (en Perú lo fija la inspección técnica de seguridad,
-    /// ITSE). Solo en zonas de Ingreso y Espera, donde la gente se acumula (RN-13, ADR-27); nulo = «aforo por
-    /// definir». El semáforo usa un umbral general (Parámetros), no uno por zona.
+    /// Capacidad de la zona (RN-13, ADR-27): en Ingreso y Espera, las personas que caben (el aforo oficial, ITSE);
+    /// en Triaje y Consulta, los puestos de atención (1 médico, 4 camillas): es la capacidad del servicio y lo que
+    /// deja ver el cuello de botella. Tránsito y Salida no tienen. Nulo = «aforo por definir». El semáforo usa un
+    /// umbral general (Parámetros), no uno por zona.
     /// </summary>
     public short? Aforo { get; set; }
     /// <summary>
@@ -44,14 +45,14 @@ public class Zona : EntidadEditable
         if (X < 0 || Y < 0) problemas.Add("La posición de la zona no puede ser negativa.");
         if (AnchoM <= 0 || FondoM <= 0) problemas.Add("El ancho y el fondo de la zona deben ser mayores que 0.");
 
-        // RN-13 (ADR-27): el aforo solo existe donde la gente se acumula; puede quedar por definir (nulo)
+        // RN-13 (ADR-27): el aforo existe donde el paciente permanece; puede quedar por definir (nulo)
         if (TipoZonaId.TieneAforo())
         {
             if (Aforo is < 1) problemas.Add("El aforo debe ser de 1 o más personas.");
         }
         else if (Aforo is not null)
         {
-            problemas.Add($"Una zona de tipo {TipoZonaId.Nombre()} no tiene aforo: lo que importa es si está libre u ocupada.");
+            problemas.Add($"Una zona de tipo {TipoZonaId.Nombre()} no tiene aforo: es de paso.");
         }
         return problemas;
     }
@@ -78,8 +79,8 @@ public class Zona : EntidadEditable
 public static class TipoZonaExtensiones
 {
     /// <summary>
-    /// RN-13 (ADR-27): solo Ingreso y Espera tienen aforo y semáforo por ocupación, porque es donde la gente se
-    /// acumula. En un consultorio o en triaje un % no dice nada (1 o 2 personas): importa si está libre u ocupado.
+    /// RN-13 (ADR-27): tienen aforo y semáforo las zonas donde el paciente permanece. En Triaje y Consulta el aforo
+    /// es el número de puestos: 0/1 verde (libre), 1/1 ámbar (sin espacio). Tránsito y Salida, nunca.
     /// </summary>
-    public static bool TieneAforo(this TipoZona tipo) => tipo is TipoZona.Ingreso or TipoZona.Espera;
+    public static bool TieneAforo(this TipoZona tipo) => tipo is not (TipoZona.Transito or TipoZona.Salida);
 }

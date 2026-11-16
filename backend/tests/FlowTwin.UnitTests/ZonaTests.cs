@@ -21,11 +21,11 @@ public class ZonaTests
     [Theory]
     [InlineData(TipoZona.Ingreso, true)]
     [InlineData(TipoZona.Espera, true)]
-    [InlineData(TipoZona.Triaje, false)]
-    [InlineData(TipoZona.Servicio, false)]
+    [InlineData(TipoZona.Triaje, true)]
+    [InlineData(TipoZona.Servicio, true)]
     [InlineData(TipoZona.Transito, false)]
     [InlineData(TipoZona.Salida, false)]
-    public void Solo_donde_la_gente_se_acumula_hay_aforo_ADR27(TipoZona tipo, bool tieneAforo)
+    public void Hay_aforo_donde_el_paciente_permanece_y_no_en_las_de_paso_ADR27(TipoZona tipo, bool tieneAforo)
     {
         Assert.Equal(tieneAforo, tipo.TieneAforo());
     }
@@ -49,9 +49,9 @@ public class ZonaTests
     }
 
     [Theory]
-    [InlineData(TipoZona.Servicio)]
     [InlineData(TipoZona.Transito)]
-    public void Un_consultorio_o_un_hall_con_aforo_no_es_valido(TipoZona tipo)
+    [InlineData(TipoZona.Salida)]
+    public void Un_hall_o_una_salida_con_aforo_no_es_valido(TipoZona tipo)
     {
         var zona = new Zona { TipoZonaId = tipo, Nombre = "X", AnchoM = 1, FondoM = 1, Aforo = 4 };
 
@@ -63,13 +63,14 @@ public class ZonaTests
     {
         Assert.Empty(Zona.Nueva(1, " Sala VIP ", TipoZona.Espera, 8).Problemas());
         Assert.Equal("Sala VIP", Zona.Nueva(1, " Sala VIP ", TipoZona.Espera, 8).Nombre);
-        Assert.Null(Zona.Nueva(1, "Consultorio 3", TipoZona.Servicio, 4).Aforo);
+        Assert.Equal((short)1, Zona.Nueva(1, "Consultorio 3", TipoZona.Servicio, 1).Aforo);   // un puesto de atención
+        Assert.Null(Zona.Nueva(1, "Pasillo", TipoZona.Transito, 4).Aforo);
     }
 
     [Fact]
     public void Devuelve_todos_los_problemas_juntos()
     {
-        var zona = new Zona { TipoZonaId = TipoZona.Servicio, Nombre = "", X = -1, AnchoM = 0, Aforo = 3 };
+        var zona = new Zona { TipoZonaId = TipoZona.Transito, Nombre = "", X = -1, AnchoM = 0, Aforo = 3 };
 
         Assert.True(zona.Problemas().Count >= 4);   // nombre, posición, tamaño y aforo donde no va
     }
