@@ -11,6 +11,7 @@ public interface IGemeloDb : IUnidadDeTrabajo
     DbSet<Piso> Pisos { get; }
     DbSet<Zona> Zonas { get; }
     DbSet<ElementoPlano> ElementosPlano { get; }
+    DbSet<ParametrosSistema> ParametrosSistema { get; }
 }
 
 public sealed record PisoDto(int Id, string Nombre, short Nivel, decimal? AnchoM, decimal? FondoM, bool Publicado);
@@ -18,8 +19,7 @@ public sealed record SedeDto(int Id, string Nombre, string? Direccion, IReadOnly
 
 /// <summary>Una zona tal como la dibujan la vista 2D y la 3D (sección "La geometría que recibe el navegador").</summary>
 public sealed record ZonaGeometriaDto(
-    int Id, string Nombre, string Tipo, decimal X, decimal Y, decimal Ancho, decimal Fondo,
-    short? Aforo, byte? UmbralMedia, byte? UmbralAlta);
+    int Id, string Nombre, string Tipo, decimal X, decimal Y, decimal Ancho, decimal Fondo, short? Aforo);
 
 /// <summary>
 /// Un muro, puerta, ventana o ambiente. X, Y, Ancho y Fondo son el rectángulo que lo contiene
@@ -74,7 +74,7 @@ public sealed class GemeloServicio(IGemeloDb db, IUsuarioActual usuario, IUbicac
             piso.PlanoRuta is null ? null : "/" + piso.PlanoRuta,
             [.. zonas.Select(z => new ZonaGeometriaDto(
                 z.Id, z.Nombre, z.TipoZonaId.Codigo(), z.X, z.Y, z.AnchoM, z.FondoM,
-                z.Aforo, z.UmbralMediaPct, z.UmbralAltaPct))],
+                z.Aforo))],
             [.. elementos.Select(ElementoDto)],
             await nodos.DeZonasAsync([.. zonas.Select(z => z.Id)], ct));
     }

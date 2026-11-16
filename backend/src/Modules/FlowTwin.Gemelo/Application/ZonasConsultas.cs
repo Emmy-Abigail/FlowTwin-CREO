@@ -18,7 +18,7 @@ public sealed class ZonasConsultas(IGemeloDb db) : IZonasConsultas
     public async Task<IReadOnlyList<ZonaSemaforo>> DelPisoAsync(int pisoId, CancellationToken ct = default)
     {
         var zonas = await db.Zonas.Where(z => z.PisoId == pisoId && !z.EnBorrador).OrderBy(z => z.Id).ToListAsync(ct);
-        return [.. zonas.Select(z => new ZonaSemaforo(z.Id, z.Nombre, z.TipoZonaId.Codigo(), z.Aforo, z.UmbralMediaPct, z.UmbralAltaPct))];
+        return [.. zonas.Select(z => new ZonaSemaforo(z.Id, z.Nombre, z.TipoZonaId.Codigo(), z.Aforo))];
     }
 
     public async Task<ZonaInfo?> ZonaAsync(int zonaId, CancellationToken ct = default) =>

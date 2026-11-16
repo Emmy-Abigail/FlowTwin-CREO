@@ -104,7 +104,7 @@ public class GemeloTests(ApiFixture api)
     }
 
     [Fact]
-    public async Task La_base_rechaza_un_aforo_sin_umbrales_RN13()
+    public async Task La_base_rechaza_un_aforo_en_un_consultorio_ADR27()
     {
         var ex = await Assert.ThrowsAsync<DbUpdateException>(() => api.EnBaseAsync(async db =>
         {

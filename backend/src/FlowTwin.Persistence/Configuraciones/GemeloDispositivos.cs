@@ -66,15 +66,9 @@ public sealed class ZonaConfig : IEntityTypeConfiguration<Zona>
             t.HasCheckConstraint("CK_Zona_Posicion", "[X] >= 0 AND [Y] >= 0");
             t.HasCheckConstraint("CK_Zona_Tamano", "[AnchoM] > 0 AND [FondoM] > 0");
             t.HasCheckConstraint("CK_Zona_Geometria", "[Geometria] IS NULL OR ISJSON([Geometria]) = 1");
-            // RN-13 también en la base: la protege aunque alguien inserte filas por fuera de la API.
-            // Sin aforo (por definir, o Tránsito/Salida) o con aforo completo, solo en los tipos que lo admiten.
-            // Los IS NOT NULL son necesarios: un CHECK acepta la fila si la condición da UNKNOWN, y
-            // «NULL > 0» da UNKNOWN, así que sin ellos pasaría un aforo sin umbrales.
-            t.HasCheckConstraint("CK_Zona_AforoRN13",
-                "([Aforo] IS NULL AND [UmbralMediaPct] IS NULL AND [UmbralAltaPct] IS NULL) " +
-                $"OR ([TipoZonaId] IN ({conAforo}) AND [Aforo] >= 1 " +
-                "AND [UmbralMediaPct] IS NOT NULL AND [UmbralAltaPct] IS NOT NULL AND [UmbralMediaPct] > 0 " +
-                "AND [UmbralMediaPct] <= [UmbralAltaPct] AND [UmbralAltaPct] <= 100)");
+            // RN-13 también en la base (ADR-27): aforo nulo (por definir, o tipos sin aforo) o de 1 o más,
+            // y solo en los tipos que lo admiten. Protege aunque alguien inserte filas por fuera de la API.
+            t.HasCheckConstraint("CK_Zona_AforoRN13", $"[Aforo] IS NULL OR ([TipoZonaId] IN ({conAforo}) AND [Aforo] >= 1)");
         });
         b.Property(z => z.Nombre).HasMaxLength(80).IsRequired();
         b.HasIndex(z => new { z.PisoId, z.Nombre }).IsUnique().HasFilter("[EstadoRegistro] = 1");
@@ -103,8 +97,6 @@ public sealed class ZonaConfig : IEntityTypeConfiguration<Zona>
     {
         Id = id, PisoId = 1, TipoZonaId = tipo, Nombre = nombre, X = x, Y = y, AnchoM = ancho, FondoM = fondo,
         Aforo = (short?)null,
-        UmbralMediaPct = (byte?)null,
-        UmbralAltaPct = (byte?)null,
         EnBorrador = false,
         EstadoRegistro = true, FechaRegistro = Semilla.Fecha, UsuarioRegistroId = UsuarioSistema.Id,
     };
@@ -206,5 +198,20 @@ public sealed class MovimientoTarjetaConfig : IEntityTypeConfiguration<Movimient
         b.HasOne<Catalogo<EstadoTarjeta>>().WithMany().HasForeignKey(m => m.EstadoNuevoId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<Atencion>().WithMany().HasForeignKey(m => m.AtencionId).OnDelete(DeleteBehavior.Restrict);
         b.HasIndex(m => new { m.TarjetaId, m.Id });
+    }
+}
+
+public sealed class ParametrosSistemaConfig : IEntityTypeConfiguration<ParametrosSistema>
+{
+    public void Configure(EntityTypeBuilder<ParametrosSistema> b)
+    {
+        b.ToTable("ParametrosSistema", "gem", t => t.HasCheckConstraint("CK_ParametrosSistema_Unica", $"[Id] = {ParametrosSistema.IdUnico}"));
+        b.Property(p => p.Id).ValueGeneratedNever();
+        // La fila única, con los valores por defecto que el sistema ya usaba (ADR-25, ADR-27)
+        b.HasData(new
+        {
+            Id = ParametrosSistema.IdUnico, EsperaAltaMin = (short)40, EsperaCriticaMin = (short)60, SinLecturasMin = (short)30,
+            HoraCierre = (byte)22, SemaforoAmbarPct = (byte)80, FechaRegistro = Semilla.Fecha, UsuarioRegistroId = UsuarioSistema.Id,
+        });
     }
 }

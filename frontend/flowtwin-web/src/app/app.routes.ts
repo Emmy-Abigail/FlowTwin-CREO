@@ -48,12 +48,6 @@ export const routes: Routes = [
         loadComponent: () => import('./features/atencion/atencion.page').then(m => m.AtencionPage),
       },
       {
-        path: 'construccion',
-        canActivate: [rolGuard(PERMISOS.construccion)],
-        data: { titulo: 'Construcción del gemelo', descripcion: 'Sedes, pisos, zonas y nodos sobre el plano (P8).' },
-        loadComponent: proximamente,
-      },
-      {
         path: 'dispositivos',
         canActivate: [rolGuard(PERMISOS.dispositivos)],
         data: { titulo: 'Dispositivos', descripcion: 'Nodos ESP32 y tarjetas BLE (P9).' },
@@ -70,6 +64,12 @@ export const routes: Routes = [
         canActivate: [rolGuard(PERMISOS.auditoria)],
         data: { titulo: 'Auditoría', descripcion: 'Bitácora de solo lectura de todas las acciones (P11).' },
         loadComponent: proximamente,
+      },
+      {
+        path: 'configuracion',
+        canActivate: [rolGuard(PERMISOS.configuracion)],
+        title: 'Configuración · CREO FlowTwin',
+        loadComponent: () => import('./features/configuracion/configuracion.page').then(m => m.ConfiguracionPage),
       },
       {
         path: 'cuenta',

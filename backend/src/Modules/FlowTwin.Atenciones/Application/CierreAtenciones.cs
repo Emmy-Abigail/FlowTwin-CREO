@@ -10,11 +10,9 @@ using Microsoft.Extensions.Options;
 
 namespace FlowTwin.Atenciones.Application;
 
-/// <summary>Sección «Jornada» de appsettings. Es un valor por defecto mientras la clínica no defina su horario (ADR-25).</summary>
+/// <summary>Sección «Jornada» de appsettings. La hora del cierre está en Configuración › Parámetros (ADR-27).</summary>
 public sealed class OpcionesJornada
 {
-    /// <summary>Hora local (0–23) del cierre de jornada (RN-08): después del horario habitual de atención.</summary>
-    public int HoraCierre { get; set; } = 22;
     /// <summary>Apagado solo en las pruebas de integración: así no dependen de la hora a la que se corren.</summary>
     public bool CierreActivo { get; set; } = true;
 }
@@ -28,7 +26,7 @@ public sealed class OpcionesJornada
 /// </summary>
 public sealed class CierreAtenciones(
     IAtencionesDb db, ITarjetasAdmision tarjetas, ISedesConsultas sedes, IAuditoria auditoria, IReloj reloj,
-    ZonaHoraria zona, IOptions<OpcionesJornada> opciones, ILogger<CierreAtenciones> log)
+    ZonaHoraria zona, IParametrosSistema parametros, ILogger<CierreAtenciones> log)
 {
     /// <summary>POST /atenciones/{id}/cerrar-sin-devolver. 404 si no es de las sedes del usuario (RN-24).</summary>
     public async Task CerrarSinDevolverAsync(long atencionId, CancellationToken ct)
@@ -49,12 +47,12 @@ public sealed class CierreAtenciones(
     /// Es idempotente: se puede llamar cuantas veces se quiera (si el servidor estuvo apagado a la hora del
     /// cierre, lo hace al volver). Devuelve cuántas atenciones y zonas cerró.
     /// </summary>
-    public Task<(int Atenciones, int Zonas)> CerrarJornadaAsync(CancellationToken ct)
+    public async Task<(int Atenciones, int Zonas)> CerrarJornadaAsync(CancellationToken ct)
     {
         var ahora = reloj.AhoraUtc;
         var hoy = zona.FechaLocal(ahora);
-        var cerrarHoy = zona.ALocal(ahora).Hour >= opciones.Value.HoraCierre;
-        return CerrarHastaAsync(cerrarHoy ? hoy : hoy.AddDays(-1), ct);   // fechas de Lima que ya terminaron su jornada
+        var cerrarHoy = zona.ALocal(ahora).Hour >= (await parametros.ObtenerAsync(ct)).HoraCierre;
+        return await CerrarHastaAsync(cerrarHoy ? hoy : hoy.AddDays(-1), ct);   // fechas de Lima que ya terminaron su jornada
     }
 
     /// <summary>Cierra las atenciones abiertas con fecha hasta «hasta» (incluida) y las pausas que empezaron hasta ese día.</summary>

@@ -17,8 +17,8 @@ public class AlertasTests
 
     private static readonly ZonaSemaforo[] Zonas =
     [
-        new(Sala, "Sala de espera", "ESPERA", null, null, null),
-        new(Modulo2, "Módulo 2", "SERVICIO", null, null, null),
+        new(Sala, "Sala de espera", "ESPERA", null),
+        new(Modulo2, "Módulo 2", "SERVICIO", null),
     ];
 
     /// <summary>Una atención en la Sala desde hace «min» minutos, vista por un nodo hace «vistoHace».</summary>
