@@ -1,0 +1,19 @@
+# Lo que NUNCA entra a la imagen: secretos, planos, dependencias locales y resultados de compilación
+**/.env
+**/.env.*
+!**/.env.example
+PLANOS_COMPLETOS/
+maquetas/*
+!maquetas/piso-1/
+**/node_modules/
+**/dist/
+**/bin/
+**/obj/
+**/logs/
+**/.angular/
+.git/
+.github/
+docs/
+tools/
+**/*.md
+!frontend/flowtwin-web/**/*.md

@@ -355,6 +355,7 @@ ESP32) está en el [README del backend](backend/README.md).
 | [Contrato con los nodos](docs/contrato-integracion-nodos.md) | Equipo de hardware (firmware de los ESP32) |
 | [Decisiones de arquitectura (ADR)](docs/adr/README.md) | Equipo técnico; las anteriores al ADR-21 están en el documento de arquitectura |
 | [Informe de seguridad](docs/seguridad/informe-seguridad.md) | Evaluación y auditoría |
+| [Despliegue](docs/despliegue.md) | Quien instale el sistema: demo en la nube y servidor de la clínica |
 | [Backend](backend/README.md) · [Generador 3D](tools/generador-modelo-3d/README.md) | Desarrollo |
 
 ---
