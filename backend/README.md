@@ -20,6 +20,8 @@ dotnet user-secrets set "ConnectionStrings:FlowTwin" \
 dotnet user-secrets set "Jwt:Clave" "$(openssl rand -base64 64 | tr -d '\n')" --project src/FlowTwin.Api
 # La misma clave del administrador de Mosquitto que pusiste en .env
 dotnet user-secrets set "Mqtt:ClaveAdmin" "$(grep MQTT_ADMIN_CLAVE .env | cut -d= -f2)" --project src/FlowTwin.Api
+# Sello de integridad de la bitácora (ADR-30). Guárdala también fuera del equipo: sin ella no se verifica la cadena
+dotnet user-secrets set "Auditoria:ClaveSello" "$(openssl rand -base64 48 | tr -d '\n')" --project src/FlowTwin.Api
 
 # 3. Herramientas locales (dotnet-ef)
 dotnet tool restore

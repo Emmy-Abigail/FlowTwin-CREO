@@ -12,6 +12,7 @@ public static class ModuloIdentidad
 {
     public static IServiceCollection AddModuloIdentidad(this IServiceCollection services, IConfiguration config)
     {
+        services.AddScoped<FlowTwin.Auditoria.Contracts.INombresDeUsuarios, NombresDeUsuarios>();
         services.Configure<OpcionesJwt>(config.GetSection("Jwt"));
         services.Configure<OpcionesContrasenas>(config.GetSection("Contrasenas"));
         // PBKDF2 con HMAC-SHA512, 100 000 iteraciones y sal aleatoria (sección Seguridad → Contraseñas)
