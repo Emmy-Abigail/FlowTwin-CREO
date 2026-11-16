@@ -19,7 +19,7 @@ import { OcupacionApi, celdas, horasDe } from './modelo-historial';
         @for (c of f.celdas; track $index) {
           <span role="cell" [class]="'c ' + c.estado" [attr.title]="c.titulo" [attr.aria-label]="c.titulo"
                 [style.background]="c.estado === 'OK' ? fondo(c.intensidad) : null"
-                [class.claro]="c.estado === 'OK' && c.intensidad > 0.55">{{ c.texto }}</span>
+                [class.claro]="c.estado === 'OK' && c.intensidad > 0.55" [class.fuera]="c.fuera">{{ c.texto }}</span>
         }
       }
     </div>
@@ -34,6 +34,8 @@ import { OcupacionApi, celdas, horasDe } from './modelo-historial';
       font-family: var(--f-mono); font-weight: 600; font-size: 12.5px; color: var(--celeste-t); font-variant-numeric: tabular-nums;
     }
     .c.claro { color: #fff; }
+    /* Fuera de servicio (ADR-25): el dato se ve igual, con un borde que avisa por qué hubo menos gente */
+    .c.fuera { outline: 2px dashed var(--gris-2); outline-offset: -3px; }
     .c.FUTURO { background: #FBFAF9; }
     /* Rayado como «Sin datos» en el gemelo: no se sabe cuánta gente hubo */
     .c.SIN_DATOS { background: repeating-linear-gradient(135deg, var(--fondo-2) 0 5px, var(--linea) 5px 10px); }

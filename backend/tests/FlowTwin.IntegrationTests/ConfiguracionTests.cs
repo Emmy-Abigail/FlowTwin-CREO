@@ -20,7 +20,7 @@ public class ConfiguracionTests(ApiFixture api)
     [Fact]
     public async Task En_la_clinica_la_simulacion_no_existe()
     {
-        using var clinica = api.Fabrica.WithWebHostBuilder(b => b.UseSetting("Demo:SimulacionDisponible", "false"));
+        using var clinica = api.ConAjustes(("Demo:SimulacionDisponible", "false"));
         var cliente = clinica.CreateClient();
         var login = await (await cliente.PostAsJsonAsync("/api/v1/auth/login", new { correo = "gerencia@creo.pe", clave = "demo123" }))
             .Content.ReadFromJsonAsync<JsonElement>();

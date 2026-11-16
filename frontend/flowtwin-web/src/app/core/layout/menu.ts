@@ -19,7 +19,6 @@ const MENU_COMPLETO: Record<Rol, ItemMenu[]> = {
     { ruta: '/admision', icono: 'scan', texto: 'Admisión', construida: true },
     { ruta: '/gemelo', icono: 'cube', texto: 'Gemelo en vivo', construida: true },
     { ruta: '/historial', icono: 'chart', texto: 'Historial y reportes', construida: true },
-    { ruta: '/seguimiento', icono: 'pulse', texto: 'Seguimiento', construida: false },
   ],
   Gerencia: [
     { ruta: '/gemelo', icono: 'cube', texto: 'Gemelo en vivo', construida: true },

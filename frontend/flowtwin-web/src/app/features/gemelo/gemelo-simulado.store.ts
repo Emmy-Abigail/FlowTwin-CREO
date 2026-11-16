@@ -22,7 +22,7 @@ export class GemeloSimuladoStore implements FuenteGemelo {
 
   private sinDatos(zonaId: number): boolean {
     const nodo = this.clinica.nodoDeZona(zonaId);
-    return zonaId in this.clinica.pausas() || (nodo != null && nodo.estado !== 'En línea');
+    return nodo != null && nodo.estado !== 'En línea';
   }
 
   readonly zonas = computed<ZonaVista[]>(() => this.geo.zonas().map(z => {
@@ -31,6 +31,7 @@ export class GemeloSimuladoStore implements FuenteGemelo {
     return {
       zonaId: z.id, personas, aforo: sinAforo ? null : z.aforo,
       nivel: sinAforo ? 'ninguno' : nivelOcupacion(personas, z, this.sinDatos(z.id)),
+      fueraDeServicio: this.clinica.pausas()[z.id]?.motivo ?? null,
     };
   }));
 

@@ -12,6 +12,7 @@ using FlowTwin.Monitoreo;
 using FlowTwin.Reportes;
 using FlowTwin.Persistence;
 using FlowTwin.SharedKernel;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -68,7 +69,7 @@ builder.Services.AddModuloGemelo();
 builder.Services.AddModuloDispositivos(builder.Configuration);
 builder.Services.AddModuloAtenciones(builder.Configuration);
 builder.Services.AddModuloAuditoria();
-builder.Services.AddModuloMonitoreo();
+builder.Services.AddModuloMonitoreo(builder.Configuration);
 builder.Services.AddModuloReportes();
 builder.Services.AddModuloMensajeria(builder.Configuration);
 
@@ -117,6 +118,10 @@ builder.Services.AddRateLimiter(o =>
         contexto.HttpContext.Response.Headers.RetryAfter = segundos.ToString();
         return ValueTask.CompletedTask;
     };
+    // /salud consulta la base en cada llamada: un límite evita que alguien la use para cargar el servidor
+    o.AddPolicy("salud", http => RateLimitPartition.GetFixedWindowLimiter(
+        http.Connection.RemoteIpAddress?.ToString() ?? "desconocida",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 60, Window = TimeSpan.FromMinutes(1) }));
     o.AddPolicy("auth", http => RateLimitPartition.GetFixedWindowLimiter(
         http.Connection.RemoteIpAddress?.ToString() ?? "desconocida",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = porMinuto, Window = TimeSpan.FromMinutes(1) }));
@@ -152,7 +157,11 @@ if (app.Environment.IsDevelopment())
 }
 
 // ---- Endpoints de cada módulo
-app.MapGet("/api/v1/salud", () => Results.Ok(new { estado = "ok" })).AllowAnonymous().WithTags("Sistema");
+// Salud: ¿responden la base y el broker? 200 si todo responde (o algo está apagado a propósito), 503 si no.
+// Es pública (la usan el monitoreo del servidor y el diagnóstico de nodos), por eso solo dice el estado de
+// cada componente, nunca el error interno.
+app.MapHealthChecks("/api/v1/salud", new HealthCheckOptions { ResponseWriter = Salud.EscribirAsync })
+    .AllowAnonymous().RequireRateLimiting("salud").WithTags("Sistema");
 // Lo que el frontend necesita saber de esta instalación. SimulacionDisponible es temporal (ADR-22): solo
 // para presentar el sistema antes de que lleguen los nodos; en la clínica es false y el botón no existe.
 app.MapGet("/api/v1/configuracion", (IConfiguration config) => Results.Ok(new

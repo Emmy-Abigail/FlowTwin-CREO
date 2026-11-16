@@ -3,6 +3,7 @@ using FlowTwin.Atenciones.Domain;
 using FlowTwin.Dispositivos.Contracts;
 using FlowTwin.SharedKernel;
 using FluentValidation;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace FlowTwin.Atenciones.Application;
@@ -57,7 +58,6 @@ public sealed class LoteLecturasValidador : AbstractValidator<LoteLecturasReques
 public sealed class IngestaServicio(
     IAtencionesDb db,
     INodosIngesta nodos,
-    RegistroSecuencias secuencias,
     IValidator<LoteLecturasRequest> validador,
     IReloj reloj)
 {
@@ -68,22 +68,22 @@ public sealed class IngestaServicio(
         var nodo = await nodos.ActivoPorMacAsync(mac, ct) ?? throw new NoAutenticadoException("Nodo no autorizado.");
         await validador.ValidarAsync(req, ct);
 
-        if (!secuencias.Registrar(nodo.Id, req.Secuencia))
+        // Reenvío (la respuesta se perdió o el broker lo volvió a entregar): ya está guardado, es un éxito.
+        // Un solo suscriptor procesa en orden (ADR-24), así que consultar y luego insertar no compite consigo mismo.
+        var yaRecibido = await db.LotesNodo
+            .Where(l => l.NodoId == nodo.Id).OrderByDescending(l => l.Id).Take(LoteNodo.VentanaDuplicados)
+            .AnyAsync(l => l.Secuencia == req.Secuencia, ct);
+        if (yaRecibido)
         {
             Metricas.LotesDuplicados.Add(1);
             return new LoteRecibido(0, Duplicado: true);
         }
-        try
-        {
-            var recibidaEn = reloj.AhoraUtc;
-            db.LecturasBle.AddRange(req.Lecturas.Select(l => LecturaBle.Desde(nodo.Id, l.UuidBle, l.Rssi, l.EdadMs, recibidaEn)));
-            await db.GuardarAsync(ct);
-        }
-        catch
-        {
-            secuencias.Olvidar(nodo.Id, req.Secuencia);   // que el reintento del nodo sí se guarde
-            throw;
-        }
+
+        // Lote y lecturas en un solo SaveChanges: o se guardan los dos o ninguno
+        var recibidaEn = reloj.AhoraUtc;
+        db.LotesNodo.Add(new LoteNodo { NodoId = nodo.Id, Secuencia = req.Secuencia, Lecturas = req.Lecturas.Count });
+        db.LecturasBle.AddRange(req.Lecturas.Select(l => LecturaBle.Desde(nodo.Id, l.UuidBle, l.Rssi, l.EdadMs, recibidaEn)));
+        await db.GuardarAsync(ct);
 
         Metricas.LotesRecibidos.Add(1);
         Metricas.LecturasRecibidas.Add(req.Lecturas.Count);

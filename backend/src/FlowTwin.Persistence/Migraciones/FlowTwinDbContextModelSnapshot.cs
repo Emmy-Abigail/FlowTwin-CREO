@@ -207,6 +207,109 @@ namespace FlowTwin.Persistence.Migraciones
                         });
                 });
 
+            modelBuilder.Entity("FlowTwin.Atenciones.Domain.LoteNodo", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<int>("Lecturas")
+                        .HasColumnType("int");
+
+                    b.Property<int>("NodoId")
+                        .HasColumnType("int");
+
+                    b.Property<long>("Secuencia")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("UsuarioRegistroId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FechaRegistro");
+
+                    b.HasIndex("NodoId", "Id");
+
+                    b.ToTable("LoteNodo", "ope");
+                });
+
+            modelBuilder.Entity("FlowTwin.Atenciones.Domain.PausaZona", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Detalle")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("FechaActualizacion")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<DateTime?>("FinEn")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<DateTime>("InicioEn")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int>("MotivoPausaId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("UsuarioActualizacionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UsuarioId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UsuarioRegistroId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
+                    b.Property<int>("ZonaId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MotivoPausaId");
+
+                    b.HasIndex("UsuarioId");
+
+                    b.HasIndex("ZonaId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_PausaZona_Abierta")
+                        .HasFilter("[FinEn] IS NULL");
+
+                    b.HasIndex("ZonaId", "InicioEn");
+
+                    b.ToTable("PausaZona", "ope", t =>
+                        {
+                            t.HasCheckConstraint("CK_PausaZona_Fin", "[FinEn] IS NULL OR [FinEn] >= [InicioEn]");
+                        });
+                });
+
             modelBuilder.Entity("FlowTwin.Auditoria.Domain.RegistroAuditoria", b =>
                 {
                     b.Property<long>("Id")
@@ -2264,6 +2367,36 @@ namespace FlowTwin.Persistence.Migraciones
                     b.HasOne("FlowTwin.Dispositivos.Domain.Nodo", null)
                         .WithMany()
                         .HasForeignKey("NodoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("FlowTwin.Atenciones.Domain.LoteNodo", b =>
+                {
+                    b.HasOne("FlowTwin.Dispositivos.Domain.Nodo", null)
+                        .WithMany()
+                        .HasForeignKey("NodoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("FlowTwin.Atenciones.Domain.PausaZona", b =>
+                {
+                    b.HasOne("FlowTwin.SharedKernel.Catalogo<FlowTwin.Atenciones.Domain.MotivoPausa>", null)
+                        .WithMany()
+                        .HasForeignKey("MotivoPausaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FlowTwin.Identidad.Domain.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FlowTwin.Gemelo.Domain.Zona", null)
+                        .WithMany()
+                        .HasForeignKey("ZonaId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

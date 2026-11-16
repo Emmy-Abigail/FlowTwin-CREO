@@ -11,7 +11,7 @@ import {
 
 // ---- GET /pisos/{id}/estado y /atendidas-hoy (backend: EstadoPiso, AtendidaHoy)
 interface EstadoApi {
-  zonas: { zonaId: number; ocupacion: number; aforo: number | null; nivel: string; pausada: boolean }[];
+  zonas: { zonaId: number; ocupacion: number; aforo: number | null; nivel: string; pausada: boolean; motivoPausa?: string | null }[];
   atenciones: { id: number; codigo: string; zonaActual: number | null; estado: string; inicioEn: string; esperaMin: number; zonaDesdeEn: string | null }[];
   kpis: { enClinica: number; enEspera: number; esperaPromMin: number | null; consultaPromMin: number | null };
   nodos: { nodoId: number; codigo: string; zonaId: number; estado: string; ultimoLatidoEn: string | null }[];
@@ -108,7 +108,7 @@ export class GemeloEnVivoStore implements FuenteGemelo {
     try {
       const e = await firstValueFrom(this.http.get<EstadoApi>(`${API}/pisos/${pisoId}/estado`));
       if (pisoId !== this.pisoId) return;
-      this.zonasPorId.set(new Map(e.zonas.map(z => [z.zonaId, { zonaId: z.zonaId, personas: z.ocupacion, aforo: z.aforo, nivel: nivelDeApi(z.nivel) }])));
+      this.zonasPorId.set(new Map(e.zonas.map(z => [z.zonaId, zonaDeApi(z)])));
       this.abiertas.set(new Map(e.atenciones.map(a => [a.codigo,
         { id: a.id, zonaId: a.zonaActual, estado: a.estado, inicio: Date.parse(a.inicioEn), esperaMin: a.esperaMin, zonaDesde: ms(a.zonaDesdeEn) }])));
       this.kpis.set(e.kpis);
@@ -137,8 +137,7 @@ export class GemeloEnVivoStore implements FuenteGemelo {
   // ------------------------------------------------------------------ mensajes del hub
 
   private manejadores: ManejadoresGemelo = {
-    ocupacionZona: m => this.zonasPorId.update(z => new Map(z).set(m.zonaId,
-      { zonaId: m.zonaId, personas: m.ocupacion, aforo: m.aforo, nivel: nivelDeApi(m.nivel) })),
+    ocupacionZona: m => this.zonasPorId.update(z => new Map(z).set(m.zonaId, zonaDeApi(m))),
     atencion: m => {
       const abiertas = new Map(this.abiertas());
       if (m.estado === 'FINALIZADA') {
@@ -156,4 +155,9 @@ export class GemeloEnVivoStore implements FuenteGemelo {
     }),
     reconectado: () => { this.cargarEstado(); this.cargarAtendidas(); },
   };
+}
+
+/** Una zona del estado o del hub, con su estado de servicio (ADR-25). */
+function zonaDeApi(z: { zonaId: number; ocupacion: number; aforo: number | null; nivel: string; pausada: boolean; motivoPausa?: string | null }): ZonaVista {
+  return { zonaId: z.zonaId, personas: z.ocupacion, aforo: z.aforo, nivel: nivelDeApi(z.nivel), fueraDeServicio: z.pausada ? (z.motivoPausa ?? 'OTRO') : null };
 }

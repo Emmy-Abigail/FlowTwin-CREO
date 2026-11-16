@@ -58,7 +58,7 @@ public class IdentidadTests(ApiFixture api)
             new { nombres = "Marta", apellidos = "Quispe", correo = "marta.quispe@creo.pe", rol = "OPERADOR", pisos = new[] { 1 } }));
         var temporal = creado.GetProperty("contrasenaTemporal").GetString()!;
 
-        using var sinRegla = api.Fabrica.WithWebHostBuilder(b => b.UseSetting("Contrasenas:ExigirCambioPrimerIngreso", "false"));
+        using var sinRegla = api.ConAjustes(("Contrasenas:ExigirCambioPrimerIngreso", "false"));
         var cliente = sinRegla.CreateClient();
         var login = await Json(await cliente.PostAsJsonAsync("/api/v1/auth/login", new { correo = "marta.quispe@creo.pe", clave = temporal }));
 
