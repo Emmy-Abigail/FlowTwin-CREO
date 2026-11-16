@@ -986,7 +986,7 @@ namespace FlowTwin.Persistence.Migraciones
 
                     b.ToTable("Zona", "gem", t =>
                         {
-                            t.HasCheckConstraint("CK_Zona_AforoRN13", "([Aforo] IS NULL AND [UmbralMediaPct] IS NULL AND [UmbralAltaPct] IS NULL) OR ([TipoZonaId] IN (1, 2, 3) AND [Aforo] >= 1 AND [UmbralMediaPct] IS NOT NULL AND [UmbralAltaPct] IS NOT NULL AND [UmbralMediaPct] > 0 AND [UmbralMediaPct] <= [UmbralAltaPct] AND [UmbralAltaPct] <= 100)");
+                            t.HasCheckConstraint("CK_Zona_AforoRN13", "([Aforo] IS NULL AND [UmbralMediaPct] IS NULL AND [UmbralAltaPct] IS NULL) OR ([TipoZonaId] IN (1, 2, 3, 6) AND [Aforo] >= 1 AND [UmbralMediaPct] IS NOT NULL AND [UmbralAltaPct] IS NOT NULL AND [UmbralMediaPct] > 0 AND [UmbralMediaPct] <= [UmbralAltaPct] AND [UmbralAltaPct] <= 100)");
 
                             t.HasCheckConstraint("CK_Zona_Geometria", "[Geometria] IS NULL OR ISJSON([Geometria]) = 1");
 
@@ -1051,7 +1051,7 @@ namespace FlowTwin.Persistence.Migraciones
                             FondoM = 4.8m,
                             Nombre = "Triaje",
                             PisoId = 1,
-                            TipoZonaId = 3,
+                            TipoZonaId = 6,
                             UsuarioRegistroId = 1,
                             X = 25.2m,
                             Y = 13.9m
@@ -1916,6 +1916,15 @@ namespace FlowTwin.Persistence.Migraciones
                             EstadoRegistro = true,
                             FechaRegistro = new DateTime(2026, 10, 27, 0, 0, 0, 0, DateTimeKind.Utc),
                             Nombre = "Salida",
+                            UsuarioRegistroId = 1
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Codigo = "TRIAJE",
+                            EstadoRegistro = true,
+                            FechaRegistro = new DateTime(2026, 10, 27, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Nombre = "Triaje",
                             UsuarioRegistroId = 1
                         });
                 });

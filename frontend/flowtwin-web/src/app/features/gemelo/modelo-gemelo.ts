@@ -122,7 +122,7 @@ export function geometriaDesdeApi(g: GeometriaApi, sede: string): GeometriaPiso 
 
 /** RN-13: los tipos donde la gente permanece tienen aforo; Tránsito y Salida, nunca. */
 export function tieneAforo(tipo: TipoZona | undefined): boolean {
-  return tipo === 'INGRESO' || tipo === 'ESPERA' || tipo === 'SERVICIO';
+  return tipo === 'INGRESO' || tipo === 'ESPERA' || tipo === 'TRIAJE' || tipo === 'SERVICIO';
 }
 
 /**
