@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { AlertasService } from '../../core/alertas/alertas.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { Rol } from '../../core/datos/modelos';
 import { PisoActualService } from '../../core/datos/piso-actual.service';
@@ -56,6 +57,16 @@ const QUE_HACE: Record<Rol, string> = {
                 }
               </dd>
             </div>
+            @if (alertas.disponible()) {
+              <div>
+                <dt>Alertas</dt>
+                <dd>
+                  <label class="sonido">Sonido de alertas urgentes
+                    <input type="checkbox" role="switch" class="interruptor" [checked]="!alertas.silencio()" (change)="alertas.alternarSilencio()">
+                  </label>
+                </dd>
+              </div>
+            }
             <div>
               <dt>Sesión</dt>
               <dd><small><app-icono nombre="reloj" [tamano]="14" /> Se cierra sola tras 30 minutos sin actividad.</small></dd>
@@ -93,12 +104,20 @@ const QUE_HACE: Record<Rol, string> = {
     .rol { padding: 3px 10px; border-radius: 999px; background: var(--celeste); color: var(--celeste-t); font-size: 13px; font-weight: 700; }
     .piso { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; background: var(--fondo-2); font-size: 13px; font-weight: 600; }
     dl > div:last-child { border-bottom: 0; padding-bottom: 0; }
+    .sonido { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .interruptor { appearance: none; width: 44px; height: 26px; border-radius: 999px; background: var(--gris-3); position: relative; cursor: pointer; transition: background-color .2s; flex: none; margin: 0; }
+    .interruptor::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .2); transition: transform .2s; }
+    .interruptor:checked { background: var(--baja); }
+    .interruptor:checked::after { transform: translateX(18px); }
+    .interruptor:focus-visible { outline: 3px solid var(--rojo); outline-offset: 2px; }
+    @media (prefers-reduced-motion: reduce) { .interruptor, .interruptor::after { transition: none; } }
     .nota { margin: 14px 0 0; padding-top: 14px; border-top: 1px solid var(--linea); font-size: 13px; color: var(--gris); }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CuentaPage {
   protected auth = inject(AuthService);
+  protected alertas = inject(AlertasService);
   protected toast = inject(ToastService);
   private pisos = inject(PisoActualService);
 

@@ -32,12 +32,12 @@ public class AlertasTests
     }
 
     [Fact]
-    public void La_espera_avisa_a_los_20_se_pone_alta_a_los_40_y_critica_a_los_60()
+    public void La_espera_alerta_a_los_40_y_es_critica_a_los_60_pero_no_avisa_por_esperas_normales()
     {
-        var a = Alertas([EnSala(1, 19), EnSala(2, 25), EnSala(3, 45), EnSala(4, 61)]);
+        var a = Alertas([EnSala(1, 25), EnSala(2, 39), EnSala(3, 45), EnSala(4, 61)]);
 
-        Assert.Equal(["CRITICA", "ALTA", "AVISO"], a.Where(x => x.Tipo == "ESPERA_LARGA").Select(x => x.Nivel));
-        Assert.DoesNotContain(a, x => x.AtencionId == 1);   // 19 min: todavía no
+        Assert.Equal(["CRITICA", "ALTA"], a.Where(x => x.Tipo == "ESPERA_LARGA").Select(x => x.Nivel));
+        Assert.DoesNotContain(a, x => x.AtencionId is 1 or 2);   // 25 y 39 min: espera normal, sin alerta
         Assert.Equal("A-0004", a[0].Codigo);                // lo más urgente primero
     }
 

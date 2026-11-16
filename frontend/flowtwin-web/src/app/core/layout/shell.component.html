@@ -17,7 +17,7 @@
 
     <div class="abajo">
       @if (alertas.disponible()) {
-        @let n = alertas.lista().length;
+        @let n = alertas.pendientes().length;
         <button class="item alertas" type="button" (click)="panelAlertas.set(true)" [class.sonando]="sonando()"
                 [attr.aria-label]="n ? 'Alertas: ' + n : 'Alertas: ninguna'" [attr.title]="colapsada() ? 'Alertas' : null">
           <span class="campana"><app-icono nombre="bell" [tamano]="22" /></span>
