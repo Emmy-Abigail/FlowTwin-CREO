@@ -14,12 +14,9 @@ public sealed record AtencionApi(long Id, string Codigo);
 public sealed record EscaneoApi(string Operacion, TarjetaApi Tarjeta, AtencionApi? Atencion);
 public sealed record LecturaApi(string UuidBle, int Rssi, int EdadMs);
 
-/// <summary>Resultado de enviar algo como nodo, según la sección 6 del contrato.</summary>
-public enum RespuestaNodo { Recibido, Rechazado, ClaveInvalida, Esperar, SinConexion }
-
 /// <summary>
-/// Habla con la API de dos maneras: como el Operador de recepción (JWT, para entregar y devolver
-/// tarjetas) y como cada ESP32 (X-Node-Key, para latidos y lecturas).
+/// Habla con la API como el Operador de recepción (JWT): entrega y devuelve tarjetas. Los nodos no usan
+/// HTTP: van por MQTT (NodosMqtt).
 /// </summary>
 public sealed class ClienteApi(HttpClient http, Escenario escenario)
 {
@@ -66,36 +63,4 @@ public sealed class ClienteApi(HttpClient http, Escenario escenario)
     }
 
     private sealed record SesionApi(string AccessToken);
-
-    // ---- Como cada ESP32 (contrato de integración, secciones 4 a 6)
-
-    public Task<(RespuestaNodo, TimeSpan)> LatidoAsync(NodoSimulado nodo, CancellationToken ct) =>
-        ComoNodoAsync(nodo, "/api/v1/ingesta/latidos",
-            new { mac = nodo.Mac, versionFirmware = "simulador-1.0", rssiWifi = -55, memoriaLibre = 150_000 }, ct);
-
-    public Task<(RespuestaNodo, TimeSpan)> LoteAsync(NodoSimulado nodo, long secuencia, List<LecturaApi> lecturas, CancellationToken ct) =>
-        ComoNodoAsync(nodo, "/api/v1/ingesta/lecturas", new { mac = nodo.Mac, secuencia, lecturas }, ct);
-
-    /// <summary>Devuelve qué hacer y, si es un 429, cuánto esperar (cabecera Retry-After).</summary>
-    private async Task<(RespuestaNodo, TimeSpan)> ComoNodoAsync(NodoSimulado nodo, string ruta, object cuerpo, CancellationToken ct)
-    {
-        using var peticion = new HttpRequestMessage(HttpMethod.Post, ruta) { Content = JsonContent.Create(cuerpo) };
-        peticion.Headers.Add("X-Node-Key", nodo.Clave);
-        try
-        {
-            using var r = await http.SendAsync(peticion, ct);
-            return r.StatusCode switch
-            {
-                HttpStatusCode.Accepted => (RespuestaNodo.Recibido, TimeSpan.Zero),
-                HttpStatusCode.Unauthorized => (RespuestaNodo.ClaveInvalida, TimeSpan.FromSeconds(60)),
-                HttpStatusCode.TooManyRequests => (RespuestaNodo.Esperar, r.Headers.RetryAfter?.Delta ?? TimeSpan.FromSeconds(10)),
-                HttpStatusCode.BadRequest => (RespuestaNodo.Rechazado, TimeSpan.Zero),
-                _ => (RespuestaNodo.SinConexion, TimeSpan.FromSeconds(2)),
-            };
-        }
-        catch (HttpRequestException)
-        {
-            return (RespuestaNodo.SinConexion, TimeSpan.FromSeconds(2));
-        }
-    }
 }

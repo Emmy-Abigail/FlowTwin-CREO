@@ -1,15 +1,16 @@
 # CREO FlowTwin · backend
 
-ASP.NET Core 10 (monolito modular) + EF Core 10 + SQL Server. Arquitectura: ver el *Documento de arquitectura*.
+ASP.NET Core 10 (monolito modular) + EF Core 10 + SQL Server + broker MQTT Mosquitto para los nodos
+(ADR-24). Arquitectura: ver el *Documento de arquitectura* y `docs/adr/`.
 
 ## Puesta en marcha (desarrollo)
 
 Todo se ejecuta dentro de `backend/`.
 
 ```bash
-# 1. SQL Server Developer en Docker (la primera vez: cp .env.example .env y pon una contraseña)
+# 1. SQL Server y Mosquitto en Docker (la primera vez: cp .env.example .env y pon las dos contraseñas)
 docker-compose up -d
-docker-compose ps                       # espera "(healthy)"
+docker-compose ps                       # espera "(healthy)" en los dos
 
 # 2. Secretos (solo la primera vez; se guardan fuera del repositorio, en ~/.microsoft/usersecrets)
 SA=$(grep MSSQL_SA_PASSWORD .env | cut -d= -f2)
@@ -17,6 +18,8 @@ dotnet user-secrets set "ConnectionStrings:FlowTwin" \
   "Server=localhost,1433;Database=FlowTwin;User Id=sa;Password=$SA;TrustServerCertificate=True;Encrypt=True" \
   --project src/FlowTwin.Api
 dotnet user-secrets set "Jwt:Clave" "$(openssl rand -base64 64 | tr -d '\n')" --project src/FlowTwin.Api
+# La misma clave del administrador de Mosquitto que pusiste en .env
+dotnet user-secrets set "Mqtt:ClaveAdmin" "$(grep MQTT_ADMIN_CLAVE .env | cut -d= -f2)" --project src/FlowTwin.Api
 
 # 3. Herramientas locales (dotnet-ef)
 dotnet tool restore
@@ -30,8 +33,25 @@ dotnet run --project src/FlowTwin.Api
 - Usuarios de demo, **solo en desarrollo** (contraseña `demo123`): `admin@creo.pe`, `operador@creo.pe`,
   `gerencia@creo.pe`, `nuevo@creo.pe`. Tarjetas `T-01` a `T-15`; `T-11` por desinfectar y `T-14` sin devolver.
 - Nodos de demo, **solo en desarrollo**: `N-01` (Admisión), `N-02` (Sala de espera) y `N-03` (Módulo 2), con
-  MAC `02:00:00:00:00:0n` y clave `nk_dev_N-0n`. En producción cada nodo se registra con `POST /api/v1/nodos`
-  y su clave aleatoria se muestra una sola vez.
+  MAC `02:00:00:00:00:0n` y clave `nk_dev_N-0n`. Al arrancar, la API les crea su cuenta en el broker. En
+  producción cada nodo se registra con `POST /api/v1/nodos`: la respuesta trae su clave (una sola vez) y su
+  usuario y temas MQTT.
+
+## Nodos por MQTT (ADR-24)
+
+Los ESP32 publican en Mosquitto (`localhost:1883` en desarrollo); la API está suscrita y guarda lo que
+llega. El contrato completo está en `docs/contrato-integracion-nodos.md`.
+
+- **Cuentas:** cada nodo tiene la suya y solo puede publicar en sus temas. La API las crea, cambia y borra
+  al registrar, regenerar la clave o dar de baja un nodo, con la cuenta de administrador de Mosquitto
+  (`Mqtt:ClaveAdmin`). Por eso registrar un nodo exige que Mosquitto esté encendido (si no, responde 503).
+- **Si Mosquitto se recrea desde cero** (se borró el volumen `flowtwin-mqttdata`): los nodos de demo se
+  recrean solos; los reales no, porque su clave no se guarda en ningún lado. La API avisa en el log
+  «regenera su clave en Dispositivos».
+- **Prefijos por entorno:** la API de trabajo usa `flowtwin`, la del simulador `flowtwin-sim` y las pruebas
+  `flowtwin-pruebas`: comparten el broker sin verse entre sí.
+- **En la clínica:** listener TLS en el 8883 con el certificado interno, `Mqtt__UsarTls=true`,
+  `Mqtt__Puerto=8883` y `Mqtt__ClaveAdmin` como variable de entorno. El firmware valida el certificado.
 
 ## Administrador inicial (instalación en la clínica)
 
@@ -54,8 +74,8 @@ Las pruebas de integración verifican la regla encendida y apagada.
 
 ## Simulador de nodos
 
-Hace de recepción y de los 3 ESP32 de desarrollo: entrega tarjetas, mueve pacientes por Admisión → Sala
-de espera → Módulo 2 y envía lecturas y latidos por la API, igual que el firmware real.
+Hace de recepción y de los 3 ESP32 de desarrollo: entrega tarjetas por la API, mueve pacientes por
+Admisión → Sala de espera → Módulo 2 y publica lecturas y latidos en Mosquitto, igual que el firmware real.
 
 Lo que escribe parece real, así que **nunca va a la base de trabajo** (`FlowTwin`, API en el 5080):
 usa su propia API en el puerto 5090 con la base `FlowTwin_Simulador`, que se crea sola la primera vez.
@@ -70,8 +90,8 @@ cd ../frontend/flowtwin-web && npm run start:simulador                          
 
 - La pantalla del simulador va en `127.0.0.1` y no en `localhost` a propósito: el navegador separa las
   cookies por nombre de sitio, no por puerto, y así cada ventana conserva su propia sesión.
-- Si el simulador apunta al 5080 se niega a arrancar; para escribir en la base de trabajo a propósito
-  hay que agregar `--en-base-de-trabajo`.
+- Si el simulador apunta al 5080 o a los temas MQTT de trabajo (prefijo `flowtwin`) se niega a arrancar;
+  para escribir en la base de trabajo a propósito hay que agregar `--en-base-de-trabajo`.
 - `Ctrl+C` lo detiene y devuelve las tarjetas de los pacientes simulados. Los tiempos, nodos y ruido de la
   señal se cambian en `tools/FlowTwin.Simulador/escenarios/*.json`.
 - Para volver una base de desarrollo al estado de la semilla (sin atenciones, lecturas ni movimientos):
@@ -80,7 +100,7 @@ cd ../frontend/flowtwin-web && npm run start:simulador                          
 ## Pruebas
 
 ```bash
-dotnet test     # unitarias, de arquitectura y de integración (estas usan la base FlowTwin_Pruebas)
+dotnet test     # unitarias, de arquitectura y de integración (base FlowTwin_Pruebas y Mosquitto encendido)
 ```
 
 ## Migraciones

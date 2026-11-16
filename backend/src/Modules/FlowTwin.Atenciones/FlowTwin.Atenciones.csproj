@@ -4,6 +4,7 @@
     <ProjectReference Include="..\..\FlowTwin.SharedKernel\FlowTwin.SharedKernel.csproj" />
     <ProjectReference Include="..\FlowTwin.Gemelo\FlowTwin.Gemelo.csproj" />
     <ProjectReference Include="..\FlowTwin.Dispositivos\FlowTwin.Dispositivos.csproj" />
+    <ProjectReference Include="..\FlowTwin.Mensajeria\FlowTwin.Mensajeria.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

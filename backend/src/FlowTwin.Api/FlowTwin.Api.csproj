@@ -25,6 +25,7 @@
     <ProjectReference Include="..\Modules\FlowTwin.Dispositivos\FlowTwin.Dispositivos.csproj" />
     <ProjectReference Include="..\Modules\FlowTwin.Gemelo\FlowTwin.Gemelo.csproj" />
     <ProjectReference Include="..\Modules\FlowTwin.Identidad\FlowTwin.Identidad.csproj" />
+    <ProjectReference Include="..\Modules\FlowTwin.Mensajeria\FlowTwin.Mensajeria.csproj" />
     <ProjectReference Include="..\Modules\FlowTwin.Monitoreo\FlowTwin.Monitoreo.csproj" />
     <ProjectReference Include="..\Modules\FlowTwin.Reportes\FlowTwin.Reportes.csproj" />
   </ItemGroup>

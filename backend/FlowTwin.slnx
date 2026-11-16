@@ -10,6 +10,7 @@
     <Project Path="src/Modules/FlowTwin.Dispositivos/FlowTwin.Dispositivos.csproj" />
     <Project Path="src/Modules/FlowTwin.Gemelo/FlowTwin.Gemelo.csproj" />
     <Project Path="src/Modules/FlowTwin.Identidad/FlowTwin.Identidad.csproj" />
+    <Project Path="src/Modules/FlowTwin.Mensajeria/FlowTwin.Mensajeria.csproj" />
     <Project Path="src/Modules/FlowTwin.Monitoreo/FlowTwin.Monitoreo.csproj" />
     <Project Path="src/Modules/FlowTwin.Reportes/FlowTwin.Reportes.csproj" />
   </Folder>

@@ -17,7 +17,8 @@
       "applicationUrl": "http://localhost:5090",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "BaseDatos__Nombre": "FlowTwin_Simulador"
+        "BaseDatos__Nombre": "FlowTwin_Simulador",
+        "Mqtt__Prefijo": "flowtwin-sim"
       }
     },
     "https": {

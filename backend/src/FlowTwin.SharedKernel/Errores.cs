@@ -35,3 +35,7 @@ public sealed class SinPermisoException(string mensaje = "No tienes permiso para
 /// <summary>429: cuenta bloqueada por intentos fallidos.</summary>
 public sealed class BloqueadoException(string mensaje, object? datos = null)
     : ErrorFlowTwin("BLOQUEADO", mensaje, 429, datos);
+
+/// <summary>503: un servicio del que depende la acción (por ejemplo, el broker MQTT) no responde. Se puede reintentar.</summary>
+public sealed class ServicioNoDisponibleException(string mensaje)
+    : ErrorFlowTwin("SERVICIO_NO_DISPONIBLE", mensaje, 503);

@@ -1,7 +1,9 @@
 using FlowTwin.Dispositivos.Domain;
 using FlowTwin.Gemelo.Contracts;
+using FlowTwin.Mensajeria.Contracts;
 using FlowTwin.SharedKernel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace FlowTwin.Dispositivos.Application;
 
@@ -9,15 +11,23 @@ public sealed record NodoDto(
     int Id, string Codigo, string Mac, int ZonaId, string Zona, int PisoId, decimal? PosX, decimal? PosY,
     string Estado, string EstadoNombre, DateTime? UltimoLatidoEn, string? VersionFirmware, short AjusteRssiDb);
 
-/// <summary>Respuesta de registrar o regenerar: la única vez que la API devuelve la clave.</summary>
-public sealed record NodoConClaveDto(NodoDto Nodo, string Clave);
+/// <summary>
+/// Respuesta de registrar o regenerar: la única vez que la API devuelve la clave. Mqtt: el usuario y los
+/// temas que se cargan en el NVS del nodo junto con la clave (contrato de integración, sección 3).
+/// </summary>
+public sealed record NodoConClaveDto(NodoDto Nodo, string Clave, CuentaMqtt Mqtt);
 
 public sealed record RegistrarNodoRequest(string Codigo, string Mac, int ZonaId, decimal? PosX, decimal? PosY);
 
 public sealed record EditarNodoRequest(int ZonaId, decimal? PosX, decimal? PosY, short AjusteRssiDb);
 
-/// <summary>Registro y administración de los nodos ESP32 (F-15). La ingesta de latidos y lecturas va aparte.</summary>
-public sealed class NodosServicio(IDispositivosDb db, IZonasConsultas zonas, IUsuarioActual usuario, IAuditoria auditoria)
+/// <summary>
+/// Registro y administración de los nodos ESP32 (F-15). Cada nodo tiene además una cuenta en el broker MQTT
+/// (ADR-24): se crea al registrarlo, se reemplaza al regenerar su clave y se borra al darlo de baja.
+/// </summary>
+public sealed class NodosServicio(
+    IDispositivosDb db, IZonasConsultas zonas, IUsuarioActual usuario, IAuditoria auditoria,
+    ICuentasNodosBroker broker, ILogger<NodosServicio> log)
 {
     /// <summary>GET /nodos: Admin ve todos; Operador, los de sus pisos.</summary>
     public async Task<List<NodoDto>> ListarAsync(CancellationToken ct)
@@ -53,7 +63,11 @@ public sealed class NodosServicio(IDispositivosDb db, IZonasConsultas zonas, IUs
             // La clave NUNCA va a la auditoría ni a los logs
             auditoria.Registrar(AccionAuditoria.Crear, "Nodo", nodo.Codigo, despues: Resumen(nodo, zona));
             await db.GuardarAsync(ct);
-            return new NodoConClaveDto(Dto(nodo, zona), clave);
+            // Último paso antes de confirmar: si el broker no responde (503), la transacción se deshace y el
+            // nodo no queda registrado sin poder conectarse. Si lo que falla es la confirmación, la cuenta
+            // huérfana la borra la sincronización al arrancar.
+            var mqtt = await broker.CrearAsync(nodo.Mac, clave, ct);
+            return new NodoConClaveDto(Dto(nodo, zona), clave, mqtt);
         }, ct);
 
     /// <summary>PUT /nodos/{id}: zona, posición y ajuste de señal (calibración en sitio, ADR-20).</summary>
@@ -75,8 +89,11 @@ public sealed class NodosServicio(IDispositivosDb db, IZonasConsultas zonas, IUs
         var nodo = await NodoVigenteAsync(id, ct);
         var clave = nodo.AsignarClaveNueva();
         auditoria.Registrar(AccionAuditoria.RegenerarClave, "Nodo", nodo.Codigo);
+        // Primero el broker: si no responde, no se cambia nada y la clave anterior sigue sirviendo. Al
+        // reemplazar la cuenta, el broker cierra la sesión abierta con la clave anterior.
+        var mqtt = await broker.CrearAsync(nodo.Mac, clave, ct);
         await db.GuardarAsync(ct);
-        return new NodoConClaveDto(Dto(nodo, await ZonaExistenteAsync(nodo.ZonaId, ct)), clave);
+        return new NodoConClaveDto(Dto(nodo, await ZonaExistenteAsync(nodo.ZonaId, ct)), clave, mqtt);
     }
 
     /// <summary>POST /nodos/{id}/baja: retira el nodo e invalida su clave.</summary>
@@ -89,6 +106,10 @@ public sealed class NodosServicio(IDispositivosDb db, IZonasConsultas zonas, IUs
         auditoria.Registrar(AccionAuditoria.DarBaja, "Nodo", nodo.Codigo,
             new { estado = estadoAntes.Codigo() }, new { estado = nodo.EstadoNodoId.Codigo() });
         await db.GuardarAsync(ct);
+        // La baja ya vale aunque el broker no responda: la ingesta rechaza a un nodo de baja, y la
+        // sincronización borra la cuenta al próximo arranque
+        try { await broker.EliminarAsync(nodo.Mac, ct); }
+        catch (ServicioNoDisponibleException) { log.LogWarning("El broker no respondió: la cuenta MQTT de {Codigo} se borrará al reiniciar", nodo.Codigo); }
         return Dto(nodo, await ZonaExistenteAsync(nodo.ZonaId, ct));
     }
 
