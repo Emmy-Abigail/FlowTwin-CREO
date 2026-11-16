@@ -77,8 +77,9 @@ npx @gltf-transform/cli@4.1.1 meshopt salida/clinica-piso1-acabado.glb salida/cl
 El horneado tarda unos 5 minutos. Los nombres de los objetos no cambian. Los
 acabados (vinílico, porcelanato en baños, madera, laminado, tapiz, acero) no
 vienen en el plano: son acabados estándar de clínica, configurables en
-`ACABADOS` dentro de `acabado/acabar.py`. Para cargarlo en Angular, ver
-`GUIA-THREEJS.md`.
+`ACABADOS` dentro de `acabado/acabar.py`. En el sistema, la maqueta la carga y la pinta
+`frontend/flowtwin-web/src/app/gemelo-render/` (`maqueta.ts` y `render-3d`): ahí están la luz, el decodificador
+meshopt y el color de cada zona.
 
 ## Corregir el modelo
 
