@@ -19,8 +19,8 @@ function detalle(extra: Partial<DetalleVista> = {}): DetalleVista {
 
 describe('P6 · detalle de atención', () => {
   it('cada tipo de zona va a su carril; lo desconocido, a «Paso»', () => {
-    expect(['INGRESO', 'ESPERA', 'SERVICIO', 'TRANSITO', 'SALIDA', 'DESCONOCIDO'].map(carrilDe))
-      .toEqual(['admision', 'espera', 'consulta', 'paso', 'paso', 'paso']);
+    expect(['INGRESO', 'TRIAJE', 'ESPERA', 'SERVICIO', 'TRANSITO', 'SALIDA', 'DESCONOCIDO'].map(carrilDe))
+      .toEqual(['admision', 'admision', 'espera', 'consulta', 'paso', 'paso', 'paso']);   // ADR-26: el triaje no es consulta
   });
 
   describe('tramos', () => {

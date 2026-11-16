@@ -11,7 +11,7 @@ import { CeldaApi, FilaDatos, FilaMapaApi, OcupacionApi, Rango, ZonaHistorialApi
 export interface ZonaSimulada { id: number; nombre: string; tipo: string; aforo: number | null }
 
 const SIN_MAPA = ['TRANSITO', 'SALIDA'];
-const ORDEN = ['ESPERA', 'SERVICIO', 'INGRESO'];
+const ORDEN = ['ESPERA', 'TRIAJE', 'SERVICIO', 'INGRESO'];
 const HORA = 60 * MIN;
 
 const delRango = (atenciones: Atencion[], r: Rango) => {

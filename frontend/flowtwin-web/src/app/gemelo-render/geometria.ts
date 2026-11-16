@@ -3,7 +3,7 @@
  * la simulación). Todo está en metros. El origen es la esquina de los ejes 1 y D: x crece hacia la
  * derecha e y hacia el fondo del plano. Lo que se DIBUJA (muros, muebles) viene de la maqueta 3D.
  */
-export type TipoZona = 'INGRESO' | 'ESPERA' | 'SERVICIO' | 'TRANSITO' | 'SALIDA';
+export type TipoZona = 'INGRESO' | 'ESPERA' | 'TRIAJE' | 'SERVICIO' | 'TRANSITO' | 'SALIDA';
 
 /** Punto [x, y] en metros. */
 export type Punto = [number, number];

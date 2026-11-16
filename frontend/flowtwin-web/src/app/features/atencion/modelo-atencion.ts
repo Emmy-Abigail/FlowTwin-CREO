@@ -39,7 +39,7 @@ export interface DetalleVista {
 export type Carril = 'admision' | 'espera' | 'consulta' | 'paso' | 'sin-detectar';
 
 export const CARRILES: { id: Carril; texto: string }[] = [
-  { id: 'admision', texto: 'Admisión' },
+  { id: 'admision', texto: 'Admisión y triaje' },
   { id: 'espera', texto: 'Espera' },
   { id: 'consulta', texto: 'Consulta' },
   { id: 'paso', texto: 'Paso' },
@@ -48,7 +48,8 @@ export const CARRILES: { id: Carril; texto: string }[] = [
 
 export function carrilDe(tipo: string): Carril {
   switch (tipo) {
-    case 'INGRESO': return 'admision';
+    case 'INGRESO':
+    case 'TRIAJE': return 'admision';   // ADR-26: paso previo a la consulta, no es consulta
     case 'ESPERA': return 'espera';
     case 'SERVICIO': return 'consulta';
     default: return 'paso';   // TRANSITO, SALIDA o una zona que ya no existe
