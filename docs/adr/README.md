@@ -14,3 +14,4 @@ atrás. Los ADR-01 a ADR-20 están en el documento de arquitectura (v2); desde e
 | [ADR-26](0026-triaje-no-detiene-la-espera.md) | El triaje no detiene la espera | Aceptada |
 | [ADR-27](0027-configuracion-sin-editor-de-planos.md) | Configuración por datos en vez de «Construcción del gemelo»; aforo donde el paciente permanece | Aceptada |
 | [ADR-28](0028-maquetas-servidas-por-la-api.md) | La maqueta 3D de cada piso la entrega la API desde una carpeta del servidor | Aceptada |
+| [ADR-29](0029-gerencia-ve-todos-los-pisos.md) | Gerencia ve todos los pisos; solo el Operador tiene pisos asignados | Aceptada |

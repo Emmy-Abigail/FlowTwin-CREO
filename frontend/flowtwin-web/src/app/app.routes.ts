@@ -56,8 +56,8 @@ export const routes: Routes = [
       {
         path: 'usuarios',
         canActivate: [rolGuard(PERMISOS.usuarios)],
-        data: { titulo: 'Usuarios', descripcion: 'Cuentas, roles y pisos asignados (P10).' },
-        loadComponent: proximamente,
+        title: 'Usuarios · CREO FlowTwin',
+        loadComponent: () => import('./features/usuarios/usuarios.page').then(m => m.UsuariosPage),
       },
       {
         path: 'auditoria',
