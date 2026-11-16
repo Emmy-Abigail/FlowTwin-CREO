@@ -5,30 +5,8 @@ ASP.NET Core 10 (monolito modular) + EF Core 10 + SQL Server + broker MQTT Mosqu
 
 ## Puesta en marcha (desarrollo)
 
-Todo se ejecuta dentro de `backend/`.
-
-```bash
-# 1. SQL Server y Mosquitto en Docker (la primera vez: cp .env.example .env y pon las dos contraseñas)
-docker-compose up -d
-docker-compose ps                       # espera "(healthy)" en los dos
-
-# 2. Secretos (solo la primera vez; se guardan fuera del repositorio, en ~/.microsoft/usersecrets)
-SA=$(grep MSSQL_SA_PASSWORD .env | cut -d= -f2)
-dotnet user-secrets set "ConnectionStrings:FlowTwin" \
-  "Server=localhost,1433;Database=FlowTwin;User Id=sa;Password=$SA;TrustServerCertificate=True;Encrypt=True" \
-  --project src/FlowTwin.Api
-dotnet user-secrets set "Jwt:Clave" "$(openssl rand -base64 64 | tr -d '\n')" --project src/FlowTwin.Api
-# La misma clave del administrador de Mosquitto que pusiste en .env
-dotnet user-secrets set "Mqtt:ClaveAdmin" "$(grep MQTT_ADMIN_CLAVE .env | cut -d= -f2)" --project src/FlowTwin.Api
-# Sello de integridad de la bitácora (ADR-30). Guárdala también fuera del equipo: sin ella no se verifica la cadena
-dotnet user-secrets set "Auditoria:ClaveSello" "$(openssl rand -base64 48 | tr -d '\n')" --project src/FlowTwin.Api
-
-# 3. Herramientas locales (dotnet-ef)
-dotnet tool restore
-
-# 4. API en http://localhost:5080 (en desarrollo aplica las migraciones y siembra los datos de demo)
-dotnet run --project src/FlowTwin.Api
-```
+Los pasos (Docker, secretos, API y web) están en el [README principal](../README.md#-cómo-correrlo). Aquí va el
+detalle técnico que solo necesita quien trabaja en el backend.
 
 - Documentación interactiva de la API: <http://localhost:5080/scalar>
 - Peticiones de ejemplo: `src/FlowTwin.Api/FlowTwin.Api.http`

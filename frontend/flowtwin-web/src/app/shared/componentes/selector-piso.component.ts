@@ -11,7 +11,7 @@ import { PisoActualService } from '../../core/datos/piso-actual.service';
     @if (piso.sedes().length > 1) {
       <label class="sr-only" for="sel-sede">Sede</label>
       <select id="sel-sede" class="sel" [value]="piso.sede()?.id" (change)="piso.seleccionarSede(+$any($event.target).value)">
-        @for (s of piso.sedes(); track s.id) { <option [value]="s.id">{{ s.nombre }}</option> }
+        @for (s of piso.sedes(); track s.id) { <option [value]="s.id" [selected]="s.id === piso.sede()?.id">{{ s.nombre }}</option> }
       </select>
     } @else if (piso.sede(); as s) {
       <span class="sede">{{ s.nombre }}</span>
@@ -19,7 +19,7 @@ import { PisoActualService } from '../../core/datos/piso-actual.service';
     @if (piso.pisosDeSede().length) {
       <label class="sr-only" for="sel-piso">Piso</label>
       <select id="sel-piso" class="sel piso" [value]="piso.piso()?.id" (change)="piso.seleccionarPiso(+$any($event.target).value)">
-        @for (p of piso.pisosDeSede(); track p.id) { <option [value]="p.id">{{ p.nombre }}</option> }
+        @for (p of piso.pisosDeSede(); track p.id) { <option [value]="p.id" [selected]="p.id === piso.piso()?.id">{{ p.nombre }}</option> }
       </select>
     } @else if (piso.cargando()) {
       <span class="sede">Cargando pisos…</span>
