@@ -8,6 +8,7 @@ namespace FlowTwin.Auditoria.Application;
 public interface IAuditoriaDb : IUnidadDeTrabajo
 {
     DbSet<RegistroAuditoria> Auditoria { get; }
+    DbSet<RegistroSello> Sellos { get; }
 }
 
 /// <summary>

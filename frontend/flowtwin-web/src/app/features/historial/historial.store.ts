@@ -13,6 +13,7 @@ import {
   filaDesdeApi, paginar, problemaRango, rangoDe, resumenDe,
 } from './modelo-historial';
 import { filasSimuladas, ocupacionSimulada } from './simulacion-historial';
+import { descargar, nombreDe } from '../../core/utils/descarga';
 
 export type Pestana = 'ocupacion' | 'atenciones';
 
@@ -202,18 +203,6 @@ function leerFiltros(): Filtros | null {
 
 function guardarFiltros(f: Filtros): void {
   try { sessionStorage.setItem(CLAVE_FILTROS, JSON.stringify(f)); } catch { /* no se recuerda */ }
-}
-
-function descargar(blob: Blob, archivo: string): void {
-  const url = URL.createObjectURL(blob);
-  Object.assign(document.createElement('a'), { href: url, download: archivo }).click();
-  setTimeout(() => URL.revokeObjectURL(url), 1_000);
-}
-
-/** «attachment; filename=a.csv; filename*=UTF-8''a.csv» → «a.csv». */
-function nombreDe(cabecera: string | null): string | null {
-  const m = /filename\*=UTF-8''([^;]+)/i.exec(cabecera ?? '') ?? /filename="?([^";]+)"?/i.exec(cabecera ?? '');
-  return m ? decodeURIComponent(m[1]) : null;
 }
 
 /** Las mismas columnas que el CSV del backend. */

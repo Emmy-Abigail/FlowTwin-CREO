@@ -59,31 +59,62 @@ public sealed class AutenticacionServicio(
         var ahora = reloj.AhoraUtc;
         var correo = req.Correo.Trim().ToLowerInvariant();
         var usuario = await db.Usuarios.Include(u => u.Pisos)
-            .SingleOrDefaultAsync(u => u.Correo == correo && u.Id != UsuarioSistema.Id, ct)
-            ?? throw new NoAutenticadoException();
+            .SingleOrDefaultAsync(u => u.Correo == correo && u.Id != UsuarioSistema.Id, ct);
+        if (usuario is null)
+        {
+            // Sin usuario no hay a quién atribuirlo: queda a nombre de Sistema, con el correo que se intentó
+            await RegistrarFallidoAsync(null, correo, "DESCONOCIDO", ct);
+            throw new NoAutenticadoException();
+        }
 
+        // Hasta comprobar la contraseña no se sabe QUIÉN intenta entrar: los fallos quedan a nombre de Sistema
+        // (la cuenta afectada va en la entidad). Atribuirlos al dueño del correo lo acusaría de algo que no hizo.
         if (usuario.EstaBloqueado(ahora))
+        {
+            await RegistrarFallidoAsync(usuario, correo, "BLOQUEADA", ct);
             throw new BloqueadoException($"Cuenta bloqueada por {contrasenas.Value.MinutosBloqueo} minutos por demasiados intentos.");
+        }
 
-        usuarioActual.IdentificarComo(usuario.Id);
         if (hasher.VerifyHashedPassword(usuario, usuario.ContrasenaHash, req.Clave) == PasswordVerificationResult.Failed)
         {
             usuario.RegistrarIntentoFallido(ahora, TimeSpan.FromMinutes(contrasenas.Value.MinutosBloqueo));
+            var bloqueada = usuario.EstaBloqueado(ahora);
+            auditoria.Registrar(AccionAuditoria.InicioSesionFallido, "Usuario", usuario.Id.ToString(), despues: new { correo = Corto(correo), motivo = "CLAVE" });
+            if (bloqueada)
+                auditoria.Registrar(AccionAuditoria.CuentaBloqueada, "Usuario", usuario.Id.ToString(),
+                    despues: new { correo = Corto(correo), minutos = contrasenas.Value.MinutosBloqueo });
             await db.GuardarAsync(ct);
-            if (usuario.EstaBloqueado(ahora))
+            if (bloqueada)
                 throw new BloqueadoException($"Cuenta bloqueada por {contrasenas.Value.MinutosBloqueo} minutos por demasiados intentos.");
             throw new NoAutenticadoException();
         }
 
         if (ExigeCambio(usuario) && usuario.ContrasenaTemporalExpiraEn < ahora)
+        {
+            await RegistrarFallidoAsync(usuario, correo, "TEMPORAL_VENCIDA", ct);
             throw new NoAutenticadoException("La contraseña temporal venció. Pide al Administrador que la restablezca.");
+        }
 
+        usuarioActual.IdentificarComo(usuario.Id);
         usuario.RegistrarIngreso(ahora);
         var sesion = AbrirSesion(usuario);
         auditoria.Registrar(AccionAuditoria.IniciarSesion, "Usuario", usuario.Id.ToString());
         await db.GuardarAsync(ct);
         return sesion;
     }
+
+    /// <summary>
+    /// OWASP: los fallos de autenticación se registran siempre. El motivo solo queda en la bitácora: a quien intenta
+    /// entrar se le responde el mismo mensaje genérico. Límite de ritmo en «auth» frena que alguien llene la tabla.
+    /// </summary>
+    private async Task RegistrarFallidoAsync(Usuario? usuario, string correo, string motivo, CancellationToken ct)
+    {
+        auditoria.Registrar(AccionAuditoria.InicioSesionFallido, "Usuario", usuario?.Id.ToString(), despues: new { correo = Corto(correo), motivo });
+        await db.GuardarAsync(ct);
+    }
+
+    /// <summary>El correo ya pasó la validación del formato; se acorta por si alguien manda uno enorme.</summary>
+    private static string Corto(string correo) => correo.Length <= 120 ? correo : correo[..120];
 
     /// <summary>F-03. Rota el token de refresco: el anterior queda revocado.</summary>
     public async Task<SesionIniciada> RefrescarAsync(string? tokenRefresco, CancellationToken ct)
