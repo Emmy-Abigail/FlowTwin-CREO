@@ -15,9 +15,9 @@ abierto**, para que cualquiera pueda repetirlo y verificarlo.
 | Avalancha de peticiones de un usuario abusivo | k6 2.4.0 | 1 025 927 peticiones en 30 s: el abusador recibió 429 en el 99,97 %; **el usuario normal fue atendido el 100 % de las veces, p95 = 9,9 ms**; la API siguió en pie |
 | Adivinar contraseñas a toda velocidad | k6 2.4.0 | de ~174 000 intentos, **solo 18 llegaron a comprobarse** (límite de 20 por minuto); todos quedaron en la bitácora |
 | Dependencias con vulnerabilidades conocidas | `dotnet list package --vulnerable`, `npm audit` | **0** en .NET; **0** en npm (se actualizó Angular a 22.2.6 / herramientas 22.2.7 para cerrar 2 que afectaban solo al servidor de desarrollo) |
-| Pruebas automáticas | xUnit, Vitest | 223 unitarias, 18 de arquitectura, 119 de integración y 195 del frontend, en verde |
+| Pruebas automáticas | xUnit, Vitest | 230 unitarias, 18 de arquitectura, 120 de integración y 198 del frontend, en verde |
 
-**Lo que falta** (sección 4): la regla de contraseñas no cumple ASVS; HTTPS, TLS de MQTT y respaldos dependen del despliegue.
+**Lo que falta** (sección 4): HTTPS, TLS de MQTT y respaldos, que dependen del despliegue. La regla de contraseñas se corrigió el mismo 16/11 (ver V2).
 
 ## 2. Controles, capítulo por capítulo (ASVS 4.0.3, nivel 1)
 
@@ -27,9 +27,9 @@ abierto**, para que cualquiera pueda repetirlo y verificarlo.
 | Control | Estado | Evidencia |
 |---|---|---|
 | Contraseñas guardadas con una función lenta y con sal | ✅ | PBKDF2-HMAC-SHA512, 100 000 iteraciones, sal aleatoria (`PasswordHasher`, ModuloIdentidad) |
-| Longitud mínima de 12 caracteres | ❌ | Hoy son 8 (`PoliticaContrasena.LongitudMinima`). Ver pendiente 4.1 |
-| Sin reglas de composición obligatoria | ❌ | Hoy se exige mayúscula, minúscula, número y símbolo. ASVS y NIST 800-63B lo desaconsejan |
-| Comprobar contra contraseñas filtradas | ❌ | No se hace. Ver pendiente 4.1 |
+| Longitud mínima de 12 caracteres (y hasta 128) | ✅ ⚠️ | `PoliticaContrasena.LongitudMinima = 12`; se aceptan frases con espacios y tildes. Cumple ASVS 4.0.3 (12) y ASVS 5.0 (mínimo 8, recomienda 15). **No alcanza** los 15 que pide NIST SP 800-63B-4 cuando la contraseña es el único factor: decisión del equipo, ver 4.7 |
+| Sin reglas de composición obligatoria | ✅ | Ya no se exige mayúscula, número ni símbolo (ASVS y NIST 800-63B lo desaconsejan) |
+| Comprobar contra contraseñas filtradas | ✅ | 46 146 contraseñas de 12+ caracteres de SecLists (MIT) dentro del ensamblado, sin consultar internet; también se rechazan las palabras del sistema con números («flowtwin2026!») y las repetitivas |
 | Frenar ataques automáticos | ✅ | Bloqueo de 15 min tras 5 intentos; 20 intentos por minuto por IP; prueba k6 (sección 1) |
 | Mensaje genérico ante un fallo | ✅ | Siempre «correo o contraseña incorrectos»; el motivo solo va a la bitácora (ADR-30) |
 | Contraseña temporal de un solo uso que obliga a cambiarla | ✅ | 12 caracteres aleatorios (`RandomNumberGenerator`), vence en 24 h, cambio obligatorio (F-02) |
@@ -119,9 +119,8 @@ abierto**, para que cualquiera pueda repetirlo y verificarlo.
 
 ## 4. Pendientes
 
-1. **Contraseñas (❌, decisión de negocio).** Propuesta: mínimo 12 caracteres, sin composición obligatoria (frases
-   largas son más seguras y más fáciles de recordar) y rechazar contraseñas conocidas por filtraciones (lista local,
-   sin enviar nada a internet). Afecta a los usuarios cuando cambien su contraseña, no antes.
+1. ~~**Contraseñas.**~~ Resuelto el 16/11/2026: mínimo 12 caracteres, sin composición obligatoria y sin contraseñas
+   filtradas. Afecta a cada usuario cuando cambie su contraseña, no antes.
 2. **HTTPS y TLS (⏳).** Se configuran y prueban en el despliegue (demo en Render; luego la nube de la clínica).
 3. **Respaldos (⏳).** Respaldo diario, copia fuera del servidor y prueba de restauración, al desplegar.
 4. **Revisión continua.** Agregar a la CI `dotnet list package --vulnerable` y `npm audit --omit=dev`, para que una
@@ -130,6 +129,17 @@ abierto**, para que cualquiera pueda repetirlo y verificarlo.
    código. Lo que sí le toca al código —que un usuario o un bot no sature la API— está probado.
 6. **Segundo factor (MFA).** ASVS nivel 1 no lo exige; es recomendable para el Administrador si el sistema se expone a
    internet de forma permanente.
+7. **Longitud mínima de 12 y no 15 (decisión aceptada, 16/11/2026).** NIST SP 800-63B-4 (2025) pide 15 caracteres
+   cuando la contraseña es el único factor de acceso; OWASP ASVS 5.0 exige 8 y recomienda 15. El equipo eligió 12 para
+   que el personal de la clínica no encuentre la regla complicada. Lo compensan: el rechazo de 46 146 contraseñas
+   filtradas y de las palabras del sistema, el bloqueo tras 5 intentos, el límite de 20 intentos por minuto y que las
+   frases con espacios están permitidas. Se revisa si el sistema se expone a internet de forma permanente, junto con el
+   segundo factor (4.6).
+8. **CAPTCHA (no se usa, por decisión).** Frenar robots que prueban contraseñas ya lo hacen el límite de intentos, el
+   bloqueo y el rechazo de contraseñas filtradas (prueba k6: de ~174 000 intentos solo 18 se comprobaron). Un CAPTCHA
+   de terceros enviaría datos de cada visita fuera de la clínica, impediría iniciar sesión si se cae internet en la
+   instalación local y es una barrera de accesibilidad. Si se viera tráfico de robots en producción, se evaluaría uno
+   que solo aparezca tras varios fallos y que no rastree a la persona.
 
 ## 5. Cómo repetir
 
