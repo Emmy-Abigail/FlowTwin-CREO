@@ -37,12 +37,20 @@
             }
             <app-render-3d [geometria]="geo" [maqueta]="m" [ocupacion]="ocupacion()"
                            (zonaClic)="zonaSeleccionada.set($event)" />
-          } @else {
+          } @else if (faltaMaqueta() === 'sin-maqueta') {
             <div class="sin-maqueta">
               <span class="sello-maqueta"><app-icono nombre="cube" [tamano]="28" /></span>
               <b>La maqueta 3D de este piso está en producción</b>
               <span>Cuando esté lista, aquí verás la ocupación de cada zona en vivo.</span>
             </div>
+          } @else if (faltaMaqueta() === 'error') {
+            <div class="sin-maqueta">
+              <span class="sello-maqueta"><app-icono nombre="alert" [tamano]="28" /></span>
+              <b>No se pudo cargar la maqueta 3D</b>
+              <span>Revisa la conexión y vuelve a abrir el gemelo.</span>
+            </div>
+          } @else {
+            <div class="cargando"><span class="spin"></span> Cargando la maqueta 3D…</div>
           }
         } @else {
           <div class="cargando"><span class="spin"></span> Cargando el gemelo del piso…</div>

@@ -65,7 +65,7 @@ builder.Services.AddOpenApi();
 // ---- Base de datos y módulos
 builder.Services.AddPersistencia(builder.Configuration);
 builder.Services.AddModuloIdentidad(builder.Configuration);
-builder.Services.AddModuloGemelo();
+builder.Services.AddModuloGemelo(builder.Configuration);
 builder.Services.AddModuloDispositivos(builder.Configuration);
 builder.Services.AddModuloAtenciones(builder.Configuration);
 builder.Services.AddModuloAuditoria();
