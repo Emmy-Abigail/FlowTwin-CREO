@@ -17,7 +17,7 @@
 
     <div class="abajo">
       @if (alertas.disponible()) {
-        @let n = alertas.lista().length;
+        @let n = alertas.pendientes().length;
         <button class="item alertas" type="button" (click)="panelAlertas.set(true)" [class.sonando]="sonando()"
                 [attr.aria-label]="n ? 'Alertas: ' + n : 'Alertas: ninguna'" [attr.title]="colapsada() ? 'Alertas' : null">
           <span class="campana"><app-icono nombre="bell" [tamano]="22" /></span>
@@ -58,8 +58,8 @@
   <div class="principal">
     @if (modo.simulacion()) {
       <div class="franja-simulacion" role="status">
-        @if (enAdmision()) {
-          <span><app-icono nombre="matraz" [tamano]="18" /><b>SIMULACIÓN</b> activa en Gemelo e Historial · Admisión no se simula: lo que ves aquí es real</span>
+        @if (pantallaReal(); as real) {
+          <span><app-icono nombre="matraz" [tamano]="18" /><b>SIMULACIÓN</b> activa en Gemelo e Historial · {{ real }} no se simula: lo que ves aquí es real</span>
         } @else {
           <span><app-icono nombre="matraz" [tamano]="18" /><b>SIMULACIÓN</b> · datos ficticios para la presentación · no se guardan ni aparecen en reportes</span>
         }

@@ -38,6 +38,37 @@ public class Tarjeta : EntidadEditable
     public string CodigoQr { get; set; } = "";
     public int SedeId { get; set; }
     public EstadoTarjeta EstadoTarjetaId { get; set; } = EstadoTarjeta.Disponible;
+    /// <summary>
+    /// La última vez que un nodo la detectó y cuál (P9). Se actualiza cada minuto con las lecturas nuevas,
+    /// así la pantalla no tiene que recorrer millones de lecturas. Nula: nunca se detectó.
+    /// </summary>
+    public DateTime? UltimaDeteccionEn { get; set; }
+    public int? UltimoNodoId { get; set; }
+
+    /// <summary>Números de tarjeta posibles: el «minor» del emisor BLE va de 1 a 65535 (contrato de integración).</summary>
+    public const int NumeroMaximo = 65535;
+
+    /// <summary>
+    /// Una tarjeta nueva de la sede: código T-07, identificador BLE {uuid}-{sede}-{número} (major = sede,
+    /// minor = número) y texto del QR CREO-T07, el que se graba en la caja.
+    /// </summary>
+    public static Tarjeta Registrar(int numero, int sedeId)
+    {
+        if (numero is < 1 or > NumeroMaximo)
+            throw new ReglaNegocioException("TARJETA_NUMERO_INVALIDO", $"El número de tarjeta va de 1 a {NumeroMaximo}.");
+        return new Tarjeta
+        {
+            Codigo = $"T-{numero:D2}", CodigoQr = $"CREO-T{numero:D2}", SedeId = sedeId,
+            UuidBle = EmisorBle.Identificador(major: sedeId, minor: numero),
+        };
+    }
+
+    /// <summary>Anota una detección; una más vieja que la guardada no la reemplaza (las lecturas pueden llegar tarde).</summary>
+    public void RegistrarDeteccion(DateTime en, int nodoId)
+    {
+        if (UltimaDeteccionEn is { } antes && antes >= en) return;
+        (UltimaDeteccionEn, UltimoNodoId) = (en, nodoId);
+    }
 
     public static bool PuedePasar(EstadoTarjeta desde, EstadoTarjeta hacia) => Permitidas[desde].Contains(hacia);
 
@@ -57,12 +88,12 @@ public class Tarjeta : EntidadEditable
         return movimiento;
     }
 
-    /// <summary>"T-07", "t7", "T 7" o "7" → "T-07". Otros textos (el contenido del QR) se devuelven en mayúsculas.</summary>
+    /// <summary>"T-07", "t7", "T 7" o "7" → "T-07"; "T-1234" → "T-1234". Otros textos (el contenido del QR) se devuelven en mayúsculas.</summary>
     public static string NormalizarCodigo(string texto)
     {
         var limpio = texto.Trim().ToUpperInvariant();
         var soloNumero = limpio.TrimStart('T').TrimStart(' ', '-');
-        return int.TryParse(soloNumero, out var n) && n is > 0 and < 1000 ? $"T-{n:D2}" : limpio;
+        return int.TryParse(soloNumero, out var n) && n is > 0 and <= NumeroMaximo ? $"T-{n:D2}" : limpio;
     }
 }
 

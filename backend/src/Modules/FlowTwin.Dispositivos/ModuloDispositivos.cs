@@ -28,6 +28,8 @@ public static class ModuloDispositivos
         services.AddScoped<ITarjetasAdmision>(sp => sp.GetRequiredService<TarjetasServicio>());
         services.AddScoped<ITarjetasConsultas>(sp => sp.GetRequiredService<TarjetasServicio>());
         services.AddScoped<NodosServicio>();
+        services.AddScoped<InventarioServicio>();
+        services.AddScoped<ITarjetasDeteccion>(sp => sp.GetRequiredService<InventarioServicio>());
         services.AddScoped<IUbicacionNodos, UbicacionNodos>();
         services.AddScoped<IHistorialNodos, HistorialNodos>();
         return services;
@@ -90,5 +92,23 @@ public static class ModuloDispositivos
                 Results.Ok(await s.DarDeBajaAsync(id, ct)))
             .RequireAuthorization(Politicas.SoloAdmin)
             .WithSummary("Retira el nodo e invalida su clave");
+
+        // P9 · Dispositivos: inventario por excepción, solo el Administrador
+        var inventario = app.MapGroup("/api/v1/inventario").WithTags("Dispositivos").RequireAuthorization(Politicas.SoloAdmin);
+        inventario.MapGet("/tarjetas", async (int sedeId, string? filtro, string? buscar, int? pagina, InventarioServicio s, CancellationToken ct) =>
+                Results.Ok(await s.TarjetasAsync(sedeId, filtro, buscar, pagina, ct)))
+            .WithSummary("Tarjetas de la sede: por defecto, las que requieren atención; con conteos por filtro");
+        inventario.MapGet("/nodos", async (string? filtro, string? buscar, int? pagina, InventarioServicio s, CancellationToken ct) =>
+                Results.Ok(await s.NodosAsync(filtro, buscar, pagina, ct)))
+            .WithSummary("Nodos: por defecto, los que requieren atención; con conteos por filtro");
+        inventario.MapPost("/tarjetas", async (RegistrarTarjetasRequest req, InventarioServicio s, CancellationToken ct) =>
+                Results.Ok(await s.RegistrarAsync(req, ct)))
+            .WithSummary("Registra las tarjetas de un rango (T-desde … T-hasta), todas o ninguna");
+        inventario.MapPost("/tarjetas/{id:int}/baja", async (int id, InventarioServicio s, CancellationToken ct) =>
+            {
+                await s.DarDeBajaTarjetaAsync(id, ct);
+                return Results.NoContent();
+            })
+            .WithSummary("Retira una tarjeta dañada o perdida");
     }
 }

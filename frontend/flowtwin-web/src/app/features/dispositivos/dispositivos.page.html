@@ -1,0 +1,213 @@
+<header class="cabecera">
+  <div>
+    <h1>Dispositivos</h1>
+    <p class="sub">{{ pisos.sede()?.nombre }}</p>
+  </div>
+  <button type="button" class="btn btn-p" (click)="abrirRegistro()">
+    <app-icono nombre="plus" [tamano]="16" />{{ pestana() === 'nodos' ? 'Registrar nodo' : 'Registrar tarjetas' }}
+  </button>
+</header>
+
+<div class="pestanas" role="tablist">
+  <button type="button" role="tab" [attr.aria-selected]="pestana() === 'nodos'" [class.on]="pestana() === 'nodos'" (click)="pestana.set('nodos')">
+    Nodos @if (cuentaNodos() !== null) {<span class="n">{{ cuentaNodos() }}</span>}
+  </button>
+  <button type="button" role="tab" [attr.aria-selected]="pestana() === 'tarjetas'" [class.on]="pestana() === 'tarjetas'" (click)="pestana.set('tarjetas')">
+    Tarjetas @if (cuentaTarjetas() !== null) {<span class="n">{{ cuentaTarjetas() }}</span>}
+  </button>
+</div>
+
+<section class="card panel" role="tabpanel">
+  <div class="barra">
+    <div class="filtros" role="group" aria-label="Filtro">
+      @for (f of filtros(); track f.id) {
+        <button type="button" [class.on]="filtro() === f.id" [class.atencion]="f.atencion && f.n > 0" [attr.aria-pressed]="filtro() === f.id"
+                (click)="filtro.set(f.id)">{{ f.texto }}<b>{{ f.n }}</b></button>
+      }
+    </div>
+    <div class="buscar">
+      <app-icono nombre="search" [tamano]="16" />
+      <input class="inp" type="search" maxlength="20" [attr.aria-label]="pestana() === 'nodos' ? 'Buscar nodo' : 'Buscar tarjeta'"
+             [placeholder]="pestana() === 'nodos' ? 'Buscar nodo (N-12)' : 'Buscar tarjeta (T-412)'"
+             [value]="buscar()" (input)="escribir($any($event.target).value)">
+    </div>
+  </div>
+
+  @if (error(); as e) {
+    <app-estado-vacio titulo="No se pudo cargar" [texto]="e" />
+  } @else if (pestana() === 'nodos') {
+    @if (nodos(); as p) {
+      <table class="tbl">
+        <thead><tr><th>Nodo</th><th>Piso · zona</th><th>Estado</th><th class="acc"><span class="sr-only">Acciones</span></th></tr></thead>
+        <tbody>
+          @for (n of p.filas; track n.id) {
+            <tr>
+              <td class="cod">{{ n.codigo }}</td>
+              <td>{{ n.piso }} · {{ n.zona }}</td>
+              <td><span class="st" [class.mal]="n.requiereAtencion"><i></i>{{ textoNodo(n, ahora()) }}</span></td>
+              <td class="acc">
+                <div class="menu">
+                  <button type="button" class="mas" [attr.aria-label]="'Acciones de ' + n.codigo" [attr.aria-expanded]="menu() === 'n' + n.id"
+                          (click)="menu.set(menu() === 'n' + n.id ? null : 'n' + n.id)">⋯</button>
+                  @if (menu() === 'n' + n.id) {
+                    <div class="opciones" role="menu">
+                      <button type="button" role="menuitem" (click)="abrirCambioZona(n)">Cambiar zona</button>
+                      <button type="button" role="menuitem" (click)="confirmarRegenerar(n)">Regenerar clave</button>
+                      <button type="button" role="menuitem" class="peligro" (click)="confirmarBajaNodo(n)">Dar de baja</button>
+                    </div>
+                  }
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="4"><p class="vacio">{{ filtro() === 'ATENCION' && !buscar() ? 'Todo en orden' : 'Sin resultados' }}</p></td></tr>
+          }
+        </tbody>
+      </table>
+    }
+  } @else {
+    @if (tarjetas(); as p) {
+      <table class="tbl">
+        <thead><tr><th>Tarjeta</th><th>Estado</th><th>Detalle</th><th class="acc"><span class="sr-only">Acciones</span></th></tr></thead>
+        <tbody>
+          @for (t of p.filas; track t.id) {
+            @let pr = textoProblema(t, ahora());
+            <tr>
+              <td class="cod">{{ t.codigo }}</td>
+              <td><span [class]="'st e-' + t.estado"><i></i>{{ t.estadoNombre }}</span></td>
+              <td [class.aviso]="pr?.aviso">{{ pr?.texto }}</td>
+              <td class="acc">
+                @if (puedeDarDeBaja(t.estado)) {
+                  <div class="menu">
+                    <button type="button" class="mas" [attr.aria-label]="'Acciones de ' + t.codigo" [attr.aria-expanded]="menu() === 't' + t.id"
+                            (click)="menu.set(menu() === 't' + t.id ? null : 't' + t.id)">⋯</button>
+                    @if (menu() === 't' + t.id) {
+                      <div class="opciones" role="menu">
+                        <button type="button" role="menuitem" class="peligro" (click)="confirmarBajaTarjeta(t)">Dar de baja</button>
+                      </div>
+                    }
+                  </div>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="4"><p class="vacio">{{ filtro() === 'ATENCION' && !buscar() ? 'Todo en orden' : 'Sin resultados' }}</p></td></tr>
+          }
+        </tbody>
+      </table>
+    }
+  }
+
+  @if (pagina$(); as p) {
+    @if (p.total > p.tamano) {
+      <div class="pie">
+        <span>Página {{ p.pagina }} de {{ paginas() }}</span>
+        <span class="paginas">
+          <button type="button" class="btn btn-o btn-sm" [disabled]="p.pagina <= 1" (click)="pagina.set(p.pagina - 1)">Anterior</button>
+          <button type="button" class="btn btn-o btn-sm" [disabled]="p.pagina >= paginas()" (click)="pagina.set(p.pagina + 1)">Siguiente</button>
+        </span>
+      </div>
+    }
+  }
+</section>
+
+<!-- Registrar nodo -->
+@if (registrandoNodo()) {
+  <app-modal titulo="Registrar nodo" (cerrar)="registrandoNodo.set(false)">
+    <label class="campo">Código<input class="inp" placeholder="N-04" maxlength="6" [value]="codigoNodo()" (input)="codigoNodo.set($any($event.target).value)"></label>
+    <label class="campo">MAC<input class="inp mono" placeholder="A4:CF:12:9B:3E:04" maxlength="17" [value]="macNodo()" (input)="macNodo.set($any($event.target).value)"></label>
+    <div class="dos">
+      <label class="campo">Piso
+        <select class="inp" (change)="pisoElegido.set(+$any($event.target).value); zonaElegida.set(null)">
+          @for (p of pisosDeSede(); track p.id) { <option [value]="p.id" [selected]="p.id === pisoElegido()">{{ p.nombre }}</option> }
+        </select>
+      </label>
+      <label class="campo">Zona
+        <select class="inp" (change)="zonaElegida.set(+$any($event.target).value)">
+          <option value="" disabled [selected]="zonaElegida() === null">Elige…</option>
+          @for (z of zonas(); track z.id) { <option [value]="z.id" [selected]="z.id === zonaElegida()">{{ z.nombre }}</option> }
+        </select>
+      </label>
+    </div>
+    @if (errorVentana(); as e) { <p class="err" role="alert">{{ e }}</p> }
+    <div pie>
+      <button type="button" class="btn btn-o" (click)="registrandoNodo.set(false)">Cancelar</button>
+      <button type="button" class="btn btn-p" [disabled]="trabajando() || !codigoNodo().trim() || !macNodo().trim() || zonaElegida() === null"
+              (click)="registrarNodo()">Registrar</button>
+    </div>
+  </app-modal>
+}
+
+<!-- Clave del nodo: una sola vez -->
+@if (clave(); as c) {
+  <app-modal [titulo]="c.codigo + ' · datos para el nodo'" (cerrar)="clave.set(null)">
+    <p class="aviso-clave">Cópialos ahora: la clave no se vuelve a mostrar.</p>
+    @for (f of c.filas; track f.etiqueta) {
+      <div class="dato">
+        <span>{{ f.etiqueta }}</span><code>{{ f.valor }}</code>
+        <button type="button" class="btn btn-o btn-sm" (click)="copiar(f.valor)">Copiar</button>
+      </div>
+    }
+    <div pie><button type="button" class="btn btn-p" (click)="clave.set(null)">Listo</button></div>
+  </app-modal>
+}
+
+<!-- Cambiar zona -->
+@if (cambiandoZona(); as n) {
+  <app-modal [titulo]="'Zona de ' + n.codigo" (cerrar)="cambiandoZona.set(null)">
+    <div class="dos">
+      <label class="campo">Piso
+        <select class="inp" (change)="pisoElegido.set(+$any($event.target).value); zonaElegida.set(null)">
+          @for (p of pisosDeSede(); track p.id) { <option [value]="p.id" [selected]="p.id === pisoElegido()">{{ p.nombre }}</option> }
+        </select>
+      </label>
+      <label class="campo">Zona
+        <select class="inp" (change)="zonaElegida.set(+$any($event.target).value)">
+          <option value="" disabled [selected]="zonaElegida() === null">Elige…</option>
+          @for (z of zonas(); track z.id) { <option [value]="z.id" [selected]="z.id === zonaElegida()">{{ z.nombre }}</option> }
+        </select>
+      </label>
+    </div>
+    @if (errorVentana(); as e) { <p class="err" role="alert">{{ e }}</p> }
+    <div pie>
+      <button type="button" class="btn btn-o" (click)="cambiandoZona.set(null)">Cancelar</button>
+      <button type="button" class="btn btn-p" [disabled]="trabajando() || zonaElegida() === null || zonaElegida() === n.zonaId" (click)="cambiarZona(n)">Guardar</button>
+    </div>
+  </app-modal>
+}
+
+<!-- Confirmar -->
+@if (confirmacion(); as c) {
+  <app-modal [titulo]="c.titulo" (cerrar)="confirmacion.set(null)">
+    @if (errorVentana(); as e) { <p class="err" role="alert">{{ e }}</p> }
+    <div pie>
+      <button type="button" class="btn btn-o" (click)="confirmacion.set(null)">Cancelar</button>
+      <button type="button" class="btn btn-p" [disabled]="trabajando()" (click)="ejecutarConfirmacion(c)">{{ c.boton }}</button>
+    </div>
+  </app-modal>
+}
+
+<!-- Registrar tarjetas por rango -->
+@if (registrandoTarjetas()) {
+  <app-modal titulo="Registrar tarjetas" (cerrar)="registrandoTarjetas.set(false)">
+    @if (tarjetasNuevas(); as nuevas) {
+      <p class="ok-texto"><app-icono nombre="check" [tamano]="18" />{{ nuevas.length }} {{ nuevas.length === 1 ? 'tarjeta registrada' : 'tarjetas registradas' }}</p>
+      <label class="campo">Texto de cada QR<textarea class="inp mono" rows="5" readonly [value]="listaQr()"></textarea></label>
+    } @else {
+      <div class="dos">
+        <label class="campo">Desde T-<input class="inp" type="number" min="1" max="65535" [value]="desde() ?? ''" (input)="desde.set(+$any($event.target).value || null)"></label>
+        <label class="campo">Hasta T-<input class="inp" type="number" min="1" max="65535" [value]="hasta() ?? ''" (input)="hasta.set(+$any($event.target).value || null)"></label>
+      </div>
+      @if (errorVentana(); as e) { <p class="err" role="alert">{{ e }}</p> }
+    }
+    <div pie>
+      @if (tarjetasNuevas()) {
+        <button type="button" class="btn btn-o" (click)="copiar(listaQr())">Copiar lista</button>
+        <button type="button" class="btn btn-p" (click)="registrandoTarjetas.set(false)">Listo</button>
+      } @else {
+        <button type="button" class="btn btn-o" (click)="registrandoTarjetas.set(false)">Cancelar</button>
+        <button type="button" class="btn btn-p" [disabled]="trabajando() || !desde() || !hasta()" (click)="registrarTarjetas()">Registrar</button>
+      }
+    </div>
+  </app-modal>
+}

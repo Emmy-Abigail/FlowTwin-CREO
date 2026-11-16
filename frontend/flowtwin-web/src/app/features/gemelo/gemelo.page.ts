@@ -28,7 +28,7 @@ import {
 type Pestana = 'esperando' | 'enConsulta' | 'atendidos';
 
 const NOMBRE_TIPO: Record<TipoZona, string> = {
-  INGRESO: 'Ingreso', ESPERA: 'Espera', SERVICIO: 'Servicio', TRANSITO: 'Tránsito', SALIDA: 'Salida',
+  INGRESO: 'Ingreso', ESPERA: 'Espera', TRIAJE: 'Triaje', SERVICIO: 'Servicio', TRANSITO: 'Tránsito', SALIDA: 'Salida',
 };
 
 /** Etiqueta, color e ícono de cada estado de paciente en sus tarjetas. */

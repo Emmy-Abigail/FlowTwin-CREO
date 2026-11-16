@@ -45,7 +45,7 @@ describe('ShellComponent', () => {
         },
         { provide: ModoDatosService, useValue: { cargar: vi.fn(), puedeSimular, simulacion, activar: vi.fn(), salir: vi.fn() } },
         { provide: PisoActualService, useValue: { cargar: vi.fn() } },
-        { provide: AlertasService, useValue: { disponible: alertasDisponibles, lista: alertas, pulso, silencio: signal(false), ahora: signal(0) } },
+        { provide: AlertasService, useValue: { disponible: alertasDisponibles, lista: alertas, pendientes: alertas, pulso, silencio: signal(false), ahora: signal(0) } },
       ],
     }).compileComponents();
   });
@@ -53,7 +53,7 @@ describe('ShellComponent', () => {
   it('el Administrador solo ve las pantallas que existen', async () => {
     await crear();
 
-    expect(textoMenu()).toEqual(['Gemelo en vivo', 'Historial y reportes']);
+    expect(textoMenu()).toEqual(['Gemelo en vivo', 'Historial y reportes', 'Dispositivos']);
   });
 
   it('sin simulación disponible no aparece el botón', async () => {

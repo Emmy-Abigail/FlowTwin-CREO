@@ -50,3 +50,16 @@ public interface ITarjetasAdmision
     /// </summary>
     Task<List<MovimientoInfo>> UltimasOperacionesAsync(IReadOnlyCollection<int>? sedeIds, int cantidad, CancellationToken ct = default);
 }
+
+/// <summary>Una detección de una tarjeta: su identificador BLE, cuándo y qué nodo la vio.</summary>
+public sealed record DeteccionTarjeta(string UuidBle, DateTime En, int NodoId);
+
+/// <summary>
+/// Lo que Atenciones (dueña de las lecturas) le entrega a Dispositivos cada minuto: la última detección de
+/// cada tarjeta vista, para que el inventario (P9) sepa cuál no se detecta hace tiempo.
+/// </summary>
+public interface ITarjetasDeteccion
+{
+    /// <summary>Actualiza la última detección de esas tarjetas (solo si es más nueva). Devuelve cuántas cambió.</summary>
+    Task<int> RegistrarAsync(IReadOnlyList<DeteccionTarjeta> detecciones, CancellationToken ct = default);
+}
