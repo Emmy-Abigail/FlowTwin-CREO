@@ -19,15 +19,11 @@ public class Zona : EntidadEditable
     /// <summary>Polígono libre en JSON (fase 2); si existe, manda sobre el rectángulo.</summary>
     public string? Geometria { get; set; }
     /// <summary>
-    /// Personas que caben. Nulo en Tránsito y Salida (RN-13). En Ingreso, Espera y Servicio, nulo
-    /// significa «aforo por definir»: la zona se muestra con su ocupación pero sin semáforo hasta que
-    /// el Administrador lo configure.
+    /// Personas que caben: el aforo oficial del ambiente (en Perú lo fija la inspección técnica de seguridad,
+    /// ITSE). Solo en zonas de Ingreso y Espera, donde la gente se acumula (RN-13, ADR-27); nulo = «aforo por
+    /// definir». El semáforo usa un umbral general (Parámetros), no uno por zona.
     /// </summary>
     public short? Aforo { get; set; }
-    /// <summary>% del aforo desde el que la zona pasa de concentración baja a media.</summary>
-    public byte? UmbralMediaPct { get; set; }
-    /// <summary>% del aforo desde el que la zona pasa de concentración media a alta.</summary>
-    public byte? UmbralAltaPct { get; set; }
     /// <summary>
     /// true = aún no publicada: el gemelo en vivo no la muestra. Sin default en la base a propósito:
     /// con un bool, EF no envía el valor false y la base pondría el default (la misma trampa que
@@ -48,24 +44,27 @@ public class Zona : EntidadEditable
         if (X < 0 || Y < 0) problemas.Add("La posición de la zona no puede ser negativa.");
         if (AnchoM <= 0 || FondoM <= 0) problemas.Add("El ancho y el fondo de la zona deben ser mayores que 0.");
 
-        // RN-13: solo las zonas donde la gente permanece tienen aforo y semáforo. El aforo puede quedar
-        // por definir (nulo, sin umbrales); si se define, va completo: aforo de 1 o más y sus umbrales.
+        // RN-13 (ADR-27): el aforo solo existe donde la gente se acumula; puede quedar por definir (nulo)
         if (TipoZonaId.TieneAforo())
         {
-            var porDefinir = Aforo is null && UmbralMediaPct is null && UmbralAltaPct is null;
-            if (porDefinir) return problemas;
-            if (Aforo is null or < 1) problemas.Add($"Una zona de tipo {TipoZonaId.Nombre()} necesita un aforo de 1 o más (RN-13).");
-            if (UmbralMediaPct is null || UmbralAltaPct is null)
-                problemas.Add("La zona necesita los umbrales de concentración media y alta.");
-            else if (!(UmbralMediaPct > 0 && UmbralMediaPct <= UmbralAltaPct && UmbralAltaPct <= 100))
-                problemas.Add("Los umbrales deben cumplir 0 < media ≤ alta ≤ 100.");
+            if (Aforo is < 1) problemas.Add("El aforo debe ser de 1 o más personas.");
         }
-        else if (Aforo is not null || UmbralMediaPct is not null || UmbralAltaPct is not null)
+        else if (Aforo is not null)
         {
-            problemas.Add($"Una zona de tipo {TipoZonaId.Nombre()} no tiene aforo ni umbrales (RN-13).");
+            problemas.Add($"Una zona de tipo {TipoZonaId.Nombre()} no tiene aforo: lo que importa es si está libre u ocupada.");
         }
         return problemas;
     }
+
+    /// <summary>
+    /// Una zona nueva desde Configuración. El rectángulo (X, Y, Ancho, Fondo) es del plano 2D anterior y el
+    /// gemelo 3D no lo usa: se guarda uno mínimo hasta quitar esas columnas (limpieza de muros y planoUrl).
+    /// </summary>
+    public static Zona Nueva(int pisoId, string nombre, TipoZona tipo, short? aforo) => new()
+    {
+        PisoId = pisoId, Nombre = nombre.Trim(), TipoZonaId = tipo, Aforo = tipo.TieneAforo() ? aforo : null,
+        X = 0, Y = 0, AnchoM = 1, FondoM = 1, EnBorrador = false,
+    };
 
     /// <summary>Lanza RN13_ZONA_INVALIDA con todos los problemas si la zona no es válida.</summary>
     public void Validar()
@@ -78,7 +77,9 @@ public class Zona : EntidadEditable
 
 public static class TipoZonaExtensiones
 {
-    /// <summary>RN-13: Ingreso, Espera, Triaje y Servicio tienen aforo y color; Tránsito y Salida no.</summary>
-    public static bool TieneAforo(this TipoZona tipo) =>
-        tipo is TipoZona.Ingreso or TipoZona.Espera or TipoZona.Triaje or TipoZona.Servicio;
+    /// <summary>
+    /// RN-13 (ADR-27): solo Ingreso y Espera tienen aforo y semáforo por ocupación, porque es donde la gente se
+    /// acumula. En un consultorio o en triaje un % no dice nada (1 o 2 personas): importa si está libre u ocupado.
+    /// </summary>
+    public static bool TieneAforo(this TipoZona tipo) => tipo is TipoZona.Ingreso or TipoZona.Espera;
 }

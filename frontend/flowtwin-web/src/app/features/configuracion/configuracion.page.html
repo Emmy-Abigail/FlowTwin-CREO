@@ -1,0 +1,163 @@
+<h1>Configuración</h1>
+
+<div class="pestanas" role="tablist">
+  <button type="button" role="tab" [attr.aria-selected]="pestana() === 'estructura'" [class.on]="pestana() === 'estructura'" (click)="pestana.set('estructura')">Sedes, pisos y zonas</button>
+  <button type="button" role="tab" [attr.aria-selected]="pestana() === 'parametros'" [class.on]="pestana() === 'parametros'" (click)="pestana.set('parametros')">Parámetros</button>
+</div>
+
+@if (pestana() === 'estructura') {
+  <div class="cuerpo">
+    <nav class="card arbol" aria-label="Sedes y pisos">
+      @for (s of arbol(); track s.id) {
+        <div class="sede">
+          <span>{{ s.nombre }}</span>
+          <button type="button" class="mas" [attr.aria-label]="'Editar ' + s.nombre" title="Editar sede" (click)="abrirSede(s)">⋯</button>
+        </div>
+        @for (p of s.pisos; track p.id) {
+          <button type="button" class="piso" [class.on]="p.id === pisoId()" [attr.aria-current]="p.id === pisoId()" (click)="pisoId.set(p.id)">
+            {{ p.nombre }}<small [class.borrador]="!p.publicado">{{ p.publicado ? 'Publicado' : 'Borrador' }}</small>
+          </button>
+        }
+        <button type="button" class="agregar" (click)="abrirPiso(s.id, null)"><app-icono nombre="plus" [tamano]="14" />Piso</button>
+      }
+      <button type="button" class="agregar abajo" (click)="abrirSede(null)"><app-icono nombre="plus" [tamano]="14" />Sede</button>
+    </nav>
+
+    <section class="card detalle">
+      @if (piso(); as p) {
+        <div class="cab">
+          <div class="titulo"><h2>{{ p.nombre }}</h2><span class="chip-estado" [class.borrador]="!p.publicado">{{ p.publicado ? 'Publicado' : 'Borrador' }}</span></div>
+          <div class="acciones">
+            <button type="button" class="btn btn-o btn-sm" (click)="abrirPiso(0, p)">Editar piso</button>
+            @if (!p.publicado) { <button type="button" class="btn btn-p btn-sm" (click)="confirmarPublicar()">Publicar</button> }
+          </div>
+        </div>
+        <div class="lista">
+        <table class="tbl">
+          <thead><tr><th>Zona</th><th>Tipo</th><th>Aforo</th><th class="acc"><span class="sr-only">Acciones</span></th></tr></thead>
+          <tbody>
+            @for (z of zonas(); track z.id) {
+              <tr>
+                <td class="nom">{{ z.nombre }}</td>
+                <td class="gris">{{ textoTipo(z.tipo) }}</td>
+                <td>
+                  @if (z.tieneAforo) {
+                    <input class="aforo" inputmode="numeric" maxlength="4" placeholder="Por definir" [attr.aria-label]="'Aforo de ' + z.nombre"
+                           [value]="z.aforo ?? ''" (change)="guardarAforo(z, $any($event.target).value)" (keydown.enter)="$any($event.target).blur()">
+                  } @else { <span class="gris">—</span> }
+                </td>
+                <td class="acc">
+                  <div class="menu">
+                    <button type="button" class="mas" [attr.aria-label]="'Acciones de ' + z.nombre" [attr.aria-expanded]="menu() === 'z' + z.id"
+                            (click)="menu.set(menu() === 'z' + z.id ? null : 'z' + z.id)">⋯</button>
+                    @if (menu() === 'z' + z.id) {
+                      <div class="opciones" role="menu">
+                        <button type="button" role="menuitem" (click)="abrirZona(z)">Editar</button>
+                        <button type="button" role="menuitem" class="peligro" (click)="confirmarBajaZona(z)">Dar de baja</button>
+                      </div>
+                    }
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="4"><p class="vacio">Este piso aún no tiene zonas</p></td></tr>
+            }
+          </tbody>
+        </table>
+        </div>
+        <div class="pie"><button type="button" class="btn btn-p" (click)="abrirZona(null)"><app-icono nombre="plus" [tamano]="16" />Zona</button></div>
+      } @else {
+        <p class="vacio">Crea una sede y su primer piso</p>
+      }
+    </section>
+  </div>
+} @else {
+  @if (parametros(); as p) {
+    <section class="card parametros">
+      <div class="fila">
+        <div><b>Alerta de espera</b><span>Minutos esperando consulta</span></div>
+        <div class="valores">
+          <label>alerta <input class="num" type="number" min="5" max="600" [value]="p.esperaAltaMin" (input)="cambiar('esperaAltaMin', +$any($event.target).value)"></label>
+          <label>crítica <input class="num" type="number" min="5" max="600" [value]="p.esperaCriticaMin" (input)="cambiar('esperaCriticaMin', +$any($event.target).value)"></label>
+        </div>
+      </div>
+      <div class="fila">
+        <div><b>Sin lecturas</b><span>Minutos sin detectar al paciente</span></div>
+        <div class="valores"><input class="num" type="number" min="5" max="600" aria-label="Minutos sin lecturas" [value]="p.sinLecturasMin" (input)="cambiar('sinLecturasMin', +$any($event.target).value)"></div>
+      </div>
+      <div class="fila">
+        <div><b>Cierre de jornada</b><span>Se cierra lo que quedó abierto</span></div>
+        <div class="valores">
+          <select class="num hora" aria-label="Hora de cierre" (change)="cambiar('horaCierre', +$any($event.target).value)">
+            @for (h of horas; track h.valor) { <option [value]="h.valor" [selected]="h.valor === p.horaCierre">{{ h.texto }}</option> }
+          </select>
+        </div>
+      </div>
+      <div class="fila">
+        <div><b>Semáforo de salas de espera</b><span>Rojo al superar el aforo</span></div>
+        <div class="valores"><label>ámbar desde <input class="num" type="number" min="10" max="100" [value]="p.semaforoAmbarPct" (input)="cambiar('semaforoAmbarPct', +$any($event.target).value)"> %</label></div>
+      </div>
+      @if (error(); as e) { <p class="err" role="alert">{{ e }}</p> }
+      <div class="pie"><button type="button" class="btn btn-p" [disabled]="trabajando()" (click)="guardarParametros()">Guardar</button></div>
+    </section>
+  }
+}
+
+@if (ventana(); as v) {
+  @switch (v.tipo) {
+    @case ('sede') {
+      <app-modal [titulo]="v.sede ? 'Editar sede' : 'Nueva sede'" (cerrar)="ventana.set(null)">
+        <label class="campo">Nombre<input class="inp" maxlength="80" [value]="nombre()" (input)="nombre.set($any($event.target).value)"></label>
+        <label class="campo">Dirección<input class="inp" maxlength="200" [value]="direccion()" (input)="direccion.set($any($event.target).value)"></label>
+        <label class="campo">Letra de los códigos de atención<input class="inp letra" maxlength="1" placeholder="A" [value]="letra()" (input)="letra.set($any($event.target).value)"></label>
+        @if (error(); as e) { <p class="err" role="alert">{{ e }}</p> }
+        <div pie>
+          <button type="button" class="btn btn-o" (click)="ventana.set(null)">Cancelar</button>
+          <button type="button" class="btn btn-p" [disabled]="trabajando() || !nombre().trim() || !letra().trim()" (click)="guardarVentana(v)">Guardar</button>
+        </div>
+      </app-modal>
+    }
+    @case ('piso') {
+      <app-modal [titulo]="v.piso ? 'Editar piso' : 'Nuevo piso'" (cerrar)="ventana.set(null)">
+        <div class="dos">
+          <label class="campo">Nombre<input class="inp" maxlength="60" placeholder="Piso 2" [value]="nombre()" (input)="nombre.set($any($event.target).value)"></label>
+          <label class="campo">Nivel<input class="inp" type="number" min="-5" max="60" [value]="nivel()" (input)="nivel.set(+$any($event.target).value)"></label>
+        </div>
+        @if (error(); as e) { <p class="err" role="alert">{{ e }}</p> }
+        <div pie>
+          <button type="button" class="btn btn-o" (click)="ventana.set(null)">Cancelar</button>
+          <button type="button" class="btn btn-p" [disabled]="trabajando() || !nombre().trim()" (click)="guardarVentana(v)">Guardar</button>
+        </div>
+      </app-modal>
+    }
+    @case ('zona') {
+      <app-modal [titulo]="v.zona ? 'Editar zona' : 'Nueva zona'" (cerrar)="ventana.set(null)">
+        <label class="campo">Nombre<input class="inp" maxlength="80" [value]="nombre()" (input)="nombre.set($any($event.target).value)"></label>
+        <div class="dos">
+          <label class="campo">Tipo
+            <select class="inp" (change)="tipo.set($any($event.target).value)">
+              @for (t of tipos; track t.codigo) { <option [value]="t.codigo" [selected]="t.codigo === tipo()">{{ t.texto }}</option> }
+            </select>
+          </label>
+          @if (llevaAforo(tipo())) {
+            <label class="campo">Aforo<input class="inp" inputmode="numeric" maxlength="4" placeholder="Por definir" [value]="aforoVentana()" (input)="aforoVentana.set($any($event.target).value)"></label>
+          }
+        </div>
+        @if (error(); as e) { <p class="err" role="alert">{{ e }}</p> }
+        <div pie>
+          <button type="button" class="btn btn-o" (click)="ventana.set(null)">Cancelar</button>
+          <button type="button" class="btn btn-p" [disabled]="trabajando() || !nombre().trim()" (click)="guardarVentana(v)">Guardar</button>
+        </div>
+      </app-modal>
+    }
+    @case ('confirmar') {
+      <app-modal [titulo]="v.titulo" (cerrar)="ventana.set(null)">
+        @if (error(); as e) { <p class="err" role="alert">{{ e }}</p> }
+        <div pie>
+          <button type="button" class="btn btn-o" (click)="ventana.set(null)">Cancelar</button>
+          <button type="button" class="btn btn-p" [disabled]="trabajando()" (click)="guardarVentana(v)">{{ v.boton }}</button>
+        </div>
+      </app-modal>
+    }
+  }
+}

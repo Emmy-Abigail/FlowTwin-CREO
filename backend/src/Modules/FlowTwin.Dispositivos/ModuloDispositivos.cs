@@ -30,7 +30,9 @@ public static class ModuloDispositivos
         services.AddScoped<NodosServicio>();
         services.AddScoped<InventarioServicio>();
         services.AddScoped<ITarjetasDeteccion>(sp => sp.GetRequiredService<InventarioServicio>());
-        services.AddScoped<IUbicacionNodos, UbicacionNodos>();
+        services.AddScoped<UbicacionNodos>();
+        services.AddScoped<IUbicacionNodos>(sp => sp.GetRequiredService<UbicacionNodos>());
+        services.AddScoped<INodosDeZonas>(sp => sp.GetRequiredService<UbicacionNodos>());
         services.AddScoped<IHistorialNodos, HistorialNodos>();
         return services;
     }

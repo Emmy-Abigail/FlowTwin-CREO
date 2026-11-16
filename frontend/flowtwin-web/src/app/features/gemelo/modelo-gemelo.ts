@@ -97,7 +97,7 @@ export function estadoDeApi(estado: string): EstadoPaciente {
 export interface GeometriaApi {
   pisoId: number; nombre: string; nivel: number; anchoM: number; fondoM: number; altoMuroM: number;
   zonas: { id: number; nombre: string; tipo: string; x: number; y: number; ancho: number; fondo: number;
-    aforo: number | null; umbralMedia: number | null; umbralAlta: number | null; }[];
+    aforo: number | null; }[];
   nodos: { codigo: string; x: number; y: number; zonaId: number }[];
 }
 
@@ -112,7 +112,9 @@ export function geometriaDesdeApi(g: GeometriaApi, sede: string): GeometriaPiso 
     zonas: g.zonas.map(z => ({
       id: z.id, nombre: z.nombre, tipo: z.tipo as GeometriaPiso['zonas'][number]['tipo'],
       x: z.x, y: z.y, ancho: z.ancho, fondo: z.fondo,
-      aforo: z.aforo ?? 0, umbralMedia: z.umbralMedia ?? 0, umbralAlta: z.umbralAlta ?? 0,
+      // Los umbrales son generales (Parámetros, ADR-27) y el nivel ya llega calculado en el estado del piso;
+      // estos solo los usa la simulación con sus datos propios
+      aforo: z.aforo ?? 0, umbralMedia: 80, umbralAlta: 100,
     })),
     nodos: g.nodos.map(n => ({ codigo: n.codigo, x: n.x, y: n.y, zonaId: n.zonaId })),
   };

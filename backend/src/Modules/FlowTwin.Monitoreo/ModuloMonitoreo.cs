@@ -14,7 +14,6 @@ public static class ModuloMonitoreo
 {
     public static IServiceCollection AddModuloMonitoreo(this IServiceCollection services, IConfiguration config)
     {
-        services.Configure<OpcionesAlertas>(config.GetSection("Alertas"));
         services.AddSignalR();
         services.AddScoped<EstadoPisoServicio>();
         services.AddSingleton<SuscripcionesPiso>();

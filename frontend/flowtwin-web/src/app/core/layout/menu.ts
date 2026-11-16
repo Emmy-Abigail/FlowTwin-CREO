@@ -27,10 +27,11 @@ const MENU_COMPLETO: Record<Rol, ItemMenu[]> = {
   Administrador: [
     { ruta: '/gemelo', icono: 'cube', texto: 'Gemelo en vivo', construida: true },
     { ruta: '/historial', icono: 'chart', texto: 'Historial y reportes', construida: true },
-    { ruta: '/construccion', icono: 'ruler', texto: 'Construcción del gemelo', construida: false },
     { ruta: '/dispositivos', icono: 'cpu', texto: 'Dispositivos', construida: true },
     { ruta: '/usuarios', icono: 'users', texto: 'Usuarios', construida: false },
     { ruta: '/auditoria', icono: 'list', texto: 'Auditoría', construida: false },
+    // Última: se usa poco y no compite con el trabajo diario (ADR-27)
+    { ruta: '/configuracion', icono: 'layers', texto: 'Configuración', construida: true },
   ],
 };
 

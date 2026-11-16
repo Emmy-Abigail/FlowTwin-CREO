@@ -3,7 +3,6 @@ using FlowTwin.Dispositivos.Contracts;
 using FlowTwin.Gemelo.Contracts;
 using FlowTwin.Monitoreo.Domain;
 using FlowTwin.SharedKernel;
-using Microsoft.Extensions.Options;
 
 namespace FlowTwin.Monitoreo.Application;
 
@@ -15,7 +14,7 @@ namespace FlowTwin.Monitoreo.Application;
 public sealed class EstadoPisoServicio(
     IZonasConsultas zonas, IPresenciaDispositivos dispositivos, IAtencionesEnCurso atenciones,
     IAtencionesCerradas cerradas, IPausasZonas pausas, IUsuarioActual usuario, IReloj reloj, ZonaHoraria zona,
-    IOptions<OpcionesAlertas> opcionesAlertas)
+    IParametrosSistema parametros)
 {
     /// <summary>GET /pisos/{id}/estado (F-11): con permiso del piso (RN-24).</summary>
     public async Task<EstadoPiso> ParaUsuarioAsync(int pisoId, CancellationToken ct)
@@ -38,7 +37,9 @@ public sealed class EstadoPisoServicio(
         if (!usuario.PuedeVerPiso(pisoId)) throw new SinPermisoException("No tienes asignado este piso.");
         var datos = await DatosAsync(pisoId, ct)
             ?? throw new NoEncontradoException($"No existe el piso {pisoId} o aún no está publicado.");
-        return CalculoAlertas.Calcular(datos.Estado, datos.Atenciones, opcionesAlertas.Value, reloj.AhoraUtc);
+        var p = await parametros.ObtenerAsync(ct);
+        var opciones = new OpcionesAlertas { EsperaAltaMin = p.EsperaAltaMin, EsperaCriticaMin = p.EsperaCriticaMin, SinLecturasMin = p.SinLecturasMin };
+        return CalculoAlertas.Calcular(datos.Estado, datos.Atenciones, opciones, reloj.AhoraUtc);
     }
 
     private async Task<(EstadoPiso Estado, IReadOnlyList<AtencionEnCurso> Atenciones)?> DatosAsync(int pisoId, CancellationToken ct)
@@ -48,7 +49,7 @@ public sealed class EstadoPisoServicio(
         var zonasPiso = await zonas.DelPisoAsync(pisoId, ct);
         var enCurso = await atenciones.DeSedeAsync(piso.SedeId, ct);
         var estado = CalculoEstado.Calcular(pisoId, zonasPiso, await dispositivos.NodosAsync(ct), enCurso, reloj.AhoraUtc,
-            await pausas.AbiertasAsync([.. zonasPiso.Select(z => z.Id)], ct));
+            await pausas.AbiertasAsync([.. zonasPiso.Select(z => z.Id)], ct), (await parametros.ObtenerAsync(ct)).SemaforoAmbarPct);
         return (estado, enCurso);
     }
 

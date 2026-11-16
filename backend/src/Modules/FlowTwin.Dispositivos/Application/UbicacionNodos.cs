@@ -9,8 +9,11 @@ namespace FlowTwin.Dispositivos.Application;
 /// Implementa IUbicacionNodos, el contrato que Gemelo declara para dibujar los nodos en el plano.
 /// Solo depende de la base, no de otros servicios, para no formar un ciclo con Gemelo.
 /// </summary>
-public sealed class UbicacionNodos(IDispositivosDb db) : IUbicacionNodos
+public sealed class UbicacionNodos(IDispositivosDb db) : IUbicacionNodos, INodosDeZonas
 {
+    public Task<int> ActivosAsync(int zonaId, CancellationToken ct = default) =>
+        db.Nodos.CountAsync(n => n.ZonaId == zonaId && n.EstadoNodoId != EstadoNodo.Baja, ct);
+
     /// <summary>Nodos con posición conocida de esas zonas, sin los dados de baja.</summary>
     public async Task<IReadOnlyList<NodoEnPlano>> DeZonasAsync(IReadOnlyCollection<int> zonaIds, CancellationToken ct = default)
     {
