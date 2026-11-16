@@ -49,6 +49,7 @@ builder.Services.AddProblemDetails(o => o.CustomizeProblemDetails = ctx =>
     {
         401 => ("NO_AUTENTICADO", "Inicia sesión para continuar."),
         403 => ("SIN_PERMISO", "No tienes permiso para esta acción."),
+        413 => ("PETICION_MUY_GRANDE", "La petición es demasiado grande."),
         429 => ("BLOQUEADO", "Demasiados intentos. Espera un momento."),
         _ => (null, null),
     };
@@ -106,11 +107,19 @@ builder.Services.AddAuthorizationBuilder()
     .AddPolicy(Politicas.SoloOperador, p => p.RequireClaim(Claims.Rol, "OPERADOR"))
     .AddPolicy(Politicas.OperadorOAdmin, p => p.RequireClaim(Claims.Rol, "OPERADOR", "ADMIN"));
 
-// ---- Límite de peticiones en /auth: frena a quien intenta adivinar contraseñas
+// ---- Protección contra abuso (Infraestructura/Proteccion.cs): límite en toda la API, tamaño de las peticiones
+var proteccion = Proteccion.Leer(builder.Configuration);
+builder.WebHost.ConfigureKestrel(k =>
+{
+    k.Limits.MaxRequestBodySize = proteccion.CuerpoMaximoBytes;
+    k.AddServerHeader = false;   // no anunciar qué servidor es: un dato menos para quien busca vulnerabilidades
+});
+// Límite estricto en /auth (frena a quien intenta adivinar contraseñas) y otro global para todo lo demás
 var porMinuto = builder.Configuration.GetValue("LimitePeticiones:AuthPorMinuto", 20);
 builder.Services.AddRateLimiter(o =>
 {
     o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    o.GlobalLimiter = Proteccion.LimiteGlobal(proteccion);
     // Retry-After (estándar HTTP) le dice al cliente cuántos segundos esperar en vez de adivinar
     o.OnRejected = (contexto, _) =>
     {
@@ -129,6 +138,7 @@ builder.Services.AddRateLimiter(o =>
 });
 
 var app = builder.Build();
+if (!app.Environment.IsDevelopment()) Proteccion.ExigirSecretos(app.Configuration);
 
 // ---- Base de datos en desarrollo: aplica las migraciones y siembra los datos de demostración
 if (app.Configuration.GetValue<bool>("BaseDatos:MigrarAlIniciar"))
@@ -146,12 +156,17 @@ await AdminInicial.AsegurarAsync(app.Services);
 // cliente. Si estuviera después del manejador de errores, vería la excepción antes de que se traduzca y
 // registraría «500» en errores que en realidad son 400 o 404 (alarmas falsas en producción).
 app.UseSerilogRequestLogging();
+app.UseCabecerasSeguridad();          // también en las respuestas de error y de límite
+if (!app.Environment.IsDevelopment()) app.UseHsts();   // el navegador solo vuelve a entrar por HTTPS
+app.UseCuerpoMaximo(proteccion.CuerpoMaximoBytes);
 app.UseExceptionHandler();
-app.UseStatusCodePages();             // cuerpo ProblemDetails para 401/403/429 sin cuerpo
+app.UseStatusCodePages();             // cuerpo ProblemDetails para 401/403/413/429 sin cuerpo
 app.UseAuthentication();
+// El límite va después de identificar al usuario (para contarlo por usuario) y ANTES de autorizar: así también
+// cuenta a quien bombardea sin sesión y solo recibiría 401
+app.UseRateLimiter();
 app.UseMiddleware<CambioContrasenaObligatorio>();
 app.UseAuthorization();
-app.UseRateLimiter();
 
 if (app.Environment.IsDevelopment())
 {
