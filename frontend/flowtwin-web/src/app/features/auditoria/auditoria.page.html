@@ -26,7 +26,7 @@
     <div class="buscar">
       <app-icono nombre="search" [tamano]="16" />
       <input class="inp" type="search" maxlength="60" aria-label="Buscar en la bitácora" placeholder="Buscar por nombre o código"
-             (input)="escribir($any($event.target).value)">
+             [value]="textoBuscar()" (input)="escribir($any($event.target).value)">
     </div>
   </div>
 
@@ -82,8 +82,11 @@
       <dt>Cuándo</dt><dd>{{ fechaCompleta(d.fila.cuando) }}</dd>
       <dt>Quién</dt><dd>{{ d.fila.usuario }}</dd>
       <dt>Desde</dt><dd>{{ d.ip ?? '—' }}</dd>
-      @if (d.traceId) { <dt>Seguimiento</dt><dd><code>{{ d.traceId }}</code></dd> }
+      @if (d.traceId) { <dt>Código técnico</dt><dd><code>{{ d.traceId }}</code></dd> }
     </dl>
+    <button type="button" class="btn btn-o btn-sm ver-dia" (click)="verDiaDe(d.fila)">
+      <app-icono nombre="person" [tamano]="15" />Ver lo que hizo {{ d.fila.usuario }} ese día
+    </button>
     @if (cambiosDetalle().length) {
       <table class="dif">
         <thead><tr><th>Campo</th><th>Antes</th><th>Después</th></tr></thead>
