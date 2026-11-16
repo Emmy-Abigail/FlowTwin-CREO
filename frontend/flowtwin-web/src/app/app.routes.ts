@@ -2,9 +2,6 @@ import { Routes } from '@angular/router';
 import { autenticadoGuard, inicioGuard, invitadoGuard, primerIngresoGuard, rolGuard, soloPrimerIngresoGuard } from './core/auth/guards';
 import { PERMISOS } from './core/auth/permisos';
 
-/** Página temporal para las pantallas de la Fase B. */
-const proximamente = () => import('./shared/paginas/proximamente.page').then(m => m.ProximamentePage);
-
 /**
  * Mapa de rutas. Cada pantalla se carga "lazy" (solo cuando se visita) y está protegida
  * por rol con rolGuard(PERMISOS.x), la misma tabla que arma el menú lateral.
@@ -26,31 +23,31 @@ export const routes: Routes = [
       {
         path: 'admision',
         canActivate: [rolGuard(PERMISOS.admision)],
-        data: { titulo: 'Admisión' },
+        title: 'Admisión · CREO FlowTwin',
         loadComponent: () => import('./features/admision/admision.page').then(m => m.AdmisionPage),
       },
       {
         path: 'gemelo',
         canActivate: [rolGuard(PERMISOS.gemelo)],
-        data: { titulo: 'Gemelo en vivo' },
+        title: 'Gemelo en vivo · CREO FlowTwin',
         loadComponent: () => import('./features/gemelo/gemelo.page').then(m => m.GemeloPage),
       },
       {
         path: 'historial',
         canActivate: [rolGuard(PERMISOS.historial)],
-        data: { titulo: 'Historial y reportes' },
+        title: 'Historial y reportes · CREO FlowTwin',
         loadComponent: () => import('./features/historial/historial.page').then(m => m.HistorialPage),
       },
       {
         path: 'atencion/:id',
         canActivate: [rolGuard(PERMISOS.atencion)],
-        data: { titulo: 'Detalle de atención' },
+        title: 'Detalle de atención · CREO FlowTwin',
         loadComponent: () => import('./features/atencion/atencion.page').then(m => m.AtencionPage),
       },
       {
         path: 'dispositivos',
         canActivate: [rolGuard(PERMISOS.dispositivos)],
-        data: { titulo: 'Dispositivos', descripcion: 'Nodos ESP32 y tarjetas BLE (P9).' },
+        title: 'Dispositivos · CREO FlowTwin',
         loadComponent: () => import('./features/dispositivos/dispositivos.page').then(m => m.DispositivosPage),
       },
       {
@@ -62,8 +59,8 @@ export const routes: Routes = [
       {
         path: 'auditoria',
         canActivate: [rolGuard(PERMISOS.auditoria)],
-        data: { titulo: 'Auditoría', descripcion: 'Bitácora de solo lectura de todas las acciones (P11).' },
-        loadComponent: proximamente,
+        title: 'Auditoría · CREO FlowTwin',
+        loadComponent: () => import('./features/auditoria/auditoria.page').then(m => m.AuditoriaPage),
       },
       {
         path: 'configuracion',
@@ -74,19 +71,18 @@ export const routes: Routes = [
       {
         path: 'cuenta',
         title: 'Mi cuenta · CREO FlowTwin',
-        data: { titulo: 'Mi cuenta' },
         loadComponent: () => import('./features/cuenta/cuenta.page').then(m => m.CuentaPage),
       },
       {
         // Solo para el primer ingreso; el resto de veces la contraseña se cambia en «Mi cuenta»
         path: 'cambiar-contrasena',
         canActivate: [soloPrimerIngresoGuard],
-        data: { titulo: 'Crea tu contraseña' },
+        title: 'Crea tu contraseña · CREO FlowTwin',
         loadComponent: () => import('./features/auth/cambiar-contrasena.page').then(m => m.CambiarContrasenaPage),
       },
       {
         path: 'sin-permiso',
-        data: { titulo: 'Sin permiso' },
+        title: 'Sin permiso · CREO FlowTwin',
         loadComponent: () => import('./shared/paginas/sin-permiso.page').then(m => m.SinPermisoPage),
       },
     ],

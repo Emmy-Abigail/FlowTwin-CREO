@@ -19,6 +19,7 @@ namespace FlowTwin.IntegrationTests;
 public sealed class ApiFixture : IAsyncLifetime
 {
     public const string PrefijoMqtt = "flowtwin-pruebas";
+    public const string ClaveSelloPruebas = "cHJ1ZWJhcy1kZS1mbG93dHdpbi1zZWxsby1kZS1hdWRpdG9yaWEtMzItYnl0ZXM=";
 
     public WebApplicationFactory<Program> Fabrica { get; private set; } = null!;
 
@@ -47,6 +48,11 @@ public sealed class ApiFixture : IAsyncLifetime
         Environment.SetEnvironmentVariable("Jornada__CierreActivo", "false");
         // Las pruebas verifican la regla F-02 encendida (en appsettings está apagada por ahora)
         Environment.SetEnvironmentVariable("Contrasenas__ExigirCambioPrimerIngreso", "true");
+        // Sello de la bitácora con una clave de prueba fija (no es un secreto: solo existe en la base de pruebas). El
+        // sellado no corre solo: las pruebas lo llaman a mano, sin margen, para controlar qué se sella y cuándo
+        Environment.SetEnvironmentVariable("Auditoria__ClaveSello", ClaveSelloPruebas);
+        Environment.SetEnvironmentVariable("Auditoria__SelladoActivo", "false");
+        Environment.SetEnvironmentVariable("Auditoria__MargenSelloSegundos", "0");
 
         await using (var db = new FlowTwinDbContext(new DbContextOptionsBuilder<FlowTwinDbContext>().UseSqlServer(cadenaPruebas).Options))
             await db.Database.EnsureDeletedAsync();

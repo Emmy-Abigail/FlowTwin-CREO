@@ -53,13 +53,6 @@ public static class CsvHistorial
     private static void Linea(StringBuilder sb, IEnumerable<string> campos) =>
         sb.Append(string.Join(',', campos.Select(Campo))).Append("\r\n");
 
-    /// <summary>
-    /// Comillas si hace falta (RFC 4180) y un apóstrofo delante de lo que Excel tomaría como fórmula
-    /// (=, +, -, @): hoy los campos los genera el sistema, pero la protección no depende de recordarlo.
-    /// </summary>
-    public static string Campo(string valor)
-    {
-        if (valor.Length > 0 && "=+-@\t\r".Contains(valor[0])) valor = "'" + valor;
-        return valor.IndexOfAny([',', '"', '\n', '\r']) >= 0 ? $"\"{valor.Replace("\"", "\"\"")}\"" : valor;
-    }
+    /// <summary>Escritura segura de un campo (ver CsvSeguro).</summary>
+    public static string Campo(string valor) => CsvSeguro.Campo(valor);
 }

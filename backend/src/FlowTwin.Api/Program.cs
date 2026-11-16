@@ -68,7 +68,7 @@ builder.Services.AddModuloIdentidad(builder.Configuration);
 builder.Services.AddModuloGemelo(builder.Configuration);
 builder.Services.AddModuloDispositivos(builder.Configuration);
 builder.Services.AddModuloAtenciones(builder.Configuration);
-builder.Services.AddModuloAuditoria();
+builder.Services.AddModuloAuditoria(builder.Configuration);
 builder.Services.AddModuloMonitoreo(builder.Configuration);
 builder.Services.AddModuloReportes();
 builder.Services.AddModuloMensajeria(builder.Configuration);
@@ -174,6 +174,7 @@ app.MapGet("/api/v1/configuracion", (IConfiguration config) => Results.Ok(new
     .RequireAuthorization().WithTags("Sistema").WithSummary("Configuración de esta instalación para el frontend");
 app.MapIdentidad();
 app.MapGemelo();
+app.MapAuditoria();
 app.MapDispositivos();
 app.MapAtenciones();
 app.MapMonitoreo();

@@ -23,4 +23,7 @@ public enum AccionAuditoria
     [Catalogo("EXTRAVIAR", "Marcó extraviada")] Extraviar = 18,
     [Catalogo("RECUPERAR", "Recuperó tarjeta")] Recuperar = 19,
     [Catalogo("REGENERAR_CLAVE", "Regeneró la clave")] RegenerarClave = 20,
+    // OWASP: los éxitos y los fallos de autenticación se registran siempre (los fallos revelan ataques de adivinación)
+    [Catalogo("INICIO_FALLIDO", "Intento de ingreso fallido")] InicioSesionFallido = 21,
+    [Catalogo("CUENTA_BLOQUEADA", "Cuenta bloqueada")] CuentaBloqueada = 22,
 }
