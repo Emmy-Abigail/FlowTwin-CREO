@@ -587,6 +587,13 @@ namespace FlowTwin.Persistence.Migraciones
                     b.Property<int>("SedeId")
                         .HasColumnType("int");
 
+                    b.Property<DateTime?>("UltimaDeteccionEn")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<int?>("UltimoNodoId")
+                        .HasColumnType("int");
+
                     b.Property<int?>("UsuarioActualizacionId")
                         .HasColumnType("int");
 
@@ -617,11 +624,13 @@ namespace FlowTwin.Persistence.Migraciones
 
                     b.HasIndex("EstadoTarjetaId");
 
-                    b.HasIndex("SedeId");
+                    b.HasIndex("UltimoNodoId");
 
                     b.HasIndex("UuidBle")
                         .IsUnique()
                         .HasFilter("[EstadoRegistro] = 1");
+
+                    b.HasIndex("SedeId", "EstadoTarjetaId");
 
                     b.ToTable("Tarjeta", "dis");
                 });
@@ -2487,6 +2496,11 @@ namespace FlowTwin.Persistence.Migraciones
                         .HasForeignKey("SedeId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("FlowTwin.Dispositivos.Domain.Nodo", null)
+                        .WithMany()
+                        .HasForeignKey("UltimoNodoId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("FlowTwin.Gemelo.Domain.ElementoPlano", b =>

@@ -35,6 +35,9 @@ public static class ModuloAtenciones
         services.Configure<OpcionesJornada>(config.GetSection("Jornada"));
         services.AddScoped<CierreAtenciones>();
         services.AddHostedService<CierreJornada>();
+        services.AddSingleton<ProgresoDeteccion>();
+        services.AddScoped<DeteccionTarjetasServicio>();
+        services.AddHostedService<DeteccionTarjetas>();
         services.AddValidatorsFromAssemblyContaining<EscaneoValidador>(ServiceLifetime.Singleton);
         return services;
     }

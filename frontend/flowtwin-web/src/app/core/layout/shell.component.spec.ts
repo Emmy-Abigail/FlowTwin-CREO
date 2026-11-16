@@ -53,7 +53,7 @@ describe('ShellComponent', () => {
   it('el Administrador solo ve las pantallas que existen', async () => {
     await crear();
 
-    expect(textoMenu()).toEqual(['Gemelo en vivo', 'Historial y reportes']);
+    expect(textoMenu()).toEqual(['Gemelo en vivo', 'Historial y reportes', 'Dispositivos']);
   });
 
   it('sin simulación disponible no aparece el botón', async () => {

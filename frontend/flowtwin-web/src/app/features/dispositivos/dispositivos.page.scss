@@ -1,0 +1,58 @@
+/* P9 · Dispositivos. Sin scroll desde 1280×720: 8 filas por página y el resto con filtros y búsqueda. */
+:host { display: flex; flex-direction: column; gap: 14px; height: 100%; min-height: 0; }
+.cabecera { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; }
+.sub { margin: 4px 0 0; color: var(--gris); }
+.cabecera .btn { display: inline-flex; align-items: center; gap: 6px; }
+
+.pestanas { display: flex; gap: 4px; border-bottom: 1px solid var(--linea); }
+.pestanas button { border: 0; background: none; padding: 8px 14px; font-weight: 700; font-size: 14.5px; color: var(--gris); border-bottom: 3px solid transparent; margin-bottom: -1px; display: inline-flex; align-items: center; gap: 6px; }
+.pestanas button.on { color: var(--tinta); border-color: var(--rojo); }
+.n { font-family: var(--f-mono); font-size: 12px; background: var(--fondo-2); border-radius: 999px; padding: 1px 7px; }
+
+.panel { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 12px 18px; }
+.barra { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-bottom: 6px; }
+.filtros { display: flex; gap: 8px; flex-wrap: wrap; }
+.filtros button { border: 1.5px solid var(--linea-2); background: #fff; border-radius: 999px; padding: 5px 12px; font-size: 13.5px; font-weight: 700; color: var(--gris); display: inline-flex; gap: 6px; }
+.filtros button b { font-family: var(--f-mono); }
+.filtros button.on { border-color: var(--tinta); color: var(--tinta); }
+.filtros button.atencion { color: #B3261E; border-color: #F0C9BE; }
+.filtros button.atencion.on { border-color: #B3261E; }
+.buscar { position: relative; display: flex; align-items: center; width: 240px; color: var(--gris); }
+.buscar app-icono { position: absolute; left: 12px; pointer-events: none; }
+.buscar .inp { padding-left: 36px; min-height: 36px; }
+
+.tbl td { padding: 10px 12px; }
+.cod { font-family: var(--f-mono); font-weight: 600; }
+.acc { width: 48px; text-align: right; }
+.st { display: inline-flex; align-items: center; gap: 7px; font-weight: 700; font-size: 13.5px; color: var(--menta-t); }
+.st i { width: 9px; height: 9px; border-radius: 50%; background: var(--baja); }
+.st.mal { color: #B3261E; } .st.mal i { background: var(--alta); }
+.st.e-DISPONIBLE, .st.e-POR_DESINFECTAR, .st.e-BAJA { color: var(--gris); }
+.st.e-DISPONIBLE i, .st.e-POR_DESINFECTAR i, .st.e-BAJA i { background: var(--gris-3); }
+.st.e-SIN_DEVOLVER, .st.e-EXTRAVIADA { color: #B3261E; }
+.st.e-SIN_DEVOLVER i, .st.e-EXTRAVIADA i { background: var(--alta); }
+td.aviso { color: var(--ambar-t); font-weight: 700; }
+td:not(.aviso) { color: inherit; }
+.vacio { text-align: center; color: var(--gris); margin: 24px 0; }
+
+.menu { position: relative; display: inline-block; }
+.mas { width: 32px; height: 32px; border: 0; border-radius: 8px; background: none; font-weight: 700; color: var(--gris-2); }
+.mas:hover, .mas[aria-expanded="true"] { background: var(--fondo-2); color: var(--tinta); }
+.opciones { position: absolute; right: 0; top: 36px; z-index: 5; background: #fff; border: 1px solid var(--linea); border-radius: 12px; box-shadow: 0 12px 30px rgba(0, 0, 0, .12); padding: 6px; min-width: 180px; display: flex; flex-direction: column; animation: aparecer .15s ease-out; }
+.opciones button { border: 0; background: none; text-align: left; padding: 9px 12px; border-radius: 8px; font-weight: 600; }
+.opciones button:hover { background: var(--fondo-2); }
+.opciones .peligro { color: #B3261E; }
+
+.pie { display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 10px; font-size: 13px; color: var(--gris); }
+.paginas { display: flex; gap: 8px; }
+
+/* Ventanas */
+.campo { display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; font-weight: 700; color: var(--gris); }
+.dos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.mono { font-family: var(--f-mono); }
+.aviso-clave { margin: 0; background: var(--amarillo-suave); color: var(--ambar-t); border-radius: 10px; padding: 10px 12px; font-weight: 700; font-size: 14px; }
+.dato { display: grid; grid-template-columns: 70px 1fr auto; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--linea); }
+.dato span { font-size: 13px; font-weight: 700; color: var(--gris); }
+.dato code { font-family: var(--f-mono); font-size: 13px; word-break: break-all; }
+.ok-texto { display: flex; align-items: center; gap: 8px; margin: 0; font-weight: 700; color: var(--menta-t); }
+@media (prefers-reduced-motion: reduce) { .opciones { animation: none; } }
