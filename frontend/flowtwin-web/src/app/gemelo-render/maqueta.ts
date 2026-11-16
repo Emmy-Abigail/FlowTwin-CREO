@@ -4,17 +4,17 @@ import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 
 /**
  * La maqueta 3D de un piso: el .glb que genera tools/generador-modelo-3d desde el plano y su lista
- * de ambientes. Los archivos NO están en el repositorio (son de la clínica): se copian a
- * public/models/ en cada equipo. Ver docs/GUIA-THREEJS.md.
+ * de ambientes. Los archivos NO están en el repositorio (son de la clínica): el equipo técnico los
+ * instala en la carpeta de maquetas del servidor y la API los entrega con sesión (ADR-28).
+ * Ver tools/generador-modelo-3d/README.md.
  *
  * Una ZONA del sistema (de donde salen ocupación y aforo) se dibuja sobre uno o más AMBIENTES de la
  * maqueta. Se enlazan por el rótulo del plano y no por el número del ambiente, porque los números
  * cambian cada vez que se regenera el modelo.
  */
 export interface MaquetaPiso {
-  glb: string;
-  ambientes: string;
-  /** zonaId → rótulos de los ambientes donde se pinta (tal como están en el plano). */
+  pisoId: number;
+  /** zonaId → rótulos de los ambientes donde se pinta (tal como están en el plano). Viene de zonas.json. */
   zonas: Record<number, string[]>;
 }
 
@@ -24,32 +24,6 @@ export interface AmbienteMaqueta {
   rotulo_en_plano: string;
   area_m2: number;
   centro: [number, number, number];
-}
-
-/**
- * Pisos que ya tienen maqueta. Provisional: cuando el Administrador configure las zonas sobre la
- * maqueta, esta tabla pasará a la base de datos y se pedirá a la API.
- */
-const MAQUETAS: Record<number, MaquetaPiso> = {
-  1: {
-    glb: 'models/clinica-piso1-final.glb',
-    ambientes: 'models/ambientes-piso1.json',
-    zonas: {
-      1: ['Admisión / Caja'],
-      2: ['Hall principal'],
-      3: ['Sala de esperas'],
-      4: ['Triaje'],
-      5: ['Tópico de enfermería'],
-      6: ['Tópico urgencia'],
-      7: ['Módulo 2', 'Módulo 2 – sillón 1', 'Módulo 2 – sillón 2'],
-      8: ['Observación 01', 'Observación 02'],
-    },
-  },
-};
-
-/** La maqueta del piso, o null si todavía no la hay (la pantalla lo dice así). */
-export function maquetaDe(pisoId: number): MaquetaPiso | null {
-  return MAQUETAS[pisoId] ?? null;
 }
 
 /** Busca un ambiente por su rótulo, sin distinguir mayúsculas ni espacios de más. */
@@ -87,17 +61,14 @@ const normalizar = (s: string) => s.normalize('NFC').trim().replace(/\s+/g, ' ')
  */
 const ACABADO = { oclusion: 0.6, reflejos: 0.7 };
 
-/** Descarga el .glb (geometría comprimida con meshopt) y su lista de ambientes. */
-export async function cargarMaqueta(maqueta: MaquetaPiso): Promise<{ escena: THREE.Group; ambientes: AmbienteMaqueta[] }> {
+/**
+ * Arma la escena desde el .glb ya descargado (geometría comprimida con meshopt). La descarga la hace
+ * MaquetasService con la sesión del usuario; aquí no se pide nada a la red.
+ */
+export async function cargarMaqueta(glb: ArrayBuffer): Promise<THREE.Group> {
   const loader = new GLTFLoader();
   loader.setMeshoptDecoder(MeshoptDecoder);
-  const [gltf, lista] = await Promise.all([
-    loader.loadAsync(maqueta.glb),
-    fetch(maqueta.ambientes).then(r => {
-      if (!r.ok) throw new Error(`No se pudo leer ${maqueta.ambientes} (${r.status})`);
-      return r.json() as Promise<{ ambientes: AmbienteMaqueta[] }>;
-    }),
-  ]);
+  const gltf = await loader.parseAsync(glb, '');
   // El piso, los ambientes y lo transparente reciben sombra, no la proyectan (como en la guía)
   gltf.scene.traverse(o => {
     if (!(o instanceof THREE.Mesh)) return;
@@ -109,7 +80,7 @@ export async function cargarMaqueta(maqueta: MaquetaPiso): Promise<{ escena: THR
     o.receiveShadow = true;
     o.castShadow = !/^ambiente|^piso|^losa|vidrio|cortina|zocalo/.test(o.name);
   });
-  return { escena: gltf.scene, ambientes: lista.ambientes };
+  return gltf.scene;
 }
 
 // ------------------------------------------------------------------ color

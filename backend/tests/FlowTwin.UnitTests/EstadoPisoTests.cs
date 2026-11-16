@@ -13,10 +13,10 @@ public class EstadoPisoTests
 
     private static readonly ZonaSemaforo[] Zonas =
     [
-        new(Admision, "Admisión y caja", "INGRESO", 6, 60, 85),
-        new(Hall, "Hall principal", "TRANSITO", null, null, null),
-        new(Sala, "Sala de espera", "ESPERA", 10, 60, 85),
-        new(Modulo2, "Módulo 2", "SERVICIO", 6, 60, 85),
+        new(Admision, "Admisión y caja", "INGRESO", 6),
+        new(Hall, "Hall principal", "TRANSITO", null),
+        new(Sala, "Sala de espera", "ESPERA", 10),
+        new(Modulo2, "Módulo 2", "SERVICIO", null),   // ADR-27: un consultorio no tiene aforo
     ];
 
     private static NodoZona Nodo(int zona, string estado = "EN_LINEA") => new(zona, $"N-0{zona}", zona, 0, estado, Ahora);
@@ -63,10 +63,11 @@ public class EstadoPisoTests
     }
 
     [Theory]
-    [InlineData(5, Nivel.Baja)]    // 50 %  < 60
-    [InlineData(6, Nivel.Media)]   // 60 %  ≥ 60 y < 85
-    [InlineData(9, Nivel.Alta)]    // 90 %  ≥ 85
-    public void El_semaforo_sigue_los_umbrales_de_la_zona(int personas, string esperado)
+    [InlineData(7, Nivel.Baja)]    // 70 %  < 80 (ámbar por defecto)
+    [InlineData(8, Nivel.Media)]   // 80 %: se está llenando
+    [InlineData(10, Nivel.Media)]  // 100 %: lleno, pero aún dentro del aforo
+    [InlineData(11, Nivel.Alta)]   // 110 %: supera el aforo, el límite oficial
+    public void El_semaforo_es_ambar_desde_el_80_y_rojo_al_superar_el_aforo_ADR27(int personas, string esperado)
     {
         var enSala = Enumerable.Range(0, personas).Select(i => Atencion($"A-{i:D4}", 10, En(Sala, 5))).ToList();
 
@@ -89,7 +90,7 @@ public class EstadoPisoTests
     [Fact]
     public void Con_el_aforo_por_definir_muestra_la_ocupacion_sin_semaforo()
     {
-        ZonaSemaforo[] zonas = [new(Sala, "Sala de espera", "ESPERA", null, null, null)];
+        ZonaSemaforo[] zonas = [new(Sala, "Sala de espera", "ESPERA", null)];
         var a = Atencion("A-0150", 5, En(Sala, 5));
 
         var sala = CalculoEstado.Calcular(1, zonas, [Nodo(Sala)], [a], Ahora).Zonas.Single();
@@ -102,7 +103,7 @@ public class EstadoPisoTests
     [Fact]
     public void Sin_datos_va_antes_que_el_aforo_por_definir()
     {
-        ZonaSemaforo[] zonas = [new(Sala, "Sala de espera", "ESPERA", null, null, null)];
+        ZonaSemaforo[] zonas = [new(Sala, "Sala de espera", "ESPERA", null)];
 
         var sala = CalculoEstado.Calcular(1, zonas, [Nodo(Sala, "SIN_SENAL")], [], Ahora).Zonas.Single();
 

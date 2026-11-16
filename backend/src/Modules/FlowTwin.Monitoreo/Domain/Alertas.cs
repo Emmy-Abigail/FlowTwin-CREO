@@ -4,9 +4,9 @@ using FlowTwin.SharedKernel;
 namespace FlowTwin.Monitoreo.Domain;
 
 /// <summary>
-/// Sección «Alertas» de appsettings (ADR-25). Valores por defecto (la clínica no definió los suyos). Contra
-/// la fatiga de alarmas, la primera alerta de espera es a los 40 min: a los 20, con una mediana de espera
-/// cercana, sonaría por la mitad de los pacientes y nadie podría hacer nada con eso.
+/// Umbrales de las alertas (ADR-25). Salen de Configuración › Parámetros (ADR-27); estos son los valores
+/// por defecto. Contra la fatiga de alarmas, la primera alerta de espera es a los 40 min: a los 20, con una
+/// mediana de espera cercana, sonaría por la mitad de los pacientes y nadie podría hacer nada con eso.
 /// </summary>
 public sealed class OpcionesAlertas
 {

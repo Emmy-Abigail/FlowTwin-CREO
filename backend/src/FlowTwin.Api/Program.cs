@@ -65,7 +65,7 @@ builder.Services.AddOpenApi();
 // ---- Base de datos y módulos
 builder.Services.AddPersistencia(builder.Configuration);
 builder.Services.AddModuloIdentidad(builder.Configuration);
-builder.Services.AddModuloGemelo();
+builder.Services.AddModuloGemelo(builder.Configuration);
 builder.Services.AddModuloDispositivos(builder.Configuration);
 builder.Services.AddModuloAtenciones(builder.Configuration);
 builder.Services.AddModuloAuditoria();
@@ -142,9 +142,12 @@ if (app.Configuration.GetValue<bool>("BaseDatos:SembrarDemo"))
 await AdminInicial.AsegurarAsync(app.Services);
 
 // ---- Middlewares, en este orden (sección "Recorrido de una petición")
+// El registro de peticiones va PRIMERO (el más externo): así anota el estado que de verdad recibe el
+// cliente. Si estuviera después del manejador de errores, vería la excepción antes de que se traduzca y
+// registraría «500» en errores que en realidad son 400 o 404 (alarmas falsas en producción).
+app.UseSerilogRequestLogging();
 app.UseExceptionHandler();
 app.UseStatusCodePages();             // cuerpo ProblemDetails para 401/403/429 sin cuerpo
-app.UseSerilogRequestLogging();
 app.UseAuthentication();
 app.UseMiddleware<CambioContrasenaObligatorio>();
 app.UseAuthorization();

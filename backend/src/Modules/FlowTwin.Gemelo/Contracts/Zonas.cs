@@ -9,8 +9,8 @@ public sealed record PisoInfo(int Id, string Nombre, int SedeId);
 /// <summary>Una zona tal como aparece en el recorrido de una atención. Tipo: como en ZonaSemaforo.</summary>
 public sealed record ZonaRecorrido(int Id, string Nombre, string Tipo, int PisoId);
 
-/// <summary>Una zona publicada con lo que hace falta para su semáforo. Tipo: INGRESO, ESPERA, SERVICIO, TRANSITO o SALIDA.</summary>
-public sealed record ZonaSemaforo(int Id, string Nombre, string Tipo, short? Aforo, byte? UmbralMediaPct, byte? UmbralAltaPct);
+/// <summary>Una zona publicada con lo que hace falta para su semáforo. Tipo: INGRESO, ESPERA, TRIAJE, SERVICIO, TRANSITO o SALIDA. Aforo en todas menos Tránsito y Salida (ADR-27).</summary>
+public sealed record ZonaSemaforo(int Id, string Nombre, string Tipo, short? Aforo);
 
 /// <summary>Consultas de zonas para otros módulos (por ejemplo, Dispositivos al registrar un nodo, RN-19).</summary>
 public interface IZonasConsultas
@@ -45,4 +45,23 @@ public interface IUbicacionNodos
 {
     /// <summary>Nodos con posición conocida de esas zonas, sin los dados de baja.</summary>
     Task<IReadOnlyList<NodoEnPlano>> DeZonasAsync(IReadOnlyCollection<int> zonaIds, CancellationToken ct = default);
+}
+
+/// <summary>Los parámetros del sistema que leen otros módulos (alertas, semáforo, cierre de jornada). ADR-27.</summary>
+public sealed record ParametrosInfo(int EsperaAltaMin, int EsperaCriticaMin, int SinLecturasMin, int HoraCierre, int SemaforoAmbarPct);
+
+public interface IParametrosSistema
+{
+    /// <summary>Los parámetros vigentes. Se guardan en memoria unos segundos: el gemelo los pide cada medio segundo.</summary>
+    Task<ParametrosInfo> ObtenerAsync(CancellationToken ct = default);
+}
+
+/// <summary>
+/// Inversión de dependencias, como IUbicacionNodos: Configuración (Gemelo) necesita saber si una zona tiene
+/// nodos antes de darla de baja, pero no puede depender de Dispositivos. Gemelo lo declara; Dispositivos lo implementa.
+/// </summary>
+public interface INodosDeZonas
+{
+    /// <summary>Nodos que no están de baja en esa zona.</summary>
+    Task<int> ActivosAsync(int zonaId, CancellationToken ct = default);
 }

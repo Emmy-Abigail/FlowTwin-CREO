@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, httpResource } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { API, mensajeDe, problemaDe } from '../../core/api/problema';
@@ -11,7 +11,7 @@ import { PisoActualService } from '../../core/datos/piso-actual.service';
 import { fechaLarga } from '../../core/utils/tiempo';
 import { Render3dComponent } from '../../gemelo-render/render-3d/render-3d.component';
 import { OcupacionZona, TipoZona } from '../../gemelo-render/geometria';
-import { maquetaDe } from '../../gemelo-render/maqueta';
+import { MaquetaPiso } from '../../gemelo-render/maqueta';
 import { EstadoVacioComponent } from '../../shared/componentes/estado-vacio.component';
 import { IconoComponent, NombreIcono } from '../../shared/componentes/icono.component';
 import { ModalComponent } from '../../shared/componentes/modal.component';
@@ -92,10 +92,20 @@ export class GemeloPage {
   /** Lo que recibe el render 3D: las zonas sin nodo, solo con su nombre. */
   protected ocupacion = computed<OcupacionZona[]>(() => ocupacionParaRender(this.f().zonas(), this.f().nodos(), this.tipoDe));
 
-  /** La maqueta 3D del piso que se mira; null si ese piso todavía no la tiene. */
-  protected maqueta = computed(() => {
-    const geo = this.f().geometria();
-    return geo ? maquetaDe(geo.pisoId) : null;
+  /**
+   * La maqueta 3D del piso que se mira, desde la carpeta del servidor (ADR-28). Instalar la de un piso
+   * nuevo es copiar sus archivos: aquí no hay que programar nada.
+   */
+  private infoMaqueta = httpResource<MaquetaPiso>(() => {
+    const id = this.f().geometria()?.pisoId;
+    return id ? `${API}/pisos/${id}/maqueta` : undefined;
+  });
+  protected maqueta = computed(() => this.infoMaqueta.hasValue() ? this.infoMaqueta.value() : null);
+  /** «sin-maqueta»: el piso aún no la tiene (404); «error»: falló otra cosa (sin red, archivo mal escrito). */
+  protected faltaMaqueta = computed<'sin-maqueta' | 'error' | null>(() => {
+    const e = this.infoMaqueta.error();
+    if (!e) return null;
+    return e instanceof HttpErrorResponse && e.status === 404 ? 'sin-maqueta' : 'error';
   });
 
   protected grupos = computed(() => pacientesPorPestana(this.f().pacientes()));

@@ -5,6 +5,8 @@ PLANOS_COMPLETOS/
 # Todo lo que sale de los planos tampoco se sube (modelo 3D, imágenes del plano, mapa de ambientes).
 # Se generan con tools/generador-modelo-3d y se copian a mano en cada máquina o servidor.
 frontend/flowtwin-web/public/models/
+# Maquetas 3D por piso que entrega la API (ADR-28): piso-N/maqueta.glb, ambientes.json y zonas.json
+maquetas/
 frontend/flowtwin-web/public/planos/
 docs/planos-textura/
 docs/mapa-ambientes-*.png
