@@ -13,3 +13,9 @@ maquetas/*
 frontend/flowtwin-web/public/planos/
 docs/planos-textura/
 docs/mapa-ambientes-*.png
+
+# Secretos de la demo local con túnel (tools/demo/demo-local.sh)
+tools/demo/demo.env
+
+# Manual de usuario (LaTeX): se entrega aparte, no va al repositorio
+manual/
