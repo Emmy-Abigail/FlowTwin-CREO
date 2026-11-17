@@ -58,12 +58,9 @@
   <div class="principal">
     @if (modo.simulacion()) {
       <div class="franja-simulacion" role="status">
-        @if (pantallaReal(); as real) {
-          <span><app-icono nombre="matraz" [tamano]="18" /><b>SIMULACIÓN</b> activa en Gemelo e Historial · {{ real }} no se simula: lo que ves aquí es real</span>
-        } @else {
-          <span><app-icono nombre="matraz" [tamano]="18" /><b>SIMULACIÓN</b> · datos ficticios para la presentación · no se guardan ni aparecen en reportes</span>
-        }
-        <button type="button" (click)="modo.reiniciar()">Reiniciar simulación</button>
+        <!-- Todo el sistema se simula (ADR-31): nada de lo que se ve o se hace llega a la base -->
+        <span><app-icono nombre="matraz" [tamano]="18" /><b>SIMULACIÓN</b> · datos ficticios para la presentación · no se guardan ni aparecen en reportes</span>
+        <button type="button" (click)="reiniciarSimulacion()">Reiniciar simulación</button>
       </div>
     }
     <main class="contenido">

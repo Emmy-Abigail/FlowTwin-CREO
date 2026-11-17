@@ -14,7 +14,7 @@
    "ancho": 2.1,
    "fondo": 5.1,
    "aforo": 6,
-   "umbralMedia": 60,
+   "umbralMedia": 80,
    "umbralAlta": 85
   },
   {
@@ -26,7 +26,7 @@
    "ancho": 6.2,
    "fondo": 4.8,
    "aforo": 30,
-   "umbralMedia": 60,
+   "umbralMedia": 80,
    "umbralAlta": 85
   },
   {
@@ -38,7 +38,7 @@
    "ancho": 5.7,
    "fondo": 5.3,
    "aforo": 24,
-   "umbralMedia": 60,
+   "umbralMedia": 80,
    "umbralAlta": 85
   },
   {
@@ -50,7 +50,7 @@
    "ancho": 3.1,
    "fondo": 4.8,
    "aforo": 3,
-   "umbralMedia": 60,
+   "umbralMedia": 80,
    "umbralAlta": 85
   },
   {
@@ -62,7 +62,7 @@
    "ancho": 3.1,
    "fondo": 4.7,
    "aforo": 3,
-   "umbralMedia": 60,
+   "umbralMedia": 80,
    "umbralAlta": 85
   },
   {
@@ -74,7 +74,7 @@
    "ancho": 5.0,
    "fondo": 3.7,
    "aforo": 4,
-   "umbralMedia": 60,
+   "umbralMedia": 80,
    "umbralAlta": 85
   },
   {
@@ -86,7 +86,7 @@
    "ancho": 7.4,
    "fondo": 5.2,
    "aforo": 6,
-   "umbralMedia": 60,
+   "umbralMedia": 80,
    "umbralAlta": 85
   },
   {
@@ -98,7 +98,7 @@
    "ancho": 3.2,
    "fondo": 6.5,
    "aforo": 4,
-   "umbralMedia": 60,
+   "umbralMedia": 80,
    "umbralAlta": 85
   }
  ],

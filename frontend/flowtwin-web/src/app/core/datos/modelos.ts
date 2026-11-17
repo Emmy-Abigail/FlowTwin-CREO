@@ -98,6 +98,9 @@ export interface EntradaAuditoria {
   accion: string;
   elemento: string;
   detalle: string;
+  /** Solo en los cambios de la Simulación: los valores antes y después, para el detalle de Auditoría. */
+  antes?: Record<string, unknown>;
+  despues?: Record<string, unknown>;
 }
 
 export interface Alerta {
