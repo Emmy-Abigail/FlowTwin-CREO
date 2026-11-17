@@ -1,7 +1,11 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable, computed, inject } from '@angular/core';
+import { Injectable, computed, inject, linkedSignal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { GeometriaPiso, ZonaGeometria } from '../../gemelo-render/geometria';
+import { ClinicaStore } from './clinica.store';
+
+/** Lo que la Configuración simulada cambia de una zona (ADR-31). */
+export type AjusteZona = Partial<Pick<ZonaGeometria, 'nombre' | 'tipo' | 'aforo' | 'umbralMedia'>>;
 
 /**
  * Carga la geometría real del Piso 1 desde public/pisos/. Hoy es un archivo estático;
@@ -14,7 +18,14 @@ export class GeometriaService {
   /** null mientras se descarga. */
   readonly piso = toSignal(this.http.get<GeometriaPiso>('pisos/geometria-piso1.json'), { initialValue: null });
 
-  readonly zonas = computed(() => this.piso()?.zonas ?? []);
+  /** Cambios hechos en la Configuración simulada; «Reiniciar simulación» los borra. */
+  private ajustes = linkedSignal<number, Record<number, AjusteZona>>({ source: inject(ClinicaStore).reinicios, computation: () => ({}) });
+
+  readonly zonas = computed(() => (this.piso()?.zonas ?? []).map(z => ({ ...z, ...this.ajustes()[z.id] })));
+
+  ajustarZona(id: number, ajuste: AjusteZona): void {
+    this.ajustes.update(a => ({ ...a, [id]: { ...a[id], ...ajuste } }));
+  }
   private porId = computed(() => new Map(this.zonas().map(z => [z.id, z])));
 
   zona(id: number | null | undefined): ZonaGeometria | undefined {

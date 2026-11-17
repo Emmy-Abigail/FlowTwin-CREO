@@ -2,6 +2,8 @@ import { HttpClient, httpResource } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, linkedSignal, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { API, mensajeDe, problemaDe } from '../../core/api/problema';
+import { ClinicaStore } from '../../core/datos/clinica.store';
+import { ModoDatosService } from '../../core/datos/modo-datos.service';
 import { ToastService } from '../../core/ui/toast.service';
 import { descargar, nombreDe } from '../../core/utils/descarga';
 import { isoFecha } from '../../core/utils/tiempo';
@@ -13,6 +15,7 @@ import { PeriodoId, Rango, rangoDe } from '../historial/modelo-historial';
 import {
   CATEGORIAS, DetalleAuditoria, FilaAuditoria, PaginaAuditoria, ResultadoIntegridad, cambios, problemaPeriodo, textoEntidad, textoIntegridad,
 } from './modelo-auditoria';
+import { BitacoraSimulada } from './simulacion-auditoria';
 
 const ESPERA_BUSQUEDA_MS = 300;
 interface UsuarioOpcion { id: number; nombres: string; apellidos: string }
@@ -20,7 +23,7 @@ interface UsuarioOpcion { id: number; nombres: string; apellidos: string }
 /**
  * P11 · Auditoría (solo Administrador). La bitácora es de solo lectura: se filtra por período, usuario, categoría y
  * texto, se pagina en el servidor y cada registro abre su «antes y después». La verificación recalcula la cadena de
- * sellos del período (ADR-30).
+ * sellos del período (ADR-30). En la Simulación (ADR-31) muestra la bitácora de la clínica simulada, sin sello.
  */
 @Component({
   selector: 'app-auditoria',
@@ -32,10 +35,16 @@ interface UsuarioOpcion { id: number; nombres: string; apellidos: string }
 export class AuditoriaPage {
   private http = inject(HttpClient);
   private toast = inject(ToastService);
+  private modo = inject(ModoDatosService);
+  private clinica = inject(ClinicaStore);
+  private bitacora = new BitacoraSimulada(this.clinica);
+  protected simulando = this.modo.simulacion;
 
   protected readonly categorias = CATEGORIAS;
   protected readonly textoEntidad = textoEntidad;
-  protected ahora = signal(Date.now());
+  private relojReal = signal(Date.now());
+  /** En la Simulación, la hora de la clínica simulada. */
+  protected ahora = computed(() => this.simulando() ? this.clinica.ahora() : this.relojReal());
   protected hoy = computed(() => isoFecha(this.ahora()));
 
   protected periodo = signal<PeriodoId>('7');
@@ -60,19 +69,23 @@ export class AuditoriaPage {
   });
 
   private recurso = httpResource<PaginaAuditoria>(() =>
-    this.problema() ? undefined : { url: `${API}/auditoria`, params: { ...this.filtros(), pagina: this.pagina() } });
+    this.problema() || this.simulando() ? undefined : { url: `${API}/auditoria`, params: { ...this.filtros(), pagina: this.pagina() } });
   /** Se conserva la página anterior mientras llega la nueva: la tabla no parpadea al filtrar. */
   protected datos = linkedSignal<PaginaAuditoria | undefined, PaginaAuditoria | null>({
-    source: () => this.recurso.hasValue() ? this.recurso.value() : undefined,
+    source: () => this.simulando()
+      ? (this.problema() ? undefined : this.bitacora.pagina(this.filtrosSim(), this.pagina()))
+      : this.recurso.hasValue() ? this.recurso.value() : undefined,
     computation: (nueva, anterior) => nueva ?? anterior?.value ?? null,
   });
   protected paginas = computed(() => { const d = this.datos(); return d ? Math.max(1, Math.ceil(d.total / d.tamano)) : 1; });
   protected totalTodo = computed(() => Object.values(this.datos()?.conteos ?? {}).reduce((s, n) => s + n, 0));
-  protected error = computed(() => { const e = this.recurso.error(); return e ? mensajeDe(problemaDe(e)) : null; });
+  protected error = computed(() => { if (this.simulando()) return null; const e = this.recurso.error(); return e ? mensajeDe(problemaDe(e)) : null; });
 
-  private usuariosRes = httpResource<UsuarioOpcion[]>(() => ({ url: `${API}/usuarios`, params: { incluirInactivos: true } }));
-  protected usuarios = computed(() => (this.usuariosRes.hasValue() ? this.usuariosRes.value() : [])
+  private usuariosRes = httpResource<UsuarioOpcion[]>(() => this.simulando() ? undefined : ({ url: `${API}/usuarios`, params: { incluirInactivos: true } }));
+  protected usuarios = computed(() => this.simulando() ? this.bitacora.usuarios() : (this.usuariosRes.hasValue() ? this.usuariosRes.value() : [])
     .map(u => ({ id: u.id, nombre: `${u.nombres} ${u.apellidos}`.trim() })).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')));
+
+  private filtrosSim = computed(() => ({ rango: this.rango(), usuarioId: this.usuarioId(), categoria: this.categoria(), buscar: this.buscar() }));
 
   protected cuandoTexto = (f: FilaAuditoria) => cuando(Date.parse(f.cuando), this.ahora());
 
@@ -89,7 +102,7 @@ export class AuditoriaPage {
   private temporizador?: ReturnType<typeof setTimeout>;
 
   constructor() {
-    const reloj = setInterval(() => this.ahora.set(Date.now()), 60_000);
+    const reloj = setInterval(() => this.relojReal.set(Date.now()), 60_000);
     inject(DestroyRef).onDestroy(() => { clearInterval(reloj); clearTimeout(this.temporizador); });
   }
 
@@ -104,6 +117,7 @@ export class AuditoriaPage {
   }
 
   protected async abrir(f: FilaAuditoria): Promise<void> {
+    if (this.simulando()) { this.detalle.set(this.bitacora.detalle(f.id)); return; }
     try {
       this.detalle.set(await firstValueFrom(this.http.get<DetalleAuditoria>(`${API}/auditoria/${f.id}`)));
     } catch (e) {
@@ -126,6 +140,11 @@ export class AuditoriaPage {
 
   protected async exportar(): Promise<void> {
     await this.trabajar(async () => {
+      if (this.simulando()) {
+        const rango = this.rango();
+        descargar(this.bitacora.csv(this.filtrosSim()), `auditoria_simulacion_${rango.desde}_${rango.hasta}.csv`);
+        return;
+      }
       const r = await firstValueFrom(this.http.get(`${API}/auditoria/exportar.csv`, { params: this.filtros(), responseType: 'blob', observe: 'response' }));
       const rango = this.rango();
       descargar(r.body!, nombreDe(r.headers.get('Content-Disposition')) ?? `auditoria_${rango.desde}_${rango.hasta}.csv`);
@@ -133,6 +152,10 @@ export class AuditoriaPage {
   }
 
   protected async verificar(): Promise<void> {
+    if (this.simulando()) {
+      this.toast.mostrar('La bitácora simulada no lleva sello: es ficticia y no se guarda. En los datos reales, esto verifica la cadena de sellos.', 'warn');
+      return;
+    }
     await this.trabajar(async () => {
       const r = this.rango();
       this.integridad.set(await firstValueFrom(this.http.post<ResultadoIntegridad>(`${API}/auditoria/integridad`, null, { params: { desde: r.desde, hasta: r.hasta } })));

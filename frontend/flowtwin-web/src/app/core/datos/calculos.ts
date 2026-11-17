@@ -37,10 +37,11 @@ export const total = (a: Atencion, ahora: number) => minutos((a.fin ?? ahora) - 
  * Concentración de una zona según sus umbrales (en % del aforo).
  * sinDatos = la zona está pausada o su nodo no envía señal: se ve gris.
  */
+/** La misma regla que el sistema real (RN-13): rojo con más pacientes que el aforo; ámbar desde umbralMedia (80 %). */
 export function nivelOcupacion(personas: number, zona: ZonaGeometria, sinDatos = false): NivelOcupacion {
   if (sinDatos) return 'nd';
   const pct = (personas / Math.max(1, zona.aforo)) * 100;
-  return pct >= zona.umbralAlta ? 'alta' : pct >= zona.umbralMedia ? 'media' : 'baja';
+  return personas > zona.aforo ? 'alta' : pct >= zona.umbralMedia ? 'media' : 'baja';
 }
 
 export const NOMBRE_NIVEL: Record<NivelOcupacion, string> = {

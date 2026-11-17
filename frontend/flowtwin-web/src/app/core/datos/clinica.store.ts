@@ -31,6 +31,8 @@ export class ClinicaStore {
   /** Reloj de la clínica (simulado: avanza 1 min en cada tick del simulador). */
   readonly ahora = signal(this.semilla.ahora);
   readonly simulacionActiva = signal(true);
+  /** Cuántas veces se reinició: lo simulado de otras pantallas (usuarios, configuración) vuelve al inicio con él. */
+  readonly reinicios = signal(0);
 
   readonly tarjetas = signal(this.semilla.tarjetas);
   readonly atenciones = signal(this.semilla.atenciones);
@@ -69,6 +71,7 @@ export class ClinicaStore {
     this.auditoria.set(s.auditoria);
     this.alertas.set(s.alertas);
     this.pausas.set({});
+    this.reinicios.update(n => n + 1);
   }
 
   enZona(zonaId: number): Atencion[] {
@@ -202,8 +205,9 @@ export class ClinicaStore {
     this.auditar('Gemelo', 'Puso en servicio', nombreZona, '', quien);
   }
 
-  auditar(tipo: TipoAuditoria, accion: string, elemento: string, detalle: string, quien: Actor): void {
-    const entrada: EntradaAuditoria = { t: this.ahora(), usuario: quien.nombre, rol: quien.rol, tipo, accion, elemento, detalle };
+  auditar(tipo: TipoAuditoria, accion: string, elemento: string, detalle: string, quien: Actor,
+    cambio?: { antes?: Record<string, unknown>; despues?: Record<string, unknown> }): void {
+    const entrada: EntradaAuditoria = { t: this.ahora(), usuario: quien.nombre, rol: quien.rol, tipo, accion, elemento, detalle, ...cambio };
     this.auditoria.update(lista => [entrada, ...lista]);
   }
 
