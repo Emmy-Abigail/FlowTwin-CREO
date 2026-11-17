@@ -58,8 +58,8 @@ public class Zona : EntidadEditable
     }
 
     /// <summary>
-    /// Una zona nueva desde Configuración. El rectángulo (X, Y, Ancho, Fondo) es del plano 2D anterior y el
-    /// gemelo 3D no lo usa: se guarda uno mínimo hasta quitar esas columnas (limpieza de muros y planoUrl).
+    /// Una zona nueva desde Configuración. El rectángulo (X, Y, Ancho, Fondo) viene del plano 2D anterior; el
+    /// gemelo 3D solo lo usa para ubicar la etiqueta si la zona aún no está en la maqueta. Se guarda uno mínimo.
     /// </summary>
     public static Zona Nueva(int pisoId, string nombre, TipoZona tipo, short? aforo) => new()
     {

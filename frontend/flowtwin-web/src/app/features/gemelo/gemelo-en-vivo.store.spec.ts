@@ -22,7 +22,7 @@ describe('GemeloEnVivoStore', () => {
 
   async function activar() {
     const carga = store.activar(1, 'Sede Principal');
-    http.expectOne('/api/v1/pisos/1/geometria').flush({ pisoId: 1, nombre: 'Piso 1', nivel: 1, anchoM: 40, fondoM: 20, altoMuroM: 2.7, planoUrl: '/planos/piso1.jpg', zonas: [], elementos: [], nodos: [] });
+    http.expectOne('/api/v1/pisos/1/geometria').flush({ pisoId: 1, nombre: 'Piso 1', nivel: 1, anchoM: 40, fondoM: 20, zonas: [], nodos: [] });
     http.expectOne('/api/v1/pisos/1/estado').flush(ESTADO);
     http.expectOne('/api/v1/pisos/1/atendidas-hoy').flush([{ id: 130, codigo: 'A-0130', inicioEn: iso(90), finEn: iso(10), motivo: 'DEVUELTA', esperaMin: 20, totalMin: 80 }]);
     await carga;

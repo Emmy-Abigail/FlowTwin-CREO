@@ -52,7 +52,9 @@ de jornada estaban fijos en `appsettings`, aunque la pantalla decía que los cam
 
 - ✅ Agregar una sede, un piso o una zona no requiere programar.
 - ✅ Los «valores por defecto» que mostraba la app ahora sí los cambia el Administrador.
-- ⚠️ Las zonas nuevas guardan un rectángulo mínimo del plano 2D anterior, que el 3D no usa; esas columnas se
-  quitan en la limpieza de muros y `planoUrl`.
+- ⚠️ Las zonas nuevas guardan un rectángulo mínimo del plano 2D anterior; el 3D solo lo usa para ubicar la
+  etiqueta de una zona que aún no está en la maqueta.
+- ✅ (17/11/2026) Se quitaron los muros del plano 2D (`gem.ElementoPlano`, `cat.TipoElementoPlano`) y las
+  columnas `PlanoRuta` y `AltoMuroM` de `gem.Piso`: lo que se dibuja viene de la maqueta 3D (ADR-28).
 - ✅ El gemelo muestra la saturación de consultorios, triaje y tópicos con la misma leyenda de siempre.
 - ⚠️ Pendiente: que la maqueta de cada piso la entregue el servidor desde su carpeta (sin escribirla en el código).

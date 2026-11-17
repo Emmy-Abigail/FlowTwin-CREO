@@ -37,7 +37,6 @@ export interface GeometriaPiso {
   nivel: number;
   anchoM: number;
   fondoM: number;
-  altoMuroM: number;
   sede: string;
   zonas: ZonaGeometria[];
   nodos: NodoGeometria[];
