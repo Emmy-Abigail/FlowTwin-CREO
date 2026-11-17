@@ -59,10 +59,12 @@ export class AdmisionPage {
     });
   }
 
-  protected hoy = computed(() => fechaLarga(this.ahora()));
+  /** La hora de las operaciones: la de la clínica simulada en la Simulación; si no, la real. */
+  private reloj = computed(() => this.store.relojSimulado() ?? this.ahora());
+  protected hoy = computed(() => fechaLarga(this.reloj()));
 
   protected hace(fecha: number | null): string {
-    return fecha === null ? '—' : haceCuanto(fecha, this.ahora());
+    return fecha === null ? '—' : haceCuanto(fecha, this.reloj());
   }
 
   /** Cambió el texto: es otra lectura (R8). Si se escribe a mano, se consulta al hacer una pausa. */

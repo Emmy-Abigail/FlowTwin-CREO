@@ -77,4 +77,18 @@ describe('Simulación de la clínica', () => {
     expect(store.operaciones()).toEqual([]);
     expect(store.historial().length).toBeGreaterThan(0);
   });
+
+  it('al pulsar Simulación hay movimiento enseguida: la fila de la puerta entra en los primeros minutos', () => {
+    TestBed.configureTestingModule({ providers: [{ provide: GeometriaService, useValue: { zona: () => undefined } }] });
+    const store = TestBed.inject(ClinicaStore);
+    const simulador = TestBed.inject(SimuladorService);
+
+    simulador.iniciar();                         // el primer minuto corre al instante, sin esperar 5 s
+    const alInstante = store.atenciones().length;
+    for (let i = 0; i < 3; i++) simulador.tick();
+    simulador.detener();
+
+    expect(alInstante).toBe(1);
+    expect(store.atenciones().length).toBeGreaterThanOrEqual(SimuladorService.FILA_APERTURA);
+  });
 });

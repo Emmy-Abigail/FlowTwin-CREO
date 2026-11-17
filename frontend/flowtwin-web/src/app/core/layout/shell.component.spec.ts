@@ -7,6 +7,7 @@ import { AuthService } from '../auth/auth.service';
 import { Rol } from '../datos/modelos';
 import { ModoDatosService } from '../datos/modo-datos.service';
 import { PisoActualService } from '../datos/piso-actual.service';
+import { ToastService } from '../ui/toast.service';
 import { ShellComponent } from './shell.component';
 
 /** El marco común: menú por rol, barra colapsable y la franja de simulación (ADR-22). */
@@ -83,14 +84,14 @@ describe('ShellComponent', () => {
     expect(pagina().querySelector('.simulacion')).toBeNull();
   });
 
-  it('en Admisión la franja aclara que esa pantalla es real', async () => {
+  it('Admisión también se simula (ADR-31): la franja dice que son datos ficticios', async () => {
     rol.set('Operador');
     simulacion.set(true);
     await crear();
 
     await TestBed.inject(Router).navigateByUrl('/admision');
     await fixture.whenStable();
-    expect(pagina().querySelector('.franja-simulacion')?.textContent).toContain('Admisión no se simula');
+    expect(pagina().querySelector('.franja-simulacion')?.textContent).toContain('datos ficticios');
 
     await TestBed.inject(Router).navigateByUrl('/gemelo');
     await fixture.whenStable();
@@ -153,5 +154,6 @@ describe('ShellComponent', () => {
     expect(boton.textContent?.trim()).toBe('Reiniciar simulación');
     boton.click();
     expect(reiniciar).toHaveBeenCalledTimes(1);
+    expect(TestBed.inject(ToastService).toasts().map(t => t.texto)).toContain('Simulación reiniciada · 07:00');
   });
 });
