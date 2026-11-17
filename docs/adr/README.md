@@ -16,3 +16,4 @@ atrás. Los ADR-01 a ADR-20 están en el documento de arquitectura (v2); desde e
 | [ADR-28](0028-maquetas-servidas-por-la-api.md) | La maqueta 3D de cada piso la entrega la API desde una carpeta del servidor | Aceptada |
 | [ADR-29](0029-gerencia-ve-todos-los-pisos.md) | Gerencia ve todos los pisos; solo el Operador tiene pisos asignados | Aceptada |
 | [ADR-30](0030-auditoria-consulta-y-sello-de-integridad.md) | Auditoría: consulta por categorías, ingresos fallidos y sello de integridad | Aceptada |
+| [ADR-31](0031-la-simulacion-cubre-todo-el-sistema.md) | La Simulación cubre todo el sistema, para presentarlo como si estuviera en uso | Aceptada |

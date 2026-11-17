@@ -39,7 +39,10 @@ export class HistorialStore {
   private pisos = inject(PisoActualService);
   private auth = inject(AuthService);
 
-  readonly periodo = signal<PeriodoId>('7');
+  /** En la Simulación abre en «Hoy»: un día de 7 casi no mueve las medianas y parecería que nada cambia (ADR-31). */
+  readonly periodo = linkedSignal<boolean, PeriodoId>({
+    source: this.modo.simulacion, computation: simulando => simulando ? 'hoy' : leerFiltros()?.periodo ?? '7',
+  });
   readonly elegido = signal<Rango | null>(null);
   readonly pestana = signal<Pestana>('ocupacion');
   readonly zonaId = signal<number | null>(null);
@@ -114,14 +117,15 @@ export class HistorialStore {
   constructor() {
     const guardados = leerFiltros();
     if (guardados) {
-      this.periodo.set(guardados.periodo);
+      if (!this.modo.simulacion()) this.periodo.set(guardados.periodo);
       this.elegido.set(guardados.elegido);
       this.pestana.set(guardados.pestana);
       this.zonaId.set(guardados.zonaId);
       this.codigo.set(guardados.codigo);
       this.pagina.set(guardados.pagina);
     }
-    effect(() => guardarFiltros({
+    // Lo que se elige durante la Simulación no se recuerda: al salir, el Historial vuelve como estaba
+    effect(() => !this.modo.simulacion() && guardarFiltros({
       periodo: this.periodo(), elegido: this.elegido(), pestana: this.pestana(),
       zonaId: this.zonaId(), codigo: this.codigo(), pagina: this.pagina(),
     }));

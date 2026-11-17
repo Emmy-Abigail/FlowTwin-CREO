@@ -23,15 +23,21 @@ const RECEPCION_SIMULADA: Actor = { nombre: 'Recepción (simulación)', rol: 'Op
 export class SimuladorService {
   /** Cada 5 s reales pasa 1 minuto en la clínica. */
   static readonly INTERVALO_MS = 5000;
+  /** Pacientes que esperan en la puerta cuando abre la clínica: entran uno por minuto. */
+  static readonly FILA_APERTURA = 4;
 
   private store = inject(ClinicaStore);
   private geometria = inject(GeometriaService);
   private static readonly SEMILLA = 20261026;
   private rnd = new Aleatorio(SimuladorService.SEMILLA);
   private temporizador: ReturnType<typeof setInterval> | null = null;
+  private filaApertura = SimuladorService.FILA_APERTURA;
 
+  /** El primer minuto corre al instante: al pulsar Simulación o Reiniciar se ve movimiento enseguida. */
   iniciar(): void {
-    this.temporizador ??= setInterval(() => this.tick(), SimuladorService.INTERVALO_MS);
+    if (this.temporizador) return;
+    this.tick();
+    this.temporizador = setInterval(() => this.tick(), SimuladorService.INTERVALO_MS);
   }
 
   detener(): void {
@@ -43,6 +49,7 @@ export class SimuladorService {
   reiniciar(): void {
     this.store.reiniciar();
     this.rnd = new Aleatorio(SimuladorService.SEMILLA);
+    this.filaApertura = SimuladorService.FILA_APERTURA;
   }
 
   /** Un minuto de la clínica. */
@@ -82,13 +89,15 @@ export class SimuladorService {
     return !zona || this.store.enZona(zonaId).length < zona.aforo;
   }
 
-  /** Llegan pacientes según la hora: más entre 9 y 11 y entre 15 y 16. */
+  /** Llegan pacientes según la hora: más entre 9 y 11 y entre 15 y 16. Al abrir, entra la fila de la puerta. */
   private llegadas(): void {
     const hora = new Date(this.store.ahora()).getHours() - HORA_APERTURA;
     const peso = LLEGADAS_POR_HORA[hora] ?? 0;
     const probabilidad = Math.min(0.9, (peso * PACIENTES_POR_PESO) / 60);
     const disponibles = this.store.tarjetas().filter(t => t.estado === 'Disponible');
-    if (disponibles.length && this.rnd.siguiente() < probabilidad) {
+    const deLaFila = this.filaApertura > 0;
+    if (deLaFila) this.filaApertura--;
+    if (disponibles.length && (deLaFila || this.rnd.siguiente() < probabilidad)) {
       this.store.entregarTarjeta(this.rnd.elegir(disponibles).id, RECEPCION_SIMULADA);
     }
   }

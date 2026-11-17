@@ -2,6 +2,8 @@
 
 **Estado:** Aceptada · **Fecha:** 05/11/2026 · **Retiro previsto:** cuando los nodos reales envíen datos estables en la clínica
 
+> **Modificado por el [ADR-31](0031-la-simulacion-cubre-todo-el-sistema.md) (17/11/2026):** la Simulación ya cubre todo el sistema, también Admisión.
+
 ## Contexto
 
 El Gemelo y el Historial del prototipo mostraban pacientes inventados (SimuladorService) sin ningún
