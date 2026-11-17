@@ -3,6 +3,8 @@ import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, linke
 import { firstValueFrom } from 'rxjs';
 import { API, mensajeDe, problemaDe } from '../../core/api/problema';
 import { AuthService } from '../../core/auth/auth.service';
+import { ClinicaStore } from '../../core/datos/clinica.store';
+import { ModoDatosService } from '../../core/datos/modo-datos.service';
 import { PisoActualService } from '../../core/datos/piso-actual.service';
 import { ToastService } from '../../core/ui/toast.service';
 import { EstadoVacioComponent } from '../../shared/componentes/estado-vacio.component';
@@ -12,13 +14,16 @@ import {
   DatosUsuario, ROLES, RolCodigo, UsuarioAdmin, UsuarioConTemporal, datosParaEnviar, estadoUsuario, filtrarUsuarios,
   formularioValido, nombreCompleto, rolTienePisos, textoPisos, textoRol, textoUltimoIngreso,
 } from './modelo-usuarios';
+import { ConfiguracionSimulada } from '../configuracion/configuracion-simulada';
+import { UsuariosSimulados } from './usuarios-simulados';
 
 interface Confirmacion { titulo: string; boton: string; accion: () => Promise<void> }
 
 /**
  * P10 · Usuarios (solo Administrador). La lista llega completa (decenas de usuarios) y se busca y filtra aquí.
  * Las reglas de seguridad (no desactivarse, un último Administrador, pisos del Operador) las aplica el
- * servidor; la pantalla solo evita ofrecer lo que sabe que será rechazado.
+ * servidor; la pantalla solo evita ofrecer lo que sabe que será rechazado. En la Simulación (ADR-31), el personal
+ * ficticio de la clínica simulada, en memoria.
  */
 @Component({
   selector: 'app-usuarios',
@@ -32,6 +37,11 @@ export class UsuariosPage {
   private auth = inject(AuthService);
   private pisosServicio = inject(PisoActualService);
   private toast = inject(ToastService);
+  private modo = inject(ModoDatosService);
+  private clinica = inject(ClinicaStore);
+  private sim = inject(UsuariosSimulados);
+  private configSim = inject(ConfiguracionSimulada);
+  protected simulando = this.modo.simulacion;
 
   protected readonly roles = ROLES;
   protected readonly textoRol = textoRol;
@@ -43,22 +53,26 @@ export class UsuariosPage {
   protected rolFiltro = signal<RolCodigo | ''>('');
   protected inactivos = signal(false);
   private recarga = signal(0);
-  protected ahora = signal(Date.now());
+  private relojReal = signal(Date.now());
+  /** En la Simulación, la hora de la clínica simulada (el «último ingreso» se cuenta desde ahí). */
+  protected ahora = computed(() => this.simulando() ? this.clinica.ahora() : this.relojReal());
 
   private recurso = httpResource<UsuarioAdmin[]>(() => {
     this.recarga();
-    return { url: `${API}/usuarios`, params: { incluirInactivos: this.inactivos() } };
+    return this.simulando() ? undefined : { url: `${API}/usuarios`, params: { incluirInactivos: this.inactivos() } };
   });
   /** Se conserva la lista anterior mientras se recarga: la tabla no parpadea al editar. */
   private lista = linkedSignal<UsuarioAdmin[] | undefined, UsuarioAdmin[] | null>({
-    source: () => this.recurso.hasValue() ? this.recurso.value() : undefined,
+    source: () => this.simulando() ? this.sim.lista().filter(u => this.inactivos() || u.estadoRegistro)
+      : this.recurso.hasValue() ? this.recurso.value() : undefined,
     computation: (nueva, anterior) => nueva ?? anterior?.value ?? null,
   });
   protected visibles = computed(() => filtrarUsuarios(this.lista() ?? [], this.buscar(), this.rolFiltro()));
-  protected error = computed(() => { const e = this.recurso.error(); return e ? mensajeDe(problemaDe(e)) : null; });
+  protected error = computed(() => { if (this.simulando()) return null; const e = this.recurso.error(); return e ? mensajeDe(problemaDe(e)) : null; });
 
   /** Todos los pisos publicados (el Administrador los ve todos); con su sede si hay más de una. */
   protected pisosDisponibles = computed(() => {
+    if (this.simulando()) return this.configSim.pisosPublicados().map(p => ({ id: p.id, nombre: p.nombre }));
     const sedes = this.pisosServicio.sedes();
     return sedes.flatMap(s => [...s.pisos].sort((a, b) => a.nivel - b.nivel)
       .map(p => ({ id: p.id, nombre: sedes.length > 1 ? `${s.nombre} · ${p.nombre}` : p.nombre })));
@@ -81,7 +95,7 @@ export class UsuariosPage {
 
   constructor() {
     if (this.pisosServicio.sedes().length === 0) void this.pisosServicio.cargar();
-    const reloj = setInterval(() => this.ahora.set(Date.now()), 60_000);
+    const reloj = setInterval(() => this.relojReal.set(Date.now()), 60_000);
     inject(DestroyRef).onDestroy(() => clearInterval(reloj));
   }
 
@@ -109,11 +123,11 @@ export class UsuariosPage {
     const cuerpo = datosParaEnviar(this.datos());
     await this.trabajar(async () => {
       if (id === null) {
-        const r = await firstValueFrom(this.http.post<UsuarioConTemporal>(`${API}/usuarios`, cuerpo));
+        const r = this.simulando() ? this.sim.crear(cuerpo) : await firstValueFrom(this.http.post<UsuarioConTemporal>(`${API}/usuarios`, cuerpo));
         this.formulario.set(null);
         this.mostrarClave(r);
       } else {
-        await firstValueFrom(this.http.put(`${API}/usuarios/${id}`, cuerpo));
+        if (this.simulando()) this.sim.editar(id, cuerpo); else await firstValueFrom(this.http.put(`${API}/usuarios/${id}`, cuerpo));
         this.formulario.set(null);
         this.toast.mostrar('Cambios guardados');
       }
@@ -123,25 +137,28 @@ export class UsuariosPage {
   protected confirmarRestablecer(u: UsuarioAdmin): void {
     this.confirmar({
       titulo: `¿Restablecer la contraseña de ${nombreCompleto(u)}?`, boton: 'Restablecer',
-      accion: async () => this.mostrarClave(await firstValueFrom(this.http.post<UsuarioConTemporal>(`${API}/usuarios/${u.id}/restablecer-contrasena`, null))),
+      accion: async () => this.mostrarClave(this.simulando() ? this.sim.restablecer(u.id)
+        : await firstValueFrom(this.http.post<UsuarioConTemporal>(`${API}/usuarios/${u.id}/restablecer-contrasena`, null))),
     });
   }
 
   protected confirmarDesactivar(u: UsuarioAdmin): void {
     this.confirmar({
       titulo: `¿Desactivar a ${nombreCompleto(u)}?`, boton: 'Desactivar',
-      accion: async () => { await firstValueFrom(this.http.post(`${API}/usuarios/${u.id}/desactivar`, null)); this.toast.mostrar(`${nombreCompleto(u)} desactivado`); },
+      accion: async () => {
+        if (this.simulando()) this.sim.desactivar(u.id); else await firstValueFrom(this.http.post(`${API}/usuarios/${u.id}/desactivar`, null));
+        this.toast.mostrar(`${nombreCompleto(u)} desactivado`); },
     });
   }
 
   protected async activar(u: UsuarioAdmin): Promise<void> {
     this.menu.set(null);
     try {
-      await firstValueFrom(this.http.post(`${API}/usuarios/${u.id}/activar`, null));
+      if (this.simulando()) this.sim.activar(u.id); else await firstValueFrom(this.http.post(`${API}/usuarios/${u.id}/activar`, null));
       this.toast.mostrar(`${nombreCompleto(u)} activado`);
       this.recarga.update(n => n + 1);
     } catch (e) {
-      this.toast.mostrar(mensajeDe(problemaDe(e)), 'bad');
+      this.toast.mostrar(e instanceof Error ? e.message : mensajeDe(problemaDe(e)), 'bad');
     }
   }
 
@@ -171,7 +188,8 @@ export class UsuariosPage {
       await accion();
       this.recarga.update(n => n + 1);
     } catch (e) {
-      this.errorVentana.set(mensajeDe(problemaDe(e)));
+      // En la Simulación los errores son de las reglas en memoria y traen su propio mensaje
+      this.errorVentana.set(e instanceof Error ? e.message : mensajeDe(problemaDe(e)));
     } finally {
       this.trabajando.set(false);
     }

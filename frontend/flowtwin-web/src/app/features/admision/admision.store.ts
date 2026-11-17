@@ -1,11 +1,15 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
+import { DestroyRef, Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { API, mensajeDe, problemaDe } from '../../core/api/problema';
+import { AuthService } from '../../core/auth/auth.service';
+import { ClinicaStore } from '../../core/datos/clinica.store';
+import { ModoDatosService } from '../../core/datos/modo-datos.service';
 import { duracion, hhmm } from '../../core/utils/tiempo';
 import {
   AVISO_SIN_TARJETA, Aviso, Confirmacion, EscaneoApi, TarjetaApi, VistaPreviaApi, avisoDeProblema, confirmacionDe, vistaPreviaDe,
 } from './presentacion-admision';
+import { RecepcionSimulada, esProblema } from './simulacion-admision';
 
 // ---- Respuestas de la API (sección API → Atenciones e ingesta)
 interface PendienteApi { tarjetaId: number; codigo: string; desde: string | null; atencionCodigo: string | null; }
@@ -41,10 +45,16 @@ const REFRESCO_MS = 15_000;
  * 2. el operador pulsa Registrar → registrar(): entrega, devolución o recuperación (F-06, F-08, F-10);
  * 3. durante 30 s puede deshacer la entrega (RN-04).
  * Además: desinfectar (F-09), extraviar (F-10) y el resumen para el monitoreo.
+ * En la Simulación (ADR-31) todo lo anterior se hace sobre las tarjetas de la clínica simulada.
  */
 @Injectable()
 export class AdmisionStore {
   private http = inject(HttpClient);
+  private modo = inject(ModoDatosService);
+  private clinica = inject(ClinicaStore);
+  private auth = inject(AuthService);
+  private recepcion = new RecepcionSimulada(this.clinica, () => this.auth.actor());
+  private get simulando(): boolean { return this.modo.simulacion(); }
 
   /** Qué va a pasar con la tarjeta leída (debajo del campo, antes de registrar). */
   readonly vistaPrevia = signal<{ texto: string; aviso: Aviso } | null>(null);
@@ -54,11 +64,16 @@ export class AdmisionStore {
   readonly registrando = signal(false);
   /** Entrega que aún se puede deshacer (null cuando pasan los 30 s). */
   readonly deshacible = signal<{ atencionId: number; desde: number; hasta: number } | null>(null);
-  private resumen = signal<ResumenApi | null>(null);
+  private resumenReal = signal<ResumenApi | null>(null);
+  /** En simulación se calcula de la clínica simulada: cambia en vivo con cada entrega de la recepción simulada. */
+  private resumen = computed<ResumenApi | null>(() => this.modo.simulacion() ? this.recepcion.resumen() : this.resumenReal());
+  /** El reloj de las operaciones: el de la clínica simulada en simulación; si no, null (la página usa el real). */
+  readonly relojSimulado = computed(() => this.modo.simulacion() ? this.clinica.ahora() : null);
   private temporizadorDeshacer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
-    this.cargar();
+    // Al entrar o salir de la simulación lo de la pantalla ya no vale: se limpia y se vuelve a cargar
+    effect(() => { this.modo.simulacion(); untracked(() => { this.nuevaLectura(); this.cargar(); }); });
     const intervalo = setInterval(() => this.cargar(), REFRESCO_MS);
     inject(DestroyRef).onDestroy(() => {
       clearInterval(intervalo);
@@ -100,8 +115,9 @@ export class AdmisionStore {
   })));
 
   async cargar(): Promise<void> {
+    if (this.simulando) return;
     try {
-      this.resumen.set(await firstValueFrom(this.http.get<ResumenApi>(`${API}/admision/resumen`)));
+      this.resumenReal.set(await firstValueFrom(this.http.get<ResumenApi>(`${API}/admision/resumen`)));
     } catch {
       /* el error de sesión lo maneja el interceptor; el monitoreo conserva lo último que se cargó */
     }
@@ -111,6 +127,10 @@ export class AdmisionStore {
   async previsualizar(texto: string): Promise<void> {
     const qr = texto.trim();
     if (!qr) { this.vistaPrevia.set(null); return; }
+    if (this.simulando) {
+      this.vistaPrevia.set({ texto: qr, aviso: vistaPreviaDe(this.recepcion.vistaPrevia(qr), this.clinica.ahora()) });
+      return;
+    }
     this.consultando.set(true);
     try {
       const v = await firstValueFrom(this.http.get<VistaPreviaApi>(`${API}/admision/vista-previa`, { params: new HttpParams().set('qr', qr) }));
@@ -142,6 +162,17 @@ export class AdmisionStore {
   async registrar(texto: string): Promise<boolean> {
     const qr = texto.trim();
     if (this.registrando() || !qr) return false;
+    if (this.simulando) {
+      const r = this.recepcion.escanear(qr);
+      if (esProblema(r)) {
+        this.vistaPrevia.set({ texto: qr, aviso: avisoDeProblema(r.codigo, r.mensaje, r.datos) });
+        return false;
+      }
+      this.confirmacion.set(confirmacionDe(r));
+      this.vistaPrevia.set(null);
+      this.recordarDeshacer(r);
+      return true;
+    }
     this.registrando.set(true);
     try {
       const r = await firstValueFrom(this.http.post<EscaneoApi>(`${API}/admision/escaneos`, { codigoQr: qr, modo: 'AUTO' }));
@@ -162,6 +193,14 @@ export class AdmisionStore {
   async deshacer(): Promise<void> {
     const pendiente = this.deshacible();
     if (!pendiente) return;
+    if (this.simulando) {
+      const t = this.recepcion.deshacer(pendiente.atencionId);
+      this.confirmacion.set(esProblema(t)
+        ? { tipo: 'error', titulo: 'No se pudo deshacer', detalle: t.mensaje }
+        : { tipo: 'anulada', titulo: `Entrega de ${t.codigo} deshecha`, detalle: 'La atención quedó anulada y la tarjeta está disponible.' });
+      this.olvidarDeshacer();
+      return;
+    }
     try {
       const t = await firstValueFrom(this.http.post<TarjetaApi>(`${API}/admision/atenciones/${pendiente.atencionId}/deshacer`, {}));
       this.confirmacion.set({ tipo: 'anulada', titulo: `Entrega de ${t.codigo} deshecha`, detalle: 'La atención quedó anulada y la tarjeta está disponible.' });
@@ -175,7 +214,8 @@ export class AdmisionStore {
   /** F-09 por tandas: todas o ninguna (el servidor lo garantiza en una transacción). */
   async desinfectar(tarjetas: { id: number; codigo: string }[]): Promise<void> {
     try {
-      await firstValueFrom(this.http.post(`${API}/tarjetas/desinfectar`, { tarjetaIds: tarjetas.map(t => t.id) }));
+      if (this.simulando) this.recepcion.desinfectar(tarjetas.map(t => t.id));
+      else await firstValueFrom(this.http.post(`${API}/tarjetas/desinfectar`, { tarjetaIds: tarjetas.map(t => t.id) }));
       this.confirmacion.set({
         tipo: 'desinfectada',
         titulo: tarjetas.length === 1 ? `${tarjetas[0].codigo} desinfectada` : `${tarjetas.length} tarjetas desinfectadas`,
@@ -193,7 +233,8 @@ export class AdmisionStore {
   /** F-10 por tandas. */
   async extraviar(tarjetas: { id: number; codigo: string }[]): Promise<void> {
     try {
-      await firstValueFrom(this.http.post(`${API}/tarjetas/extraviar`, { tarjetaIds: tarjetas.map(t => t.id) }));
+      if (this.simulando) this.recepcion.extraviar(tarjetas.map(t => t.id));
+      else await firstValueFrom(this.http.post(`${API}/tarjetas/extraviar`, { tarjetaIds: tarjetas.map(t => t.id) }));
       this.confirmacion.set({
         tipo: 'extraviada',
         titulo: tarjetas.length === 1 ? `${tarjetas[0].codigo} marcada como extraviada` : `${tarjetas.length} tarjetas marcadas como extraviadas`,

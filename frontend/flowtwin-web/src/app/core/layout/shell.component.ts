@@ -1,13 +1,12 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, signal, untracked } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { filter, map } from 'rxjs';
+import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { IconoComponent } from '../../shared/componentes/icono.component';
 import { AlertasPanelComponent } from '../alertas/alertas-panel.component';
 import { AlertasService } from '../alertas/alertas.service';
 import { AuthService } from '../auth/auth.service';
 import { ModoDatosService } from '../datos/modo-datos.service';
 import { PisoActualService } from '../datos/piso-actual.service';
+import { ToastService } from '../ui/toast.service';
 import { menuDe } from './menu';
 
 /** Clave de localStorage: la barra colapsada o expandida es una preferencia de cada persona. */
@@ -32,6 +31,7 @@ const CLAVE_COLAPSADA = 'flowtwin.menuColapsado';
 export class ShellComponent {
   protected auth = inject(AuthService);
   protected modo = inject(ModoDatosService);
+  private toast = inject(ToastService);
 
   protected menu = computed(() => {
     const rol = this.auth.rol();
@@ -49,13 +49,6 @@ export class ShellComponent {
   /** Mientras es true, la campana se mueve: llegó una alerta nueva. */
   protected sonando = signal(false);
   private finSonando?: ReturnType<typeof setTimeout>;
-
-  private router = inject(Router);
-  private url = toSignal(this.router.events.pipe(filter(e => e instanceof NavigationEnd), map(() => this.router.url)),
-    { initialValue: this.router.url });
-  /** Admisión y Dispositivos nunca se simulan (ADR-22): ahí la franja aclara que lo que se ve es real. */
-  protected pantallaReal = computed(() =>
-    this.url().startsWith('/admision') ? 'Admisión' : this.url().startsWith('/dispositivos') ? 'Dispositivos' : null);
 
   /**
    * Con la contraseña temporal el servidor solo permite cambiarla (F-02) y responde 403 a todo lo demás: los pisos y
@@ -82,6 +75,12 @@ export class ShellComponent {
   protected alternarColapsada(): void {
     this.colapsada.update(v => !v);
     try { localStorage.setItem(CLAVE_COLAPSADA, String(this.colapsada())); } catch { /* sin almacenamiento */ }
+  }
+
+  /** Vuelve a las 07:00 con la clínica vacía; el aviso deja claro que se reinició. */
+  protected reiniciarSimulacion(): void {
+    this.modo.reiniciar();
+    this.toast.mostrar('Simulación reiniciada · 07:00');
   }
 
   protected alternarSimulacion(): void {
