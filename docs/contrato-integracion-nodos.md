@@ -1,6 +1,6 @@
 # Contrato de integración: ESP32 ↔ FlowTwin (MQTT)
 
-**Versión 2.0 · 15/11/2026** · Software: Emmy López · Hardware: equipo de nodos
+**Versión 2.1 · 17/11/2026** (2.1: el nodo es un ESP32-C3, sección 2) · Software: Emmy López · Hardware: equipo de nodos
 
 Este documento es el acuerdo entre el firmware de los ESP32 y el servidor. Si el firmware cumple lo que
 dice aquí, el sistema funciona; no hace falta conocer el backend. **Cualquier cambio se conversa entre
@@ -42,6 +42,18 @@ UUID, major y minor **no cambian nunca** en un emisor. Cada uno lleva su QR impr
 5. **No necesita la hora real** (no hace falta NTP): el servidor calcula la hora de cada lectura con su
    propio reloj, como `hora de llegada − edadMs`.
 
+**Placa: ESP32-C3.** Tiene BLE 5 y Wi-Fi de 2,4 GHz y soporta TLS (mbedTLS) para la conexión cifrada de la
+clínica. Lo que hay que tener en cuenta:
+
+- **Una sola radio para BLE y Wi-Fi.** El escaneo BLE y el envío por Wi-Fi se turnan (coexistencia de
+  ESP-IDF, activada por defecto). Usar un escaneo con ventana menor que el intervalo (por ejemplo 80 ms de
+  ventana cada 100 ms) para que Wi-Fi tenga tiempo de publicar el lote cada 2 s; con escaneo al 100 % se
+  pierden conexiones MQTT.
+- **Un solo núcleo.** El escaneo, el armado del lote y MQTT van en tareas de FreeRTOS distintas; ninguna
+  debe bloquear con esperas largas (el reenvío de la sección 8 se hace sin `delay` de segundos).
+- **Memoria:** Wi-Fi, BLE y TLS comparten los 400 KB de RAM. Medir con `esp_get_free_heap_size()` con todo
+  encendido y dimensionar el búfer de la sección 8 dentro de lo que quede, dejando margen.
+
 **Configuración guardada en NVS** (se carga por puerto serie o con un portal la primera vez, nunca en el
 código fuente ni en el repositorio): SSID y contraseña del Wi-Fi, servidor y puerto del broker, usuario
 y clave del nodo, y el certificado raíz de la clínica (sección 9).
@@ -50,7 +62,7 @@ y clave del nodo, y el certificado raíz de la clínica (sección 9).
 
 | Dato | Formato | Ejemplo |
 |---|---|---|
-| MAC del nodo | MAC **Wi-Fi STA** del ESP32 (`esp_read_mac(…, ESP_MAC_WIFI_STA)`) | `A4:CF:12:9B:3E:03` |
+| MAC del nodo | MAC **Wi-Fi STA** del ESP32-C3 (`esp_read_mac(…, ESP_MAC_WIFI_STA)`), no la de BLE | `A4:CF:12:9B:3E:03` |
 | `{mac}` en los temas | La MAC en **minúsculas y sin separadores** | `a4cf129b3e03` |
 | Usuario MQTT | `{prefijo}-{mac}`. En la clínica el prefijo es `flowtwin` | `flowtwin-a4cf129b3e03` |
 | Clave del nodo | Texto que empieza con `nk_`; es la contraseña MQTT | `nk_Zt81…` |
