@@ -15,7 +15,8 @@ interface ConfiguracionApi {
  * - solo existe si el servidor lo permite (Demo:SimulacionDisponible, falso en la clínica);
  * - la pueden activar todos los roles (Operador, Gerencia y Administrador), para mostrarle al sponsor
  *   cómo se ve cada pantalla; Admisión siempre es real, porque ahí se entregan tarjetas de verdad;
- * - no se recuerda: al recargar la página se vuelve a los datos reales.
+ * - no se recuerda: al recargar la página se vuelve a los datos reales;
+ * - salir y volver a entrar retoma donde quedó; «Reiniciar simulación» empieza el día de cero.
  */
 @Injectable({ providedIn: 'root' })
 export class ModoDatosService {
@@ -50,5 +51,13 @@ export class ModoDatosService {
   salir(): void {
     this.simulando.set(false);
     this.simulador.detener();
+  }
+
+  /** «Reiniciar simulación»: vuelve a las 07:00 con la clínica vacía, sin salir de la simulación. */
+  reiniciar(): void {
+    if (!this.simulando()) return;
+    this.simulador.detener();
+    this.simulador.reiniciar();
+    this.simulador.iniciar();
   }
 }

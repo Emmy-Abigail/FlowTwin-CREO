@@ -26,7 +26,8 @@ export class SimuladorService {
 
   private store = inject(ClinicaStore);
   private geometria = inject(GeometriaService);
-  private rnd = new Aleatorio(20261026);
+  private static readonly SEMILLA = 20261026;
+  private rnd = new Aleatorio(SimuladorService.SEMILLA);
   private temporizador: ReturnType<typeof setInterval> | null = null;
 
   iniciar(): void {
@@ -36,6 +37,12 @@ export class SimuladorService {
   detener(): void {
     if (this.temporizador) clearInterval(this.temporizador);
     this.temporizador = null;
+  }
+
+  /** Empieza el día otra vez: la clínica recién abierta y las mismas llegadas que la primera vez. */
+  reiniciar(): void {
+    this.store.reiniciar();
+    this.rnd = new Aleatorio(SimuladorService.SEMILLA);
   }
 
   /** Un minuto de la clínica. */
