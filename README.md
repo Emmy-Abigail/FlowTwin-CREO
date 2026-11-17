@@ -342,7 +342,7 @@ ESP32) está en el [README del backend](backend/README.md).
 ├── tools/
 │   ├── generador-modelo-3d/     # Genera la maqueta 3D desde el plano
 │   └── seguridad/               # Pruebas de seguridad repetibles (OWASP ZAP y k6)
-└── docs/                        # ADR, contrato con los nodos, pantallas e informe de seguridad
+└── docs/                        # ADR, contrato con los nodos, despliegue e informe de seguridad
 ```
 
 ---
@@ -351,7 +351,6 @@ ESP32) está en el [README del backend](backend/README.md).
 
 | Documento | Para quién |
 |---|---|
-| [Pantallas y flujos](docs/prototipo/version-final-pantallas.md) | Qué hace cada pantalla y cada rol |
 | [Contrato con los nodos](docs/contrato-integracion-nodos.md) | Equipo de hardware (firmware de los ESP32) |
 | [Decisiones de arquitectura (ADR)](docs/adr/README.md) | Equipo técnico; las anteriores al ADR-21 están en el documento de arquitectura |
 | [Informe de seguridad](docs/seguridad/informe-seguridad.md) | Evaluación y auditoría |
