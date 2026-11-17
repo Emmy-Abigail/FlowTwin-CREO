@@ -38,16 +38,14 @@ public sealed class PisoConfig : IEntityTypeConfiguration<Piso>
         b.Property(p => p.Nombre).HasMaxLength(60).IsRequired();
         b.HasIndex(p => new { p.SedeId, p.Nombre }).IsUnique().HasFilter("[EstadoRegistro] = 1");
         b.HasIndex(p => new { p.SedeId, p.Nivel }).IsUnique().HasFilter("[EstadoRegistro] = 1");
-        b.Property(p => p.PlanoRuta).HasMaxLength(260);
         b.Property(p => p.AnchoM).HasPrecision(6, 2);
         b.Property(p => p.FondoM).HasPrecision(6, 2);
-        b.Property(p => p.AltoMuroM).HasPrecision(4, 2).HasDefaultValue(2.70m);
         b.HasOne<Sede>().WithMany().HasForeignKey(p => p.SedeId).OnDelete(DeleteBehavior.Restrict);
         // Piso 1: geometría real de la lámina A-07 de AutoCAD (40.12 × 20.99 m)
         b.HasData(new
         {
-            Id = 1, SedeId = 1, Nombre = "Piso 1", Nivel = (short)1, PlanoRuta = "planos/piso1.jpg",
-            AnchoM = (decimal?)40.12m, FondoM = (decimal?)20.99m, AltoMuroM = 2.70m, Publicado = true,
+            Id = 1, SedeId = 1, Nombre = "Piso 1", Nivel = (short)1,
+            AnchoM = (decimal?)40.12m, FondoM = (decimal?)20.99m, Publicado = true,
             PublicadoEn = (DateTime?)Semilla.Fecha,
             EstadoRegistro = true, FechaRegistro = Semilla.Fecha, UsuarioRegistroId = UsuarioSistema.Id,
         });
@@ -100,32 +98,6 @@ public sealed class ZonaConfig : IEntityTypeConfiguration<Zona>
         EnBorrador = false,
         EstadoRegistro = true, FechaRegistro = Semilla.Fecha, UsuarioRegistroId = UsuarioSistema.Id,
     };
-}
-
-/// <summary>
-/// gem.ElementoPlano. Los muros del Piso 1 NO van con HasData: son ~28 KB y EF los copiaría en el
-/// snapshot de cada migración futura. Se cargan una sola vez en la migración Avance2_Muros.
-/// </summary>
-public sealed class ElementoPlanoConfig : IEntityTypeConfiguration<ElementoPlano>
-{
-    public void Configure(EntityTypeBuilder<ElementoPlano> b)
-    {
-        b.ToTable("ElementoPlano", "gem", t =>
-        {
-            t.HasCheckConstraint("CK_ElementoPlano_AltoM", "[AltoM] IS NULL OR [AltoM] > 0");
-            t.HasCheckConstraint("CK_ElementoPlano_Geometria", "[Geometria] IS NULL OR ISJSON([Geometria]) = 1");
-            t.HasCheckConstraint("CK_ElementoPlano_NombreAmbiente",
-                $"[TipoElementoPlanoId] <> {(int)TipoElementoPlano.Ambiente} OR [Nombre] IS NOT NULL");
-        });
-        b.Property(e => e.Nombre).HasMaxLength(80);
-        b.Property(e => e.X1).HasPrecision(6, 2);
-        b.Property(e => e.Y1).HasPrecision(6, 2);
-        b.Property(e => e.X2).HasPrecision(6, 2);
-        b.Property(e => e.Y2).HasPrecision(6, 2);
-        b.Property(e => e.AltoM).HasPrecision(4, 2);
-        b.HasOne<Piso>().WithMany().HasForeignKey(e => e.PisoId).OnDelete(DeleteBehavior.Restrict);
-        b.HasOne<Catalogo<TipoElementoPlano>>().WithMany().HasForeignKey(e => e.TipoElementoPlanoId).OnDelete(DeleteBehavior.Restrict);
-    }
 }
 
 /// <summary>Esquema dis.</summary>

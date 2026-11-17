@@ -95,20 +95,19 @@ export function estadoDeApi(estado: string): EstadoPaciente {
 }
 
 export interface GeometriaApi {
-  pisoId: number; nombre: string; nivel: number; anchoM: number; fondoM: number; altoMuroM: number;
+  pisoId: number; nombre: string; nivel: number; anchoM: number; fondoM: number;
   zonas: { id: number; nombre: string; tipo: string; x: number; y: number; ancho: number; fondo: number;
     aforo: number | null; }[];
   nodos: { codigo: string; x: number; y: number; zonaId: number }[];
 }
 
 /**
- * GET /pisos/{id}/geometria → medidas, zonas y nodos para el render. Los muros que también trae no se
- * usan: lo que se dibuja es la maqueta 3D. El aforo y el nivel de cada zona vienen del estado del piso
+ * GET /pisos/{id}/geometria → medidas, zonas y nodos para el render. Lo que se dibuja es la maqueta 3D. El aforo y el nivel de cada zona vienen del estado del piso
  * (ZonaVista), que es la fuente de verdad.
  */
 export function geometriaDesdeApi(g: GeometriaApi, sede: string): GeometriaPiso {
   return {
-    pisoId: g.pisoId, nombre: g.nombre, nivel: g.nivel, anchoM: g.anchoM, fondoM: g.fondoM, altoMuroM: g.altoMuroM, sede,
+    pisoId: g.pisoId, nombre: g.nombre, nivel: g.nivel, anchoM: g.anchoM, fondoM: g.fondoM, sede,
     zonas: g.zonas.map(z => ({
       id: z.id, nombre: z.nombre, tipo: z.tipo as GeometriaPiso['zonas'][number]['tipo'],
       x: z.x, y: z.y, ancho: z.ancho, fondo: z.fondo,
