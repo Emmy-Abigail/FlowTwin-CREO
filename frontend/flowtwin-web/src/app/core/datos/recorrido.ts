@@ -7,6 +7,9 @@ import { MIN } from '../utils/tiempo';
 import { ZONAS } from './clinica.config';
 import { EventoZona, PasoRuta } from './modelos';
 
+/** Proporción de pacientes con una espera larga (se usa en la semilla y en la simulación). */
+export const PROBABILIDAD_ESPERA_LARGA = 0.1;
+ 
 /** Admisión → Hall → Sala → Triaje → Sala → zona de atención → Hall (sale y devuelve la tarjeta). */
 export function crearRuta(rnd: Aleatorio): PasoRuta[] {
   const destino = rnd.ponderado([
@@ -16,12 +19,15 @@ export function crearRuta(rnd: Aleatorio): PasoRuta[] {
     [ZONAS.observacion, 1.5],
   ] as const);
   const enConsulta = destino === ZONAS.observacion ? rnd.entero(18, 32) : rnd.entero(8, 19);
+  // 1 de cada 10 espera bastante más después del triaje (un médico que se retrasa, una urgencia que pasa
+  // antes): así aparecen solas las alertas de espera larga, como en un día real
+  const retraso = rnd.siguiente() < PROBABILIDAD_ESPERA_LARGA ? rnd.entero(30, 45) : 0;
   return [
     { zonaId: ZONAS.admision, minutos: rnd.entero(2, 4) },
     { zonaId: ZONAS.hall, minutos: 1 },
     { zonaId: ZONAS.sala, minutos: rnd.entero(4, 12) },
     { zonaId: ZONAS.triaje, minutos: rnd.entero(3, 5) },
-    { zonaId: ZONAS.sala, minutos: rnd.entero(4, 14) },
+    { zonaId: ZONAS.sala, minutos: rnd.entero(4, 14) + retraso },
     { zonaId: destino, minutos: enConsulta },
     { zonaId: ZONAS.hall, minutos: rnd.entero(2, 4) },
   ];

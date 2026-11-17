@@ -1,47 +1,102 @@
 <div class="login">
-  <section class="login-l">
-    <div>
-      <app-logo />
-      <div class="sub-logo">Clínica Renal y Oncológica</div>
+  <!-- Mitad oscura: la personalidad del sistema. Etiqueta arriba, mensaje en el centro (frente al formulario). -->
+  <aside class="presentacion" aria-hidden="true">
+    <span class="etiqueta">Clínica Renal y Oncológica CREO+</span>
+    <div class="mensaje">
+      <p class="frase">Gemelo digital del flujo de pacientes</p>
+      <p class="detalle">Ocupación, esperas y recorridos en tiempo real, con identificadores anónimos.</p>
+      <ul class="puntos">
+        <li>
+          <span class="icono"><app-icono nombre="layers" [tamano]="22" /></span>
+          <span><b>Cada piso, en vivo y en 3D</b>Qué zona se está llenando, en el momento.</span>
+        </li>
+        <li>
+          <span class="icono"><app-icono nombre="card" [tamano]="22" /></span>
+          <span><b>Recorridos anónimos</b>Cada paciente es un código, sin datos personales.</span>
+        </li>
+        <li>
+          <span class="icono"><app-icono nombre="chart" [tamano]="22" /></span>
+          <span><b>Esperas y atención medidas</b>Datos reales para decidir mejor.</span>
+        </li>
+      </ul>
     </div>
-    <div class="pitch">
-      <span class="eyebrow">CREO FlowTwin</span>
-      <h1>Gemelo digital del flujo de pacientes</h1>
-      <p>Ocupación, esperas y recorridos en tiempo real, con identificadores anónimos.</p>
-    </div>
-    <small>Clínica CREO+ · Sede Principal</small>
-  </section>
+  </aside>
 
-  <section class="login-r">
-    <form class="login-box" autocomplete="off" (ngSubmit)="ingresar()">
-      <h1>Iniciar sesión</h1>
-      <p class="sub">Ingresa con tu correo institucional.</p>
+  <!-- Mitad blanca: el formulario. El logo de FlowTwin aparece una sola vez. -->
+  <main class="acceso">
+    <img src="marca/flowtwin-logo.png" alt="FlowTwin, gemelo digital de flujo hospitalario" class="logo-flowtwin">
 
-      <div class="field">
-        <label for="lg-mail">Correo</label>
-        <input class="inp" id="lg-mail" name="correo" type="email" placeholder="nombre@creo.pe" required
-               [ngModel]="correo()" (ngModelChange)="correo.set($event)">
+    <form class="formulario" novalidate (ngSubmit)="ingresar()" [attr.aria-busy]="enviando()"
+          [class.sacudir]="sacudir()" (animationend)="sacudir.set(false)">
+      <div class="titulo">
+        <h1>Bienvenido</h1>
+        <p>Ingresa con tu correo institucional de CREO+.</p>
       </div>
-      <div class="field">
-        <label for="lg-pass">Contraseña</label>
-        <input class="inp" id="lg-pass" name="clave" type="password" required
-               [ngModel]="clave()" (ngModelChange)="clave.set($event)">
-      </div>
-      @if (error()) { <div class="err" role="alert">{{ error() }}</div> }
 
-      <button appBoton="primario" [bloque]="true" type="submit"><app-icono nombre="inn" [tamano]="16" /> Ingresar</button>
-      <button class="link" type="button" (click)="mostrarAyuda.set(true)">¿Olvidaste tu contraseña?</button>
-      @if (mostrarAyuda()) {
-        <div class="helpbox">Pide al Administrador que restablezca tu contraseña. Él te entregará una contraseña temporal.</div>
+      @if (errorServidor()) {
+        <div class="aviso-err" role="alert">
+          <app-icono nombre="alert" [tamano]="18" />
+          <span>{{ errorServidor() }}</span>
+        </div>
       }
 
-      <div class="demo-acc">
-        <span class="lbl-up">Acceso rápido de demo</span>
-        @for (d of accesosDemo; track d.correo) {
-          <button appBoton="oscuro" [bloque]="true" type="button" (click)="entrar(d.correo)">Entrar como {{ d.rol }}</button>
+      <div class="campo" [class.con-error]="mensajeCorreo()">
+        <label for="lg-mail">Correo</label>
+        <div class="entrada">
+          <app-icono nombre="mail" [tamano]="18" />
+          <input id="lg-mail" name="correo" type="email" inputmode="email" #campoCorreo
+                 autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="nombre@creo.pe"
+                 [attr.aria-invalid]="!!mensajeCorreo()" [attr.aria-describedby]="mensajeCorreo() ? 'lg-mail-error' : null"
+                 [ngModel]="correo()" (ngModelChange)="escribir('correo', $event)" (blur)="salir('correo')">
+        </div>
+        @if (mensajeCorreo(); as m) {
+          <span id="lg-mail-error" class="msg-error"><app-icono nombre="alert" [tamano]="15" />{{ m }}</span>
         }
-        <span class="hint">También puedes usar cualquier correo de demo con la contraseña «demo123». Prueba nuevo&#64;creo.pe para ver el primer ingreso.</span>
       </div>
+
+      <div class="campo" [class.con-error]="mensajeClave()">
+        <label for="lg-pass">Contraseña</label>
+        <div class="entrada">
+          <app-icono nombre="lock" [tamano]="18" />
+          <input id="lg-pass" name="clave" [type]="verClave() ? 'text' : 'password'" #campoClave
+                 autocomplete="current-password" placeholder="Tu contraseña"
+                 [attr.aria-invalid]="!!mensajeClave()"
+                 [attr.aria-describedby]="mensajeClave() ? 'lg-pass-error' : (mayusculas() ? 'lg-mayus' : null)"
+                 [ngModel]="clave()" (ngModelChange)="escribir('clave', $event)"
+                 (keyup)="revisarMayusculas($event)" (keydown)="revisarMayusculas($event)" (blur)="salir('clave')">
+          <button class="ver" type="button" (click)="verClave.set(!verClave())"
+                  [attr.aria-label]="verClave() ? 'Ocultar contraseña' : 'Mostrar contraseña'" [attr.aria-pressed]="verClave()">
+            <app-icono [nombre]="verClave() ? 'ojoNo' : 'ojo'" [tamano]="19" />
+          </button>
+        </div>
+        @if (mensajeClave(); as m) {
+          <span id="lg-pass-error" class="msg-error"><app-icono nombre="alert" [tamano]="15" />{{ m }}</span>
+        } @else if (mayusculas()) {
+          <span id="lg-mayus" class="msg-mayus" aria-live="polite"><app-icono nombre="alert" [tamano]="14" />Bloq Mayús está activado</span>
+        }
+      </div>
+
+      <button class="ingresar" type="submit" [attr.aria-busy]="enviando()">
+        @if (enviando()) { <span class="spin" aria-hidden="true"></span> Ingresando… }
+        @else { Ingresar <app-icono nombre="inn" [tamano]="18" /> }
+      </button>
+
+      <div class="fila">
+        <label class="check">
+          <input type="checkbox" name="recordar" [ngModel]="recordar()" (ngModelChange)="recordar.set($event)">
+          Recordar mi correo
+        </label>
+        <button class="enlace" type="button" [attr.aria-expanded]="mostrarAyuda()" aria-controls="lg-ayuda"
+                (click)="mostrarAyuda.set(!mostrarAyuda())">¿Olvidaste tu contraseña?</button>
+      </div>
+      @if (mostrarAyuda()) {
+        <p id="lg-ayuda" class="ayuda">Pide al Administrador que restablezca tu contraseña. Te dará una temporal para ingresar.</p>
+      }
     </form>
-  </section>
+
+    <footer class="pie">
+      <span><app-icono nombre="escudo" [tamano]="15" />Acceso solo para personal autorizado</span>
+      <img src="marca/creo-logo.png" alt="Clínica CREO+" class="logo-creo">
+    </footer>
+  </main>
 </div>

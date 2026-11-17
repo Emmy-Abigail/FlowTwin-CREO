@@ -1,0 +1,214 @@
+using System.Threading.RateLimiting;
+using FlowTwin.Api.Infraestructura;
+using FlowTwin.Atenciones;
+using FlowTwin.Auditoria;
+using FlowTwin.Dispositivos;
+using FlowTwin.Gemelo;
+using FlowTwin.Identidad;
+using FlowTwin.Identidad.Application;
+using FlowTwin.Identidad.Endpoints;
+using FlowTwin.Mensajeria;
+using FlowTwin.Monitoreo;
+using FlowTwin.Reportes;
+using FlowTwin.Persistence;
+using FlowTwin.SharedKernel;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Scalar.AspNetCore;
+using Serilog;
+
+// =====================================================================
+// FlowTwin.Api: la única puerta de entrada del sistema (ADR-01).
+// 1) Registra servicios: módulos, base de datos, seguridad.
+// 2) Arma la cadena de middlewares, en el orden de la sección "Recorrido de una petición".
+// 3) Publica los endpoints de cada módulo.
+// =====================================================================
+
+var builder = WebApplication.CreateBuilder(args);
+
+// ---- Plataformas como Render indican el puerto en la variable PORT: si existe, se escucha ahí, en todas las
+// interfaces (0.0.0.0). Sin PORT manda la configuración normal (ASPNETCORE_HTTP_PORTS, launchSettings).
+if (Environment.GetEnvironmentVariable("PORT") is { Length: > 0 } puerto && int.TryParse(puerto, out var numero))
+    builder.WebHost.UseUrls($"http://0.0.0.0:{numero}");
+
+// ---- Logs técnicos con Serilog: consola y, si Registro:Archivo no está vacío, un archivo por día (30 días).
+// En un contenedor se deja vacío: los logs van a la consola, que la plataforma guarda (el disco del contenedor se pierde)
+var archivoLogs = builder.Configuration["Registro:Archivo"] ?? "logs/flowtwin-.log";
+builder.Host.UseSerilog((ctx, log) =>
+{
+    log.ReadFrom.Configuration(ctx.Configuration).Enrich.FromLogContext().WriteTo.Console();
+    if (!string.IsNullOrWhiteSpace(archivoLogs))
+        log.WriteTo.File(archivoLogs, rollingInterval: RollingInterval.Day, retainedFileCountLimit: 30);
+});
+
+// ---- Servicios comunes
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IUsuarioActual, UsuarioActualHttp>();
+builder.Services.AddSingleton<IReloj, RelojSistema>();
+builder.Services.AddSingleton(new ZonaHoraria(builder.Configuration["ZonaHoraria"] ?? "America/Lima"));
+builder.Services.AddSingleton<IEmisorTokens, EmisorTokensJwt>();
+// Los 401/403/429 que genera ASP.NET (sin token, rol sin permiso, límite de peticiones) también
+// salen como ProblemDetails con su código (sección "Traducción de errores").
+builder.Services.AddProblemDetails(o => o.CustomizeProblemDetails = ctx =>
+{
+    var (codigo, titulo) = ctx.ProblemDetails.Status switch
+    {
+        401 => ("NO_AUTENTICADO", "Inicia sesión para continuar."),
+        403 => ("SIN_PERMISO", "No tienes permiso para esta acción."),
+        413 => ("PETICION_MUY_GRANDE", "La petición es demasiado grande."),
+        429 => ("BLOQUEADO", "Demasiados intentos. Espera un momento."),
+        _ => (null, null),
+    };
+    if (codigo is not null && !ctx.ProblemDetails.Extensions.ContainsKey("codigo"))
+    {
+        ctx.ProblemDetails.Extensions["codigo"] = codigo;
+        ctx.ProblemDetails.Title = titulo;
+    }
+    ctx.ProblemDetails.Extensions.TryAdd("traceId", System.Diagnostics.Activity.Current?.TraceId.ToString() ?? ctx.HttpContext.TraceIdentifier);
+});
+builder.Services.AddExceptionHandler<ManejadorErrores>();
+builder.Services.AddOpenApi();
+
+// ---- Base de datos y módulos
+builder.Services.AddPersistencia(builder.Configuration);
+builder.Services.AddModuloIdentidad(builder.Configuration);
+builder.Services.AddModuloGemelo(builder.Configuration);
+builder.Services.AddModuloDispositivos(builder.Configuration);
+builder.Services.AddModuloAtenciones(builder.Configuration);
+builder.Services.AddModuloAuditoria(builder.Configuration);
+builder.Services.AddModuloMonitoreo(builder.Configuration);
+builder.Services.AddModuloReportes();
+builder.Services.AddModuloMensajeria(builder.Configuration);
+
+// ---- Autenticación JWT y políticas por rol (sección Seguridad)
+var jwt = builder.Configuration.GetSection("Jwt").Get<OpcionesJwt>() ?? new OpcionesJwt();
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(o =>
+    {
+        o.MapInboundClaims = false;   // conserva "sub", "rol", "piso" tal como se firmaron
+        o.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidIssuer = jwt.Emisor,
+            ValidAudience = jwt.Emisor,
+            IssuerSigningKey = EmisorTokensJwt.Clave(jwt),
+            NameClaimType = "sub",
+            RoleClaimType = Claims.Rol,
+            ClockSkew = TimeSpan.FromSeconds(30),
+        };
+        // SignalR por WebSocket no puede enviar la cabecera Authorization: el navegador manda el token
+        // en ?access_token=…, y SOLO se acepta en /hubs. El log de peticiones registra la ruta sin la
+        // consulta, así el token no queda escrito en los logs.
+        o.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = ctx =>
+            {
+                if (ctx.HttpContext.Request.Path.StartsWithSegments("/hubs"))
+                    ctx.Token = ctx.Request.Query["access_token"];
+                return Task.CompletedTask;
+            },
+        };
+    });
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy(Politicas.SoloAdmin, p => p.RequireClaim(Claims.Rol, "ADMIN"))
+    .AddPolicy(Politicas.SoloOperador, p => p.RequireClaim(Claims.Rol, "OPERADOR"))
+    .AddPolicy(Politicas.OperadorOAdmin, p => p.RequireClaim(Claims.Rol, "OPERADOR", "ADMIN"));
+
+// ---- Protección contra abuso (Infraestructura/Proteccion.cs): límite en toda la API, tamaño de las peticiones
+var proteccion = Proteccion.Leer(builder.Configuration);
+builder.WebHost.ConfigureKestrel(k =>
+{
+    k.Limits.MaxRequestBodySize = proteccion.CuerpoMaximoBytes;
+    k.AddServerHeader = false;   // no anunciar qué servidor es: un dato menos para quien busca vulnerabilidades
+});
+// Límite estricto en /auth (frena a quien intenta adivinar contraseñas) y otro global para todo lo demás
+var porMinuto = builder.Configuration.GetValue("LimitePeticiones:AuthPorMinuto", 20);
+builder.Services.AddRateLimiter(o =>
+{
+    o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    o.GlobalLimiter = Proteccion.LimiteGlobal(proteccion);
+    // Retry-After (estándar HTTP) le dice al cliente cuántos segundos esperar en vez de adivinar
+    o.OnRejected = (contexto, _) =>
+    {
+        var segundos = contexto.Lease.TryGetMetadata(MetadataName.RetryAfter, out var espera) ? (int)Math.Ceiling(espera.TotalSeconds) : 60;
+        contexto.HttpContext.Response.Headers.RetryAfter = segundos.ToString();
+        return ValueTask.CompletedTask;
+    };
+    // /salud consulta la base en cada llamada: un límite evita que alguien la use para cargar el servidor
+    o.AddPolicy("salud", http => RateLimitPartition.GetFixedWindowLimiter(
+        http.Connection.RemoteIpAddress?.ToString() ?? "desconocida",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 60, Window = TimeSpan.FromMinutes(1) }));
+    o.AddPolicy("auth", http => RateLimitPartition.GetFixedWindowLimiter(
+        http.Connection.RemoteIpAddress?.ToString() ?? "desconocida",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = porMinuto, Window = TimeSpan.FromMinutes(1) }));
+    // Los nodos ya no usan HTTP: su límite por nodo está en la mensajería MQTT (ADR-24)
+});
+
+var app = builder.Build();
+if (!app.Environment.IsDevelopment()) Proteccion.ExigirSecretos(app.Configuration);
+
+// ---- Base de datos: espera a que responda (Azure la pausa sin uso), aplica las migraciones y siembra la demo
+await EsperaBaseDatos.HastaQueRespondaAsync(app.Services, app.Configuration);
+if (app.Configuration.GetValue<bool>("BaseDatos:MigrarAlIniciar"))
+{
+    using var scope = app.Services.CreateScope();
+    await scope.ServiceProvider.GetRequiredService<FlowTwinDbContext>().Database.MigrateAsync();
+}
+if (app.Configuration.GetValue<bool>("BaseDatos:SembrarDemo"))
+    await SemillaDesarrollo.SembrarAsync(app.Services);
+// En todos los ambientes: si no hay ningún Administrador activo, crea el de "AdminInicial"
+await AdminInicial.AsegurarAsync(app.Services);
+
+// ---- Middlewares, en este orden (sección "Recorrido de una petición")
+// El registro de peticiones va PRIMERO (el más externo): así anota el estado que de verdad recibe el
+// cliente. Si estuviera después del manejador de errores, vería la excepción antes de que se traduzca y
+// registraría «500» en errores que en realidad son 400 o 404 (alarmas falsas en producción).
+// La web (build de Angular) desde la misma API, solo si se configuró Web:Ruta (contenedor). Ver WebEstatica
+var carpetaWeb = WebEstatica.Carpeta(app.Configuration, app.Environment);
+app.UseSerilogRequestLogging();
+app.UseCabecerasSeguridad(carpetaWeb is not null);   // también en las respuestas de error y de límite
+if (!app.Environment.IsDevelopment()) app.UseHsts();   // el navegador solo vuelve a entrar por HTTPS
+app.UseCuerpoMaximo(proteccion.CuerpoMaximoBytes);
+if (carpetaWeb is not null) app.UseWebEstatica(carpetaWeb);
+app.UseExceptionHandler();
+app.UseStatusCodePages();             // cuerpo ProblemDetails para 401/403/413/429 sin cuerpo
+app.UseAuthentication();
+// El límite va después de identificar al usuario (para contarlo por usuario) y ANTES de autorizar: así también
+// cuenta a quien bombardea sin sesión y solo recibiría 401
+app.UseRateLimiter();
+app.UseMiddleware<CambioContrasenaObligatorio>();
+app.UseAuthorization();
+
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();                                 // /openapi/v1.json
+    app.MapScalarApiReference(o => o.WithTitle("CREO FlowTwin · API"));   // /scalar
+}
+
+// ---- Endpoints de cada módulo
+// Salud: ¿responden la base y el broker? 200 si todo responde (o algo está apagado a propósito), 503 si no.
+// Es pública (la usan el monitoreo del servidor y el diagnóstico de nodos), por eso solo dice el estado de
+// cada componente, nunca el error interno.
+app.MapHealthChecks("/api/v1/salud", new HealthCheckOptions { ResponseWriter = Salud.EscribirAsync })
+    .AllowAnonymous().RequireRateLimiting("salud").WithTags("Sistema");
+// Lo que el frontend necesita saber de esta instalación. SimulacionDisponible es temporal (ADR-22): solo
+// para presentar el sistema antes de que lleguen los nodos; en la clínica es false y el botón no existe.
+app.MapGet("/api/v1/configuracion", (IConfiguration config) => Results.Ok(new
+    {
+        simulacionDisponible = config.GetValue("Demo:SimulacionDisponible", false),
+    }))
+    .RequireAuthorization().WithTags("Sistema").WithSummary("Configuración de esta instalación para el frontend");
+app.MapIdentidad();
+app.MapGemelo();
+app.MapAuditoria();
+app.MapDispositivos();
+app.MapAtenciones();
+app.MapMonitoreo();
+app.MapReportes();
+if (carpetaWeb is not null) app.MapWebEstatica(carpetaWeb);
+
+app.Run();
+
+/// <summary>Visible para las pruebas de integración (WebApplicationFactory).</summary>
+public partial class Program;

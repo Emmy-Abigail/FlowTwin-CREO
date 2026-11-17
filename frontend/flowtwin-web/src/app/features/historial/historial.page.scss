@@ -1,10 +1,90 @@
-:host { display: contents; }
+/* P5 · Historial. Sin scroll de página desde 1280×720: llena el alto del shell y el mapa o la tabla
+   ocupan lo que queda. Mismos estilos de cifras que el gemelo y el detalle de atención. */
+:host { display: flex; flex-direction: column; gap: 14px; height: 100%; min-height: 0; }
 
-.filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
-.filters .field { min-width: 150px; }
-.two { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 18px; }
-.buscar { min-width: 260px; }
-.tabla { padding: 6px 6px 0; }
-.sin-margen { margin: 0; }
+/* ---------- Encabezado ---------- */
+.cabecera { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.sub { margin: 4px 0 0; color: var(--gris); display: flex; align-items: center; gap: 6px; }
+.controles { display: flex; gap: 10px; align-items: center; }
+.seg button { display: inline-flex; align-items: center; gap: 6px; }
+.fechas { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; font-size: 14px; font-weight: 700; color: var(--gris); }
+.fechas label { display: inline-flex; align-items: center; gap: 8px; }
+.fechas .inp { width: auto; min-height: 36px; }
 
-@media (max-width: 1100px) { .two { grid-template-columns: 1fr; } }
+/* ---------- Tres cifras ---------- */
+.kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.kpi { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border: 1px solid var(--linea); border-radius: 14px; background: #fff; }
+.kpi b { font-family: var(--f-disp); font-size: 26px; font-weight: 900; line-height: 1; display: block; }
+.kpi b small { font-size: 13px; font-weight: 700; color: var(--gris); margin-left: 3px; }
+.kpi span:not(.sello) { display: block; font-size: 13px; color: var(--gris); margin-top: 4px; }
+.kpi strong { color: var(--tinta); }
+.sello { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; flex: none; }
+.sello.gris { background: var(--fondo-2); color: var(--tinta); }
+.sello.ambar { background: var(--amarillo-suave); color: var(--ambar-t); }
+.sello.celeste { background: var(--celeste); color: var(--celeste-t); }
+
+/* ---------- Pestañas ---------- */
+.pestanas { display: flex; align-items: center; gap: 4px; border-bottom: 1px solid var(--linea); }
+.pestanas button {
+  border: 0; background: none; padding: 8px 14px; font-weight: 700; font-size: 14.5px; color: var(--gris);
+  border-bottom: 3px solid transparent; margin-bottom: -1px; display: inline-flex; align-items: center; gap: 6px;
+}
+.pestanas button.on { color: var(--tinta); border-color: var(--rojo); }
+.n { font-family: var(--f-mono); font-size: 12px; background: var(--fondo-2); border-radius: 999px; padding: 1px 7px; }
+.actualizando { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--gris); }
+.panel { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+
+/* ---------- Ocupación ---------- */
+.zona { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--gris); }
+.zona .inp { width: auto; min-width: 260px; min-height: 38px; font-weight: 700; color: var(--tinta); }
+.mapa { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; padding: 14px 18px; }
+.mapa-cab { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.mapa-cab h2 { font-size: 17px; }
+.mapa-cab p { margin: 2px 0 0; color: var(--gris); font-size: 13px; }
+.leyenda { display: flex; gap: 14px; font-size: 12.5px; color: var(--gris); align-items: center; }
+.leyenda i { display: inline-block; width: 13px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.leyenda .pocos { background: rgba(31, 95, 153, .2); }
+.leyenda .muchos { background: rgba(31, 95, 153, .9); }
+.leyenda .nd { background: repeating-linear-gradient(135deg, var(--fondo-2) 0 3px, var(--linea-2) 3px 6px); }
+.leyenda .fuera { outline: 2px dashed var(--gris-2); outline-offset: -2px; }
+.cuerpo-mapa { flex: 1; min-height: 0; }
+.nota { margin: 0; font-size: 12.5px; color: var(--gris); }
+.vacio { flex: 1; margin: 0; display: grid; place-items: center; color: var(--gris); }
+
+/* ---------- Atenciones ---------- */
+.tabla { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 14px 18px; gap: 6px; }
+.tabla-cab { display: flex; align-items: center; gap: 14px; }
+.tabla-cab .hint { margin-left: auto; font-size: 13px; }
+.buscar { position: relative; display: flex; align-items: center; width: 300px; color: var(--gris); }
+.buscar app-icono { position: absolute; left: 12px; pointer-events: none; }
+.buscar .inp { padding-left: 36px; min-height: 36px; }
+.tbl td { padding: 8px 12px; }
+.tbl .der { text-align: right; font-variant-numeric: tabular-nums; }
+.tbl .mono { font-family: var(--f-mono); font-weight: 600; }
+.tbl small { color: var(--ambar-t); font-size: 12px; }
+.codigo { font-family: var(--f-mono); font-weight: 600; color: var(--tinta); text-decoration: none; }
+.codigo:hover { text-decoration: underline; }
+.pie { display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 6px; }
+.paginas { display: flex; gap: 8px; }
+
+.cargando { flex: 1; display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--gris); }
+.spin { width: 16px; height: 16px; border-radius: 50%; border: 3px solid var(--linea); border-top-color: var(--rojo); animation: girar 1s linear infinite; }
+@keyframes girar { to { rotate: 360deg; } }
+@media (prefers-reduced-motion: reduce) { .spin { animation-duration: 3s; } }
+
+/* Pantallas bajas (720–820 px): más compacto */
+@media (max-height: 820px) {
+  :host { gap: 10px; }
+  .kpi { padding: 8px 14px; }
+  .kpi b { font-size: 22px; }
+  .tbl td { padding: 6px 12px; }
+  .tbl th { padding: 7px 12px; }
+}
+
+/* Debajo de 1280 px se apila (el «sin scroll» rige desde 1280×720) */
+@media (max-width: 1279px) {
+  :host { height: auto; }
+  .kpis { grid-template-columns: 1fr; }
+  .tabla-cab { flex-wrap: wrap; }
+  .tabla { overflow-x: auto; }
+}

@@ -11,11 +11,10 @@ export const PERMISOS = {
   gemelo: TODOS,
   historial: TODOS,
   atencion: TODOS,
-  seguimiento: ['Operador'],
-  construccion: ['Administrador'],
   dispositivos: ['Administrador'],
   usuarios: ['Administrador'],
   auditoria: ['Administrador'],
+  configuracion: ['Administrador'],
 } satisfies Record<string, Rol[]>;
 
 export type Pantalla = keyof typeof PERMISOS;

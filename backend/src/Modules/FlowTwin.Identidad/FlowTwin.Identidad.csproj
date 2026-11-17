@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\FlowTwin.SharedKernel\FlowTwin.SharedKernel.csproj" />
+    <ProjectReference Include="..\FlowTwin.Auditoria\FlowTwin.Auditoria.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Contraseñas filtradas (ASVS 2.1.7), dentro del ensamblado: no se consulta internet -->
+    <EmbeddedResource Include="Domain\contrasenas-filtradas.txt.gz" LogicalName="FlowTwin.Identidad.contrasenas-filtradas.txt.gz" />
+  </ItemGroup>
+
+</Project>

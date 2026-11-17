@@ -1,0 +1,130 @@
+using Microsoft.AspNetCore.Hosting;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text.Json;
+using FlowTwin.Persistence;
+using Microsoft.Data.SqlClient;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace FlowTwin.IntegrationTests;
+
+/// <summary>
+/// Levanta la API completa en memoria contra una base SQL Server de pruebas (FlowTwin_Pruebas),
+/// creada desde cero con las migraciones y los datos de demostración. Nunca toca la base de desarrollo.
+/// Necesita el contenedor de SQL Server levantado (docker-compose up -d).
+/// </summary>
+public sealed class ApiFixture : IAsyncLifetime
+{
+    public const string PrefijoMqtt = "flowtwin-pruebas";
+    public const string ClaveSelloPruebas = "cHJ1ZWJhcy1kZS1mbG93dHdpbi1zZWxsby1kZS1hdWRpdG9yaWEtMzItYnl0ZXM=";
+
+    public WebApplicationFactory<Program> Fabrica { get; private set; } = null!;
+
+    public async Task InitializeAsync()
+    {
+        // Misma cadena de conexión que en desarrollo, pero otra base. En tu máquina sale de los
+        // user-secrets; en la integración continua (GitHub Actions), de variables de entorno.
+        var config = new ConfigurationBuilder().AddUserSecrets<Program>(optional: true).AddEnvironmentVariables().Build();
+        var cadena = config.GetConnectionString("FlowTwin")
+            ?? throw new InvalidOperationException(
+                "Configura ConnectionStrings:FlowTwin en los user-secrets de FlowTwin.Api o en la variable ConnectionStrings__FlowTwin.");
+        // Se cambia la base con el constructor oficial, no reemplazando texto: así funciona escriba
+        // la cadena "Database=" o "Initial Catalog=", y nunca apunta por error a la base de desarrollo.
+        var cadenaPruebas = new SqlConnectionStringBuilder(cadena) { InitialCatalog = "FlowTwin_Pruebas" }.ConnectionString;
+
+        Environment.SetEnvironmentVariable("ConnectionStrings__FlowTwin", cadenaPruebas);
+        Environment.SetEnvironmentVariable("BaseDatos__MigrarAlIniciar", "true");
+        Environment.SetEnvironmentVariable("BaseDatos__SembrarDemo", "true");
+        Environment.SetEnvironmentVariable("LimitePeticiones__AuthPorMinuto", "1000");
+        // Todas las pruebas usan los mismos usuarios: sin esto, el límite global de la API las frenaría entre sí
+        Environment.SetEnvironmentVariable("LimitePeticiones__ApiPorMinuto", "100000");
+        Environment.SetEnvironmentVariable("LimitePeticiones__ApiRafaga", "100000");
+        // Broker MQTT de desarrollo (docker-compose up -d mosquitto), con un prefijo propio: las pruebas
+        // solo crean y borran SUS cuentas y temas, nunca los de la API de trabajo o del simulador
+        Environment.SetEnvironmentVariable("Mqtt__Prefijo", PrefijoMqtt);
+        // El motor no corre solo: las pruebas lo llaman a mano (ProcesarAsync) para controlar el tiempo
+        Environment.SetEnvironmentVariable("Presencia__MotorActivo", "false");
+        // Ni el cierre de jornada: si las pruebas se corren después de las 22:00 cerraría sus atenciones
+        Environment.SetEnvironmentVariable("Jornada__CierreActivo", "false");
+        // Las pruebas verifican la regla F-02 encendida (en appsettings está apagada por ahora)
+        Environment.SetEnvironmentVariable("Contrasenas__ExigirCambioPrimerIngreso", "true");
+        // Sello de la bitácora con una clave de prueba fija (no es un secreto: solo existe en la base de pruebas). El
+        // sellado no corre solo: las pruebas lo llaman a mano, sin margen, para controlar qué se sella y cuándo
+        Environment.SetEnvironmentVariable("Auditoria__ClaveSello", ClaveSelloPruebas);
+        Environment.SetEnvironmentVariable("Auditoria__SelladoActivo", "false");
+        Environment.SetEnvironmentVariable("Auditoria__MargenSelloSegundos", "0");
+
+        await using (var db = new FlowTwinDbContext(new DbContextOptionsBuilder<FlowTwinDbContext>().UseSqlServer(cadenaPruebas).Options))
+            await db.Database.EnsureDeletedAsync();
+
+        Fabrica = new WebApplicationFactory<Program>();
+        _ = Fabrica.Server;   // arranca la API: aplica migraciones y siembra
+    }
+
+    public Task DisposeAsync()
+    {
+        Fabrica.Dispose();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Otra instancia de la API con algunos ajustes distintos, sobre la misma base. Con MQTT APAGADO: si
+    /// arrancara su propio suscriptor, usaría la misma cuenta de ingesta y desconectaría al principal.
+    /// </summary>
+    public WebApplicationFactory<Program> ConAjustes(params (string Clave, string Valor)[] ajustes) =>
+        Fabrica.WithWebHostBuilder(b =>
+        {
+            b.UseSetting("Mqtt:Activo", "false");
+            foreach (var (clave, valor) in ajustes) b.UseSetting(clave, valor);
+        });
+
+    /// <summary>Un HttpClient con la sesión iniciada del usuario indicado (contraseña demo123).</summary>
+    public async Task<HttpClient> ClienteDeAsync(string correo, string clave = "demo123")
+    {
+        var cliente = Fabrica.CreateClient();
+        var r = await cliente.PostAsJsonAsync("/api/v1/auth/login", new { correo, clave });
+        r.EnsureSuccessStatusCode();
+        var cuerpo = await r.Content.ReadFromJsonAsync<JsonElement>();
+        cliente.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", cuerpo.GetProperty("accessToken").GetString());
+        return cliente;
+    }
+
+    /// <summary>Acceso directo a la base, para comprobar lo que quedó guardado.</summary>
+    public async Task<T> EnBaseAsync<T>(Func<FlowTwinDbContext, Task<T>> consulta)
+    {
+        using var scope = Fabrica.Services.CreateScope();
+        return await consulta(scope.ServiceProvider.GetRequiredService<FlowTwinDbContext>());
+    }
+}
+
+[CollectionDefinition("Api")]
+public sealed class ColeccionApi : ICollectionFixture<ApiFixture>;
+
+/// <summary>
+/// Qué tarjeta de la semilla usa cada prueba. Todas comparten la misma base, así que dos pruebas que
+/// usan la misma tarjeta se arruinan entre sí según el orden en que corran. Elegir aquí, nunca a mano
+/// dentro de la prueba. Libres: ninguna (agrega más tarjetas a la semilla si hace falta). La semilla las deja todas Disponibles (sin
+/// historia inventada): si una prueba necesita otro estado, lo prepara con el flujo real.
+/// </summary>
+public static class TarjetasDePrueba
+{
+    public const string CicloCompleto = "T-05";      // AdmisionTests: entrega, devolución y desinfección
+    public const string Deshacer = "6";              // AdmisionTests: T-06, escrita como número (el escáner la normaliza)
+    public const string SinPermiso = "T-07";         // AdmisionTests: Gerencia no puede entregar
+    public const string EstadoPiso = "T-08";         // EstadoPisoTests
+    public const string Presencia = "T-09";          // PresenciaTests (emisor minor 9)
+    public const string HubEnVivo = "T-10";          // GemeloHubTests
+    public const string VistaPrevia = "T-13";        // AdmisionTests: la vista previa no cambia nada
+    public const string TandaA = "T-01";             // AdmisionTests: desinfección por tandas
+    public const string TandaB = "T-02";             // AdmisionTests: desinfección por tandas
+    public const string TandaDisponible = "T-03";    // AdmisionTests: una tanda con una tarjeta que no corresponde
+    public const string TandaPendiente = "T-14";     // AdmisionTests: queda por desinfectar tras la tanda fallida
+    public const string AtendidaHoy = "T-04";        // EstadoPisoTests: se entrega y se devuelve
+    public const string AnuladaHoy = "T-15";         // EstadoPisoTests: se entrega y se deshace
+    public const string PorDesinfectar = "T-11";     // AdmisionTests: se entrega y se devuelve para dejarla por desinfectar
+    public const int SinAtencion = 12;               // PresenciaTests: emisor de una tarjeta Disponible (RN-12)
+}

@@ -1,16 +1,18 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, afterNextRender, inject, input, output } from '@angular/core';
 import { IconoComponent } from './icono.component';
 
 /**
  * Ventana emergente. variante="dialogo" se centra; variante="panel" entra por la derecha
  * (como el Detalle de zona, M2). Se cierra con la X, con Escape o al hacer clic fuera.
+ * Al abrirse, el foco entra al modal (al botón principal: el último del pie) para que Enter confirme
+ * y el teclado no siga actuando sobre la pantalla de atrás (accesibilidad, WAI-ARIA dialog).
  *   <app-modal titulo="Pausar zona" (cerrar)="...">contenido<div pie>botones</div></app-modal>
  */
 @Component({
   selector: 'app-modal',
   imports: [IconoComponent],
   template: `
-    <div class="scrim" [class.panel]="variante() === 'panel'" (click)="$event.target === $event.currentTarget && cerrar.emit()">
+    <div class="scrim" [class.panel]="variante() === 'panel'" (click)="clicEnFondo($event)">
       <div [class]="variante() === 'panel' ? 'drawer' : 'modal'" role="dialog" aria-modal="true" [attr.aria-label]="titulo()">
         <div class="m-h">
           <div>
@@ -33,4 +35,19 @@ export class ModalComponent {
   readonly antetitulo = input('');
   readonly variante = input<'dialogo' | 'panel'>('dialogo');
   readonly cerrar = output<void>();
+
+  /**
+   * Cierra solo si el clic fue en el fondo oscuro. Es un método que no devuelve nada a propósito: si la
+   * expresión del template devolviera false (clic dentro del modal), Angular cancelaría el clic
+   * (preventDefault) y las casillas o enlaces del contenido dejarían de funcionar.
+   */
+  protected clicEnFondo(e: MouseEvent): void {
+    if (e.target === e.currentTarget) this.cerrar.emit();
+  }
+
+  constructor() {
+    const host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+    afterNextRender(() =>
+      (host.querySelector<HTMLElement>('.m-f button:last-of-type') ?? host.querySelector<HTMLElement>('.x'))?.focus());
+  }
 }

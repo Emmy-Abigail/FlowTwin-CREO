@@ -1,0 +1,14 @@
+<!--
+  Se aplica automáticamente a los 7 módulos de esta carpeta (MSBuild busca este archivo
+  hacia arriba desde cada .csproj). Así no se repiten estas referencias en cada módulo.
+-->
+<Project>
+  <ItemGroup>
+    <!-- ASP.NET Core: cada módulo publica sus propios endpoints (minimal APIs) -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <!-- EF Core: cada módulo declara las tablas que usa en su interfaz I<Modulo>Db -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.14" />
+    <!-- Validación de las peticiones antes de llegar al dominio -->
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.2.0" />
+  </ItemGroup>
+</Project>

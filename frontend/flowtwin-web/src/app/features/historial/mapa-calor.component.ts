@@ -1,67 +1,56 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { HORA_APERTURA } from '../../core/datos/clinica.config';
-import { pad2 } from '../../core/utils/tiempo';
-import { ZonaGeometria } from '../../gemelo-render/geometria';
-
-const COLOR = { alta: '#E53935', media: '#F2A900', baja: '#2E9E6B' };
-
-export interface FilaMapa {
-  etiqueta: string;
-  valores: (number | null)[];
-}
+import { OcupacionApi, celdas, horasDe } from './modelo-historial';
 
 /**
- * Mapa "Día × hora": cada celda es la ocupación promedio de esa hora en % del aforo,
- * coloreada con el semáforo según los umbrales de la zona. Muestra los picos que se repiten.
+ * Mapa «Día × hora»: cada celda es cuántas personas había en promedio en la zona durante esa hora.
+ * Un solo color (azul) que se oscurece con la cantidad: sin aforo no hay «lleno» que juzgar (ADR-23).
+ * El número va escrito en la celda (no depende solo del color) y «sin datos» va rayado, nunca como 0.
  */
 @Component({
   selector: 'app-mapa-calor',
   template: `
-    <div class="hm" [style.grid-template-columns]="'54px repeat(' + horas().length + ', minmax(0, 1fr))'">
-      <span></span>
-      @for (h of horas(); track h.indice) { <span class="lab centro">{{ h.indice % 2 === 0 ? h.texto : '' }}</span> }
-      @for (f of celdas(); track f.etiqueta) {
-        <span class="lab">{{ f.etiqueta }}</span>
+    <div class="mapa" role="table" [attr.aria-label]="'Personas en promedio por ' + (porDia() ? 'día de la semana' : 'fecha') + ' y hora'"
+         [style.grid-template-columns]="'72px repeat(' + horas().length + ', minmax(0, 1fr))'"
+         [style.grid-template-rows]="'auto repeat(' + filas().length + ', minmax(24px, 52px))'">
+      <span role="columnheader"></span>
+      @for (h of horas(); track h) { <span class="h" role="columnheader">{{ h }}</span> }
+      @for (f of filas(); track f.etiqueta) {
+        <span class="f" role="rowheader">{{ f.etiqueta }}</span>
         @for (c of f.celdas; track $index) {
-          @if (c) {
-            <span class="c" [title]="c.titulo" [style.background]="c.color" [style.opacity]="c.opacidad" [style.color]="c.opacidad > 0.6 ? '#fff' : '#1F1B1C'">{{ c.pct }}</span>
-          } @else {
-            <span class="c futuro"></span>
-          }
+          <span role="cell" [class]="'c ' + c.estado" [attr.title]="c.titulo" [attr.aria-label]="c.titulo"
+                [style.background]="c.estado === 'OK' ? fondo(c.intensidad) : null"
+                [class.claro]="c.estado === 'OK' && c.intensidad > 0.55" [class.fuera]="c.fuera">{{ c.texto }}</span>
         }
       }
     </div>
   `,
   styles: `
-    .hm { display: grid; gap: 3px; font-size: 11px; }
-    .c { border-radius: 4px; height: 28px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-variant-numeric: tabular-nums; }
-    .c.futuro { background: #F4F1ED; }
-    .lab { color: var(--gris); display: flex; align-items: center; font-weight: 600; }
-    .lab.centro { justify-content: center; }
+    :host { display: block; min-height: 0; }
+    .mapa { display: grid; gap: 4px; height: 100%; align-content: start; }
+    .h { font-family: var(--f-mono); font-size: 12px; color: var(--gris-2); text-align: center; }
+    .f { display: flex; align-items: center; font-size: 13px; font-weight: 700; color: var(--gris); }
+    .c {
+      border-radius: 6px; display: flex; align-items: center; justify-content: center;
+      font-family: var(--f-mono); font-weight: 600; font-size: 12.5px; color: var(--celeste-t); font-variant-numeric: tabular-nums;
+    }
+    .c.claro { color: #fff; }
+    /* Fuera de servicio (ADR-25): el dato se ve igual, con un borde que avisa por qué hubo menos gente */
+    .c.fuera { outline: 2px dashed var(--gris-2); outline-offset: -3px; }
+    .c.FUTURO { background: #FBFAF9; }
+    /* Rayado como «Sin datos» en el gemelo: no se sabe cuánta gente hubo */
+    .c.SIN_DATOS { background: repeating-linear-gradient(135deg, var(--fondo-2) 0 5px, var(--linea) 5px 10px); }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MapaCalorComponent {
-  readonly filas = input.required<FilaMapa[]>();
-  readonly zona = input.required<ZonaGeometria>();
+  readonly ocupacion = input.required<OcupacionApi>();
 
-  protected horas = computed(() =>
-    (this.filas()[0]?.valores ?? []).map((_, i) => ({ indice: i, texto: pad2(i + HORA_APERTURA) })));
+  protected horas = computed(() => horasDe(this.ocupacion()));
+  protected filas = computed(() => celdas(this.ocupacion()));
+  protected porDia = computed(() => this.ocupacion().agrupacion === 'DIA_SEMANA');
 
-  protected celdas = computed(() => {
-    const z = this.zona();
-    return this.filas().map(f => ({
-      etiqueta: f.etiqueta,
-      celdas: f.valores.map((v, i) => {
-        if (v == null) return null;
-        const pct = Math.round((v / Math.max(1, z.aforo)) * 100);
-        const nivel = pct >= z.umbralAlta ? 'alta' : pct >= z.umbralMedia ? 'media' : 'baja';
-        return {
-          pct, color: COLOR[nivel],
-          opacidad: +(0.18 + Math.min(1, pct / 110) * 0.82).toFixed(2),
-          titulo: `${f.etiqueta} ${pad2(i + HORA_APERTURA)}:00 · ${v} pacientes (${pct} %)`,
-        };
-      }),
-    }));
-  });
+  /** El celeste-texto de la paleta (#1F5F99) con más o menos opacidad; un cero se ve casi blanco. */
+  protected fondo(intensidad: number): string {
+    return `rgba(31, 95, 153, ${(0.07 + intensidad * 0.85).toFixed(2)})`;
+  }
 }

@@ -1,0 +1,38 @@
+using FlowTwin.SharedKernel;
+
+namespace FlowTwin.Gemelo.Domain;
+
+/// <summary>Catálogo cat.TipoZona: define cómo cuenta el tiempo en las métricas (RN-06, RN-13).</summary>
+public enum TipoZona
+{
+    [Catalogo("INGRESO", "Ingreso")] Ingreso = 1,
+    [Catalogo("ESPERA", "Espera")] Espera = 2,
+    [Catalogo("SERVICIO", "Servicio")] Servicio = 3,
+    [Catalogo("TRANSITO", "Tránsito")] Transito = 4,
+    [Catalogo("SALIDA", "Salida")] Salida = 5,
+    /// <summary>Evaluación previa (ADR-26): tiene aforo, pero NO detiene la espera ni suma a la consulta.</summary>
+    [Catalogo("TRIAJE", "Triaje")] Triaje = 6,
+}
+
+/// <summary>gem.Sede. El prefijo arma el código anónimo de cada atención (A-0143).</summary>
+public class Sede : EntidadEditable
+{
+    public int Id { get; set; }
+    public string Nombre { get; set; } = "";
+    public string? Direccion { get; set; }
+    public char PrefijoAtencion { get; set; } = 'A';
+}
+
+/// <summary>gem.Piso. Sus zonas están en gem.Zona; lo que se dibuja (muros, muebles) viene de su maqueta 3D (ADR-28).</summary>
+public class Piso : EntidadEditable
+{
+    public int Id { get; set; }
+    public int SedeId { get; set; }
+    public string Nombre { get; set; } = "";
+    /// <summary>Orden vertical; los sótanos son negativos.</summary>
+    public short Nivel { get; set; }
+    public decimal? AnchoM { get; set; }
+    public decimal? FondoM { get; set; }
+    public bool Publicado { get; set; }
+    public DateTime? PublicadoEn { get; set; }
+}

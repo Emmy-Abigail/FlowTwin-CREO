@@ -1,21 +1,27 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
-import { AuthService } from '../../core/auth/auth.service';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
+import { ModoDatosService } from '../../core/datos/modo-datos.service';
+import { PisoActualService } from '../../core/datos/piso-actual.service';
 import { ToastService } from '../../core/ui/toast.service';
-import { BotonDirective } from '../../shared/componentes/boton.directive';
+import { ChipComponent } from '../../shared/componentes/chip.component';
+import { EstadoVacioComponent } from '../../shared/componentes/estado-vacio.component';
 import { IconoComponent } from '../../shared/componentes/icono.component';
-import { KpiComponent } from '../../shared/componentes/kpi.component';
-import { ModalComponent } from '../../shared/componentes/modal.component';
-import { Columna, TablaComponent } from '../../shared/componentes/tabla.component';
-import { AforoChartComponent } from './aforo-chart.component';
-import { FilaAtencion, HistorialStore, Rango } from './historial.store';
+import { SelectorPisoComponent } from '../../shared/componentes/selector-piso.component';
+import { HistorialStore, Pestana } from './historial.store';
 import { MapaCalorComponent } from './mapa-calor.component';
+import { FilaVista, PeriodoId, cifras, filaVista, textoPeriodo } from './modelo-historial';
 
-/** P5 · Historial y reportes. Gerencia lo ve en solo lectura (puede exportar). */
+/** Espera antes de buscar mientras se escribe el código: no se pide al servidor en cada tecla. */
+const ESPERA_BUSQUEDA_MS = 300;
+
+/**
+ * P5 · Historial y reportes. Lo esencial (como en los tableros de flujo de pacientes): cuántas
+ * atenciones, la espera y el tiempo total típicos (mediana) con su «cola», cuándo se llena cada zona
+ * y la lista para revisar un caso. Gerencia lo ve igual: no tiene acciones que cambien datos.
+ */
 @Component({
   selector: 'app-historial',
-  imports: [FormsModule, BotonDirective, IconoComponent, KpiComponent, ModalComponent, TablaComponent, AforoChartComponent, MapaCalorComponent],
+  imports: [RouterLink, ChipComponent, EstadoVacioComponent, IconoComponent, SelectorPisoComponent, MapaCalorComponent],
   templateUrl: './historial.page.html',
   styleUrl: './historial.page.scss',
   providers: [HistorialStore],
@@ -23,52 +29,49 @@ import { MapaCalorComponent } from './mapa-calor.component';
 })
 export class HistorialPage {
   protected store = inject(HistorialStore);
-  protected auth = inject(AuthService);
+  protected modo = inject(ModoDatosService);
+  protected pisos = inject(PisoActualService);
   private router = inject(Router);
   private toast = inject(ToastService);
+  private temporizador?: ReturnType<typeof setTimeout>;
 
-  /** Aviso del reporte PDF generado (en la demo no se descarga un PDF real). */
-  protected pdfGenerado = signal<{ archivo: string; filas: number } | null>(null);
-
-  protected readonly columnas: Columna<FilaAtencion>[] = [
-    { titulo: 'ID', valor: f => f.id, clase: 'mono' },
-    { titulo: 'Fecha', valor: f => f.fecha },
-    { titulo: 'Ingreso', valor: f => f.ingreso, clase: 'num' },
-    { titulo: 'Atendido en', valor: f => f.atendidoEn },
-    { titulo: 'Espera', valor: f => f.espera, clase: 'num' },
-    { titulo: 'Consulta', valor: f => f.consulta, clase: 'num' },
-    { titulo: 'Total', valor: f => (f.activa ? { chip: 'En curso', tono: 'media' } : f.total), clase: 'num' },
-    { titulo: 'Cierre', valor: f => f.cierre },
+  protected readonly periodos: { id: PeriodoId; texto: string }[] = [
+    { id: 'hoy', texto: 'Hoy' }, { id: '7', texto: '7 días' }, { id: '30', texto: '30 días' }, { id: 'elegir', texto: 'Elegir' },
   ];
 
-  protected cambiarRango(rango: Rango): void {
-    this.store.cambiarFiltro(() => {
-      this.store.rango.set(rango);
-      if (rango === 'custom' && !this.store.desde()) {
-        this.store.desde.set(this.store.haceSeisIso());
-        this.store.hasta.set(this.store.hoyIso());
-      }
-    });
+  /** El selector de piso solo aparece si hay entre qué elegir. */
+  protected variosPisos = computed(() => this.pisos.sedes().length > 1 || this.pisos.pisosDeSede().length > 1);
+  protected subtitulo = computed(() => {
+    const partes = [textoPeriodo(this.store.rango(), this.store.hoy()), this.pisos.sede()?.nombre, this.pisos.piso()?.nombre];
+    return partes.filter(Boolean).join(' · ');
+  });
+  protected k = computed(() => cifras(this.store.resumen()));
+  protected filas = computed<FilaVista[]>(() => this.store.atenciones()?.filas.map(filaVista) ?? []);
+  protected zona = computed(() => {
+    const o = this.store.ocupacion();
+    return o?.zonas.find(z => z.id === o.zonaId) ?? null;
+  });
+
+  constructor() {
+    inject(DestroyRef).onDestroy(() => clearTimeout(this.temporizador));
   }
 
-  protected abrir(fila: FilaAtencion): void {
-    this.router.navigate(['/atencion', fila.id], { state: { desde: 'historial' } });
+  protected cambiarPestana(p: Pestana): void {
+    this.store.pestana.set(p);
   }
 
-  /** CSV real: se descarga un archivo con las filas filtradas. */
-  protected exportarCsv(): void {
-    const { nombre, contenido, filas } = this.store.generarCsv();
-    const url = URL.createObjectURL(new Blob([contenido], { type: 'text/csv;charset=utf-8' }));
-    const enlace = Object.assign(document.createElement('a'), { href: url, download: nombre });
-    enlace.click();
-    URL.revokeObjectURL(url);
-    this.store.registrarExportacion(nombre, 'CSV');
-    this.toast.mostrar(`Reporte generado con los filtros actuales · ${filas} atenciones`);
+  protected escribir(texto: string): void {
+    clearTimeout(this.temporizador);
+    this.temporizador = setTimeout(() => this.store.buscar(texto), ESPERA_BUSQUEDA_MS);
   }
 
-  protected exportarPdf(): void {
-    const archivo = this.store.nombreArchivo('pdf');
-    this.store.registrarExportacion(archivo, 'PDF');
-    this.pdfGenerado.set({ archivo, filas: this.store.filtradas().length });
+  protected abrir(f: FilaVista): void {
+    this.router.navigate(['/atencion', f.clave], { queryParams: { desde: 'historial' } });
+  }
+
+  protected async exportar(): Promise<void> {
+    const r = await this.store.exportarCsv();
+    if ('error' in r) this.toast.mostrar(`No se pudo exportar: ${r.error}`, 'bad');
+    else this.toast.mostrar(`Se descargó ${r.archivo}. La exportación quedó registrada en la auditoría.`);
   }
 }

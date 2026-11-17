@@ -1,100 +1,142 @@
-<div class="page-head">
+<header class="cabecera">
   <div>
     <h1>Historial y reportes</h1>
-    <p>{{ auth.soloLectura() ? 'Solo lectura. ' : '' }}Evolución de la ocupación y detalle de cada atención.</p>
+    <p class="sub"><app-icono nombre="calendario" [tamano]="16" />{{ subtitulo() }}</p>
   </div>
-  <div class="toolbar">
-    <button appBoton="borde" type="button" (click)="exportarCsv()"><app-icono nombre="dl" [tamano]="16" /> Exportar CSV</button>
-    <button appBoton="borde" type="button" (click)="exportarPdf()"><app-icono nombre="dl" [tamano]="16" /> Exportar PDF</button>
-  </div>
-</div>
-
-<!-- Filtros -->
-<div class="card pad filters">
-  <div class="field">
-    <label for="h-r">Fecha</label>
-    <select class="inp" id="h-r" [ngModel]="store.rango()" (ngModelChange)="cambiarRango($event)">
-      <option value="hoy">Hoy</option>
-      <option value="7">Últimos 7 días</option>
-      <option value="custom">Personalizado</option>
-    </select>
-  </div>
-  @if (store.rango() === 'custom') {
-    <div class="field">
-      <label for="h-d">Desde</label>
-      <input class="inp" type="date" id="h-d" [min]="store.haceSeisIso()" [max]="store.hoyIso()"
-             [ngModel]="store.desde()" (ngModelChange)="store.cambiarFiltro(() => store.desde.set($event))">
+  <div class="controles">
+    <div class="seg" role="group" aria-label="Periodo">
+      @for (p of periodos; track p.id) {
+        <button type="button" [class.on]="store.periodo() === p.id" [attr.aria-pressed]="store.periodo() === p.id"
+                (click)="store.cambiarPeriodo(p.id)">@if (p.id === 'elegir') {<app-icono nombre="calendario" [tamano]="14" />} {{ p.texto }}</button>
+      }
     </div>
-    <div class="field">
-      <label for="h-h">Hasta</label>
-      <input class="inp" type="date" id="h-h" [min]="store.haceSeisIso()" [max]="store.hoyIso()"
-             [ngModel]="store.hasta()" (ngModelChange)="store.cambiarFiltro(() => store.hasta.set($event))">
-    </div>
-  }
-  <div class="field">
-    <label for="h-p">Piso</label>
-    <select class="inp" id="h-p" disabled><option>Piso 1</option></select>
+    @if (variosPisos()) { <app-selector-piso /> }
   </div>
-  <div class="field">
-    <label for="h-z">Zona</label>
-    <select class="inp" id="h-z" [ngModel]="store.zonaId()" (ngModelChange)="store.cambiarFiltro(() => store.zonaId.set(+$event))">
-      @for (z of store.zonas(); track z.id) { <option [value]="z.id">{{ z.nombre }}</option> }
-    </select>
-  </div>
-</div>
+</header>
 
-<!-- KPI del periodo -->
-@let k = store.kpis();
-<div class="kpis tres">
-  <app-kpi etiqueta="Espera promedio del periodo" [valor]="k.espera" sufijo=" min">Desde el escaneo hasta la entrada a consulta</app-kpi>
-  <app-kpi etiqueta="Consulta promedio" [valor]="k.consulta" sufijo=" min">Permanencia en consultorios y tópicos</app-kpi>
-  <app-kpi etiqueta="Atenciones" [valor]="k.total">{{ store.zona()?.nombre }} · {{ store.rango() === 'hoy' ? 'hoy' : 'periodo elegido' }}</app-kpi>
-</div>
-
-<!-- Gráficos -->
-@if (store.zona(); as z) {
-  <div class="two">
-    <section class="card">
-      <div class="card-h">
-        <div><h2>Aforo histórico · {{ z.nombre }}</h2><p>Promedio de pacientes presentes por hora frente al aforo máximo ({{ z.aforo }}).</p></div>
-      </div>
-      <div class="pad"><app-aforo-chart [serie]="store.serie()" [aforo]="z.aforo" [maximo7Dias]="store.maximo7Dias()" /></div>
-    </section>
-    <section class="card">
-      <div class="card-h">
-        <div><h2>Mapa día × hora</h2><p>Ocupación promedio, en % del aforo. Muestra las horas pico que se repiten.</p></div>
-      </div>
-      <div class="pad"><app-mapa-calor [filas]="store.matriz()" [zona]="z" /></div>
-    </section>
+@if (store.periodo() === 'elegir') {
+  @let r = store.rango();
+  <div class="fechas">
+    <label>Desde <input class="inp" type="date" [max]="store.hoy()" [value]="r.desde" (change)="store.elegirFecha('desde', $any($event.target).value)"></label>
+    <label>Hasta <input class="inp" type="date" [max]="store.hoy()" [value]="r.hasta" (change)="store.elegirFecha('hasta', $any($event.target).value)"></label>
+    <span [class]="store.problema() ? 'err' : 'hint'">{{ store.problema() ?? 'Como máximo 31 días por consulta.' }}</span>
   </div>
 }
 
-<!-- Tabla de atenciones -->
-<section class="card">
-  <div class="card-h">
-    <div><h2>Atenciones</h2><p>Clic en una fila para ver el recorrido completo.</p></div>
-    <div class="buscar">
-      <label for="h-q" class="sr-only">Buscar por ID anónimo</label>
-      <input class="inp" id="h-q" placeholder="Buscar por ID anónimo (ej. A-1290)"
-             [ngModel]="store.busqueda()" (ngModelChange)="store.cambiarFiltro(() => store.busqueda.set($event))">
-    </div>
+@if (!pisos.piso() && !modo.simulacion()) {
+  <app-estado-vacio titulo="No tienes un piso asignado" texto="El historial es por piso. Pide al Administrador que te asigne uno." />
+} @else if (store.error(); as e) {
+  <app-estado-vacio titulo="No se pudo cargar el historial" [texto]="e" />
+} @else {
+  <!-- Las tres cifras del periodo: «—» mientras no hay con qué calcular, nunca un 0 que engañe -->
+  @let c = k();
+  <div class="kpis">
+    <div class="kpi"><span class="sello gris"><app-icono nombre="users" [tamano]="18" /></span>
+      <div><b>{{ c.atenciones.valor ?? '—' }}</b><span>{{ c.atenciones.detalle }}</span></div></div>
+    <div class="kpi"><span class="sello ambar"><app-icono nombre="reloj" [tamano]="18" /></span>
+      <div><b>{{ c.espera.valor ?? '—' }}@if (c.espera.valor !== null) {<small>min</small>}</b>
+        <span><strong>Espera</strong> (mediana) · {{ c.espera.detalle }}</span></div></div>
+    <div class="kpi"><span class="sello celeste"><app-icono nombre="walk" [tamano]="18" /></span>
+      <div><b>{{ c.total.valor ?? '—' }}@if (c.total.valor !== null) {<small>min</small>}</b>
+        <span><strong>Tiempo total</strong> (mediana) · {{ c.total.detalle }}</span></div></div>
   </div>
-  <div class="tabla">
-    <app-tabla [columnas]="columnas" [filas]="store.filas()" [clicable]="true" (filaClic)="abrir($event)"
-               vacio="No hay atenciones con estos filtros." />
-  </div>
-  <div class="pager">
-    <span class="hint num">{{ store.filtradas().length }} atenciones · página {{ store.pagina() + 1 }} de {{ store.paginas() }}</span>
-    <button appBoton="borde" [chico]="true" type="button" [disabled]="store.pagina() === 0" (click)="store.pagina.set(store.pagina() - 1)">Anterior</button>
-    <button appBoton="borde" [chico]="true" type="button" [disabled]="store.pagina() >= store.paginas() - 1" (click)="store.pagina.set(store.pagina() + 1)">Siguiente</button>
-  </div>
-</section>
 
-@if (pdfGenerado(); as p) {
-  <app-modal titulo="Reporte PDF generado" (cerrar)="pdfGenerado.set(null)">
-    <p class="sin-margen">Se generó el reporte con los filtros actuales.</p>
-    <div class="li"><span><app-icono nombre="dl" [tamano]="16" /> <b>{{ p.archivo }}</b></span><span class="hint">{{ p.filas }} registros</span></div>
-    <span class="hint">En el sistema real el PDF lo genera el backend y se descarga. En esta demo solo se registra la acción en la auditoría.</span>
-    <div pie><button appBoton="primario" type="button" (click)="pdfGenerado.set(null)">Entendido</button></div>
-  </app-modal>
+  <div class="pestanas" role="tablist">
+    <button type="button" role="tab" id="tab-ocupacion" aria-controls="panel-historial" [attr.aria-selected]="store.pestana() === 'ocupacion'"
+            [class.on]="store.pestana() === 'ocupacion'" (click)="cambiarPestana('ocupacion')">Ocupación por zona</button>
+    <button type="button" role="tab" id="tab-atenciones" aria-controls="panel-historial" [attr.aria-selected]="store.pestana() === 'atenciones'"
+            [class.on]="store.pestana() === 'atenciones'" (click)="cambiarPestana('atenciones')">
+      Atenciones @if (store.resumen(); as r) {<span class="n">{{ r.atenciones }}</span>}
+    </button>
+    @if (store.cargando()) { <span class="actualizando" role="status"><span class="spin"></span>Actualizando…</span> }
+  </div>
+
+  <div class="panel" id="panel-historial" role="tabpanel" [attr.aria-labelledby]="'tab-' + store.pestana()">
+    @if (store.pestana() === 'ocupacion') {
+      @if (store.ocupacion(); as o) {
+        @if (o.zonas.length) {
+          <div class="zona">
+            <label for="h-zona">Zona</label>
+            <select class="inp" id="h-zona" [value]="o.zonaId" (change)="store.zonaId.set(+$any($event.target).value)">
+              @for (z of o.zonas; track z.id) {
+                <option [value]="z.id" [selected]="z.id === o.zonaId">{{ z.nombre }}{{ z.conNodo ? (z.aforo === null ? ' · aforo por definir' : '') : ' · sin nodo' }}</option>
+              }
+            </select>
+          </div>
+        }
+        <section class="card mapa">
+          <div class="mapa-cab">
+            <div>
+              <h2>¿Cuándo se llena? · día × hora</h2>
+              <p>{{ o.agrupacion === 'DIA_SEMANA' ? 'Promedio de cada día de la semana en el periodo.' : 'Pacientes presentes en promedio en cada hora.' }} Lo más oscuro es la hora pico.</p>
+            </div>
+            <div class="leyenda" aria-hidden="true">
+              <span><i class="pocos"></i>pocos</span><span><i class="muchos"></i>muchos</span><span><i class="nd"></i>sin datos</span><span><i class="fuera"></i>fuera de servicio</span>
+            </div>
+          </div>
+          @if (o.filas.length) {
+            <app-mapa-calor class="cuerpo-mapa" [ocupacion]="o" />
+          } @else {
+            <p class="vacio">No hubo atenciones en este periodo: no hay horas que mostrar.</p>
+          }
+          <p class="nota">
+            @if (zona(); as z) {
+              @if (!z.conNodo) { Esta zona no tiene un nodo instalado: no se puede saber cuánta gente hubo. }
+              @else if (z.aforo === null) { En personas, no en %: el aforo de esta zona está por definir. Cuando el Administrador lo configure, aquí se verá el % de ocupación. }
+              @else { En personas en promedio por hora. Cada número sale del tiempo que cada paciente estuvo en la zona. }
+            }
+          </p>
+        </section>
+      } @else {
+        <div class="cargando"><span class="spin"></span> Cargando la ocupación…</div>
+      }
+    } @else {
+      <section class="card tabla">
+        <div class="tabla-cab">
+          <div class="buscar">
+            <app-icono nombre="search" [tamano]="16" />
+            <label for="h-q" class="sr-only">Buscar por código</label>
+            <input id="h-q" class="inp" type="search" placeholder="Buscar por código (ej. A-0041)" maxlength="20"
+                   [value]="store.codigo()" (input)="escribir($any($event.target).value)">
+          </div>
+          <span class="hint">Clic en una fila para ver su recorrido</span>
+          <button type="button" class="btn btn-o btn-sm" [disabled]="store.exportando() || !!store.problema()" (click)="exportar()">
+            <app-icono nombre="dl" [tamano]="16" /> {{ store.exportando() ? 'Descargando…' : 'Descargar CSV' }}</button>
+        </div>
+        @if (store.atenciones(); as p) {
+          <table class="tbl">
+            <thead><tr>
+              <th>Código</th><th>Fecha</th><th>Entrega</th><th>Fin</th>
+              <th class="der">Espera</th><th class="der">Consulta</th><th class="der">Total</th><th>Cierre</th>
+            </tr></thead>
+            <tbody>
+              @for (f of filas(); track f.clave) {
+                <tr class="click" (click)="abrir(f)">
+                  <td><a class="codigo" [routerLink]="['/atencion', f.clave]" [queryParams]="{ desde: 'historial' }" (click)="$event.stopPropagation()">{{ f.codigo }}</a></td>
+                  <td>{{ f.fecha }}</td>
+                  <td class="mono">{{ f.entrega }}</td>
+                  <td class="mono">{{ f.fin }}</td>
+                  <td class="der">{{ f.espera }}@if (f.enCurso) {<small> en curso</small>}</td>
+                  <td class="der">{{ f.consulta }}</td>
+                  <td class="der">{{ f.total }}@if (f.enCurso) {<small> en curso</small>}</td>
+                  <td><app-chip [tono]="f.cierre.tono">{{ f.cierre.texto }}</app-chip></td>
+                </tr>
+              } @empty {
+                <tr><td colspan="8"><div class="empty">{{ store.codigo() ? 'Ninguna atención con ese código en el periodo.' : 'No hubo atenciones en este periodo.' }}</div></td></tr>
+              }
+            </tbody>
+          </table>
+          <div class="pie">
+            <span class="hint">{{ p.total }} {{ p.total === 1 ? 'atención' : 'atenciones' }} · página {{ p.pagina }} de {{ store.paginas() }}</span>
+            <span class="paginas">
+              <button type="button" class="btn btn-o btn-sm" [disabled]="p.pagina <= 1" (click)="store.pagina.set(p.pagina - 1)">Anterior</button>
+              <button type="button" class="btn btn-o btn-sm" [disabled]="p.pagina >= store.paginas()" (click)="store.pagina.set(p.pagina + 1)">Siguiente</button>
+            </span>
+          </div>
+        } @else {
+          <div class="cargando"><span class="spin"></span> Cargando las atenciones…</div>
+        }
+      </section>
+    }
+  </div>
 }
