@@ -1,0 +1,21 @@
+# Planos originales de la clínica: Confidenciales y pesados (9MB).
+
+PLANOS_COMPLETOS/
+
+# Todo lo que sale de los planos tampoco se sube (modelo 3D, imágenes del plano, mapa de ambientes).
+# Se generan con tools/generador-modelo-3d y se copian a mano en cada máquina o servidor.
+frontend/flowtwin-web/public/models/
+# Maquetas 3D por piso que entrega la API (ADR-28): piso-N/maqueta.glb, ambientes.json y zonas.json.
+# Excepción (16/11/2026, con permiso del sponsor): el piso 1 va en git para que la demo en la nube muestre el 3D.
+# Los demás pisos siguen fuera; cuando la clínica dé su nube, se vuelve a sacar.
+maquetas/*
+!maquetas/piso-1/
+frontend/flowtwin-web/public/planos/
+docs/planos-textura/
+docs/mapa-ambientes-*.png
+
+# Secretos de la demo local con túnel (tools/demo/demo-local.sh)
+tools/demo/demo.env
+
+# Manual de usuario (LaTeX): se entrega aparte, no va al repositorio
+manual/

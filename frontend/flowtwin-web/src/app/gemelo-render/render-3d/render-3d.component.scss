@@ -10,8 +10,19 @@ app-render-3d { position: relative; display: block; width: 100%; height: 100%; m
   justify-content: flex-end; background: rgba(255, 255, 255, .94); border: 1px solid var(--linea);
   border-radius: 10px; padding: 6px 8px;
 }
-.r3d-check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--gris); cursor: pointer; }
-.r3d-check input { accent-color: var(--rojo); }
+
+/* Mientras carga o si falla la maqueta: un aviso centrado sobre el lienzo */
+.r3d-aviso {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; color: var(--gris); font-size: 14px; text-align: center; padding: 16px;
+}
+.r3d-aviso b { color: var(--tinta); font-size: 15px; }
+.r3d-spin {
+  width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--linea); border-top-color: var(--rojo);
+  animation: r3d-giro .8s linear infinite;
+}
+@keyframes r3d-giro { to { rotate: 360deg; } }
+@media (prefers-reduced-motion: reduce) { .r3d-spin { animation-duration: 2.4s; } }
 
 /* Etiqueta de zona: nombre arriba; abajo el ícono de persona en el color del semáforo y "8/20". */
 .r3d-etiqueta {
@@ -34,3 +45,8 @@ app-render-3d { position: relative; display: block; width: 100%; height: 100%; m
   font-family: var(--f-disp); font-weight: 800; font-size: 11px; color: #fff; background: var(--negro);
   border-radius: 999px; padding: 0 7px; font-variant-numeric: tabular-nums; white-space: nowrap;
 }
+
+/* Sin datos: la cifra no se resalta (no hay un número que creer) */
+.r3d-etiqueta.r3d-sin-datos .r3d-cifra small { background: var(--gris-3); }
+/* Zona sin nodo: aún no se monitorea, así que solo se ve su nombre */
+.r3d-etiqueta.r3d-solo-nombre .r3d-cifra { display: none; }

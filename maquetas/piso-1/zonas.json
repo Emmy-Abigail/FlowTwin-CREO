@@ -1,0 +1,10 @@
+{ "zonas": {
+  "1": ["Admisión / Caja"],
+  "2": ["Hall principal"],
+  "3": ["Sala de esperas"],
+  "4": ["Triaje"],
+  "5": ["Tópico de enfermería"],
+  "6": ["Tópico urgencia"],
+  "7": ["Módulo 2"],
+  "8": ["Observación 01", "Observación 02"]
+} }

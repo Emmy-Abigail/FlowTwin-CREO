@@ -1,0 +1,52 @@
+# SQL Server y broker MQTT para desarrollo de CREO FlowTwin (ADR-03, ADR-24).
+# Uso:  docker compose up -d     (levantar)
+#       docker compose down      (apagar; los datos quedan en el volumen)
+# La contraseña de "sa" y la del administrador de Mosquitto se leen de backend/.env, que git ignora.
+name: flowtwin
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: flowtwin-sqlserver
+    environment: # variables que sql lee al arrancar
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Developer"
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD:?Falta MSSQL_SA_PASSWORD en backend/.env}"
+      TZ: "UTC"   # ADR-14: todo se guarda en UTC; la pantalla convierte a hora de Lima
+    ports:
+      - "1433:1433"
+    volumes:
+      - flowtwin-sqldata:/var/opt/mssql # aqui viven los datos y sobreviven si borro el contenedor
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q \"SELECT 1\" -b -o /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped #se levanta sola
+
+  # Broker MQTT de los nodos ESP32 (ADR-24). Versión fija: una actualización se decide, no llega sola.
+  mosquitto:
+    image: eclipse-mosquitto:2.0.20
+    container_name: flowtwin-mosquitto
+    entrypoint: ["/bin/sh", "/iniciar.sh"]
+    environment:
+      MQTT_ADMIN_USUARIO: "flowtwin-admin"
+      MQTT_ADMIN_CLAVE: "${MQTT_ADMIN_CLAVE:?Falta MQTT_ADMIN_CLAVE en backend/.env}"
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./mosquitto/iniciar.sh:/iniciar.sh:ro
+      - flowtwin-mqttdata:/mosquitto/data # cuentas de los nodos y mensajes pendientes
+    healthcheck:
+      # Sin credenciales el broker rechaza la conexión, pero responde: eso basta para saber que está vivo
+      test: ["CMD-SHELL", "mosquitto_pub -h localhost -t salud -m x 2>&1 | grep -qi 'not authori'"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    restart: unless-stopped
+
+volumes:
+  flowtwin-sqldata: #declara el volumen con la configuración por defecto
+  flowtwin-mqttdata:

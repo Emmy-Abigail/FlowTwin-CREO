@@ -44,7 +44,7 @@
   {
    "id": 4,
    "nombre": "Triaje",
-   "tipo": "SERVICIO",
+   "tipo": "TRIAJE",
    "x": 25.2,
    "y": 13.9,
    "ancho": 3.1,

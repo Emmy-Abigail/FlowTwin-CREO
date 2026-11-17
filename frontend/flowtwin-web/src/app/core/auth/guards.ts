@@ -18,11 +18,15 @@ export const invitadoGuard: CanActivateFn = () => {
 /** En el primer ingreso, cualquier pantalla redirige a Cambiar contraseña (P2). */
 export const primerIngresoGuard: CanActivateChildFn = (_ruta, estado) => {
   const auth = inject(AuthService);
-  const pendiente = auth.usuario()?.estado === 'Primer ingreso';
+  const pendiente = auth.usuario()?.debeCambiarContrasena === true;
   return pendiente && !estado.url.startsWith('/cambiar-contrasena')
     ? inject(Router).parseUrl('/cambiar-contrasena')
     : true;
 };
+
+/** «Crea tu contraseña» es solo para el primer ingreso; después la contraseña se cambia en «Mi cuenta». */
+export const soloPrimerIngresoGuard: CanActivateFn = () =>
+  inject(AuthService).usuario()?.debeCambiarContrasena === true ? true : inject(Router).parseUrl('/cuenta');
 
 /** Solo deja pasar a los roles indicados; el resto ve "No tienes permiso". */
 export function rolGuard(roles: readonly Rol[]): CanActivateFn {

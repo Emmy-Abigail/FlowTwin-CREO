@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Mensajería con los nodos ESP32 por MQTT (ADR-24). Es transporte: no sabe de atenciones ni de nodos.
+    Los módulos le registran manejadores (Contracts) y administran las cuentas del broker por contrato.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\FlowTwin.SharedKernel\FlowTwin.SharedKernel.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="MQTTnet" Version="5.2.0.1603" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

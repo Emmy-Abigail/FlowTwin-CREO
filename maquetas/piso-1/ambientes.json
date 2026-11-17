@@ -1,0 +1,716 @@
+{
+ "fuente": "A07_PISO 01.pdf",
+ "escala_m_por_pt": 0.0266,
+ "altura_corte_muros_m": 1.4,
+ "nivel_y0": "N.P.T. +0.75",
+ "ambientes": [
+  {
+   "id": "ambiente_01",
+   "rotulo_en_plano": "Cto. de limpieza 2",
+   "nota": null,
+   "area_m2": 1.4,
+   "nivel_y": 0.0,
+   "centro": [
+    -0.09,
+    0.0,
+    -9.28
+   ]
+  },
+  {
+   "id": "ambiente_02",
+   "rotulo_en_plano": "Sala de reuniones",
+   "nota": null,
+   "area_m2": 9.4,
+   "nivel_y": 0.0,
+   "centro": [
+    -5.73,
+    0.0,
+    -8.67
+   ]
+  },
+  {
+   "id": "ambiente_03",
+   "rotulo_en_plano": "SSHH-13",
+   "nota": null,
+   "area_m2": 3.5,
+   "nivel_y": 0.0,
+   "centro": [
+    1.57,
+    0.0,
+    -8.99
+   ]
+  },
+  {
+   "id": "ambiente_04",
+   "rotulo_en_plano": "SSHH-12",
+   "nota": null,
+   "area_m2": 5.5,
+   "nivel_y": 0.0,
+   "centro": [
+    -2.19,
+    0.0,
+    -8.55
+   ]
+  },
+  {
+   "id": "ambiente_05",
+   "rotulo_en_plano": "Almacén de insumos",
+   "nota": null,
+   "area_m2": 3.5,
+   "nivel_y": 0.0,
+   "centro": [
+    -17.95,
+    0.0,
+    -8.5
+   ]
+  },
+  {
+   "id": "ambiente_06",
+   "rotulo_en_plano": "Módulo 1 – sillón 5",
+   "nota": null,
+   "area_m2": 10.0,
+   "nivel_y": 0.0,
+   "centro": [
+    -13.19,
+    0.0,
+    -8.13
+   ]
+  },
+  {
+   "id": "ambiente_07",
+   "rotulo_en_plano": "Módulo 1 – sillón 6",
+   "nota": null,
+   "area_m2": 9.3,
+   "nivel_y": 0.0,
+   "centro": [
+    -9.64,
+    0.0,
+    -8.29
+   ]
+  },
+  {
+   "id": "ambiente_08",
+   "rotulo_en_plano": "Hall (SSHH)",
+   "nota": null,
+   "area_m2": 2.2,
+   "nivel_y": 0.0,
+   "centro": [
+    -0.07,
+    0.0,
+    -7.82
+   ]
+  },
+  {
+   "id": "ambiente_09",
+   "rotulo_en_plano": "Módulo 1 – sector sin sillón",
+   "nota": null,
+   "area_m2": 3.4,
+   "nivel_y": 0.0,
+   "centro": [
+    -15.44,
+    0.0,
+    -7.41
+   ]
+  },
+  {
+   "id": "ambiente_10",
+   "rotulo_en_plano": "Módulo 1 – sillón 4",
+   "nota": null,
+   "area_m2": 5.2,
+   "nivel_y": 0.0,
+   "centro": [
+    -16.43,
+    0.0,
+    -6.39
+   ]
+  },
+  {
+   "id": "ambiente_11",
+   "rotulo_en_plano": "Área de apoyo",
+   "nota": null,
+   "area_m2": 7.0,
+   "nivel_y": 0.0,
+   "centro": [
+    -18.95,
+    0.0,
+    -5.72
+   ]
+  },
+  {
+   "id": "ambiente_12",
+   "rotulo_en_plano": "Módulo 1 – sillón 7",
+   "nota": null,
+   "area_m2": 11.7,
+   "nivel_y": 0.0,
+   "centro": [
+    -7.65,
+    0.0,
+    -6.11
+   ]
+  },
+  {
+   "id": "ambiente_13",
+   "rotulo_en_plano": "Corredor de escape",
+   "nota": "Límite derecho en el eje estructural; a la derecha sigue el ingreso vehicular (exterior).",
+   "area_m2": 8.0,
+   "nivel_y": -0.65,
+   "centro": [
+    12.11,
+    -0.65,
+    -5.81
+   ]
+  },
+  {
+   "id": "ambiente_14",
+   "rotulo_en_plano": "Módulo 1 – espacio con lavatorio",
+   "nota": null,
+   "area_m2": 3.0,
+   "nivel_y": 0.0,
+   "centro": [
+    -16.39,
+    0.0,
+    -4.41
+   ]
+  },
+  {
+   "id": "ambiente_15",
+   "rotulo_en_plano": "Control",
+   "nota": null,
+   "area_m2": 3.6,
+   "nivel_y": -0.65,
+   "centro": [
+    18.95,
+    -0.65,
+    -4.33
+   ]
+  },
+  {
+   "id": "ambiente_16",
+   "rotulo_en_plano": "SH-22 Control",
+   "nota": null,
+   "area_m2": 3.7,
+   "nivel_y": -0.65,
+   "centro": [
+    15.69,
+    -0.65,
+    -4.04
+   ]
+  },
+  {
+   "id": "ambiente_17",
+   "rotulo_en_plano": "Escalera N°3",
+   "nota": null,
+   "area_m2": 7.5,
+   "nivel_y": -0.65,
+   "centro": [
+    12.28,
+    -0.65,
+    -3.85
+   ]
+  },
+  {
+   "id": "ambiente_18",
+   "rotulo_en_plano": "Tableros eléctricos",
+   "nota": null,
+   "area_m2": 8.9,
+   "nivel_y": 0.0,
+   "centro": [
+    -4.8,
+    0.0,
+    -3.98
+   ]
+  },
+  {
+   "id": "ambiente_19",
+   "rotulo_en_plano": "Escalera N°1",
+   "nota": null,
+   "area_m2": 18.9,
+   "nivel_y": 0.0,
+   "centro": [
+    -2.62,
+    0.0,
+    -2.83
+   ]
+  },
+  {
+   "id": "ambiente_20",
+   "rotulo_en_plano": "Escalera N°2",
+   "nota": null,
+   "area_m2": 18.6,
+   "nivel_y": 0.0,
+   "centro": [
+    6.64,
+    0.0,
+    -2.46
+   ]
+  },
+  {
+   "id": "ambiente_21",
+   "rotulo_en_plano": "Área de entrevistas",
+   "nota": null,
+   "area_m2": 29.6,
+   "nivel_y": 0.0,
+   "centro": [
+    -13.32,
+    0.0,
+    -3.06
+   ]
+  },
+  {
+   "id": "ambiente_22",
+   "rotulo_en_plano": "Hall ascensores",
+   "nota": null,
+   "area_m2": 19.5,
+   "nivel_y": 0.0,
+   "centro": [
+    1.04,
+    0.0,
+    -3.47
+   ]
+  },
+  {
+   "id": "ambiente_23",
+   "rotulo_en_plano": "Cuarto de rack",
+   "nota": null,
+   "area_m2": 2.7,
+   "nivel_y": 0.0,
+   "centro": [
+    -6.9,
+    0.0,
+    -3.57
+   ]
+  },
+  {
+   "id": "ambiente_24",
+   "rotulo_en_plano": "Módulo 1 – sillón 3",
+   "nota": null,
+   "area_m2": 6.2,
+   "nivel_y": 0.0,
+   "centro": [
+    -16.39,
+    0.0,
+    -2.84
+   ]
+  },
+  {
+   "id": "ambiente_25",
+   "rotulo_en_plano": "Área de camillas",
+   "nota": null,
+   "area_m2": 1.2,
+   "nivel_y": 0.0,
+   "centro": [
+    12.81,
+    0.0,
+    -2.69
+   ]
+  },
+  {
+   "id": "ambiente_26",
+   "rotulo_en_plano": "Depósito",
+   "nota": null,
+   "area_m2": 1.0,
+   "nivel_y": 0.0,
+   "centro": [
+    -11.05,
+    0.0,
+    -2.66
+   ]
+  },
+  {
+   "id": "ambiente_27",
+   "rotulo_en_plano": "Montante de ascensores",
+   "nota": null,
+   "area_m2": 14.6,
+   "nivel_y": 0.0,
+   "centro": [
+    3.77,
+    0.0,
+    -2.65
+   ]
+  },
+  {
+   "id": "ambiente_28",
+   "rotulo_en_plano": "Rayos X",
+   "nota": null,
+   "area_m2": 6.6,
+   "nivel_y": 0.0,
+   "centro": [
+    -9.21,
+    0.0,
+    -2.43
+   ]
+  },
+  {
+   "id": "ambiente_29",
+   "rotulo_en_plano": "Esclusa",
+   "nota": null,
+   "area_m2": 4.0,
+   "nivel_y": 0.0,
+   "centro": [
+    16.93,
+    0.0,
+    -2.39
+   ]
+  },
+  {
+   "id": "ambiente_30",
+   "rotulo_en_plano": "Área de recepción",
+   "nota": null,
+   "area_m2": 4.6,
+   "nivel_y": 0.0,
+   "centro": [
+    19.13,
+    0.0,
+    -0.76
+   ]
+  },
+  {
+   "id": "ambiente_31",
+   "rotulo_en_plano": "Recepción y entrega de trabajos de área de apoyo",
+   "nota": null,
+   "area_m2": 3.6,
+   "nivel_y": 0.0,
+   "centro": [
+    -6.93,
+    0.0,
+    -1.36
+   ]
+  },
+  {
+   "id": "ambiente_32",
+   "rotulo_en_plano": "Conteo",
+   "nota": null,
+   "area_m2": 1.6,
+   "nivel_y": 0.0,
+   "centro": [
+    17.77,
+    0.0,
+    -0.43
+   ]
+  },
+  {
+   "id": "ambiente_33",
+   "rotulo_en_plano": "Módulo 1 – sillón 2",
+   "nota": null,
+   "area_m2": 10.1,
+   "nivel_y": 0.0,
+   "centro": [
+    -15.77,
+    0.0,
+    0.42
+   ]
+  },
+  {
+   "id": "ambiente_34",
+   "rotulo_en_plano": "Admisión / Caja",
+   "nota": null,
+   "area_m2": 6.1,
+   "nivel_y": 0.0,
+   "centro": [
+    16.31,
+    0.0,
+    0.62
+   ]
+  },
+  {
+   "id": "ambiente_35",
+   "rotulo_en_plano": "Corredor de servicio",
+   "nota": null,
+   "area_m2": 13.4,
+   "nivel_y": 0.0,
+   "centro": [
+    -19.24,
+    0.0,
+    0.12
+   ]
+  },
+  {
+   "id": "ambiente_36",
+   "rotulo_en_plano": "Hall principal",
+   "nota": null,
+   "area_m2": 65.3,
+   "nivel_y": 0.0,
+   "centro": [
+    11.81,
+    0.0,
+    -0.59
+   ]
+  },
+  {
+   "id": "ambiente_37",
+   "rotulo_en_plano": "Cto. de limpieza",
+   "nota": null,
+   "area_m2": 1.9,
+   "nivel_y": 0.0,
+   "centro": [
+    -18.04,
+    0.0,
+    0.77
+   ]
+  },
+  {
+   "id": "ambiente_38",
+   "rotulo_en_plano": "Módulo 1 – sillón 1",
+   "nota": null,
+   "area_m2": 12.1,
+   "nivel_y": 0.0,
+   "centro": [
+    -12.6,
+    0.0,
+    1.66
+   ]
+  },
+  {
+   "id": "ambiente_39",
+   "rotulo_en_plano": "Corredor N°6",
+   "nota": null,
+   "area_m2": 42.9,
+   "nivel_y": 0.0,
+   "centro": [
+    -3.02,
+    0.0,
+    2.42
+   ]
+  },
+  {
+   "id": "ambiente_40",
+   "rotulo_en_plano": "Hall",
+   "nota": null,
+   "area_m2": 16.2,
+   "nivel_y": 0.0,
+   "centro": [
+    2.44,
+    0.0,
+    1.89
+   ]
+  },
+  {
+   "id": "ambiente_41",
+   "rotulo_en_plano": "Farmacia",
+   "nota": null,
+   "area_m2": 9.8,
+   "nivel_y": 0.0,
+   "centro": [
+    18.69,
+    0.0,
+    2.26
+   ]
+  },
+  {
+   "id": "ambiente_42",
+   "rotulo_en_plano": "Montacarga",
+   "nota": null,
+   "area_m2": 2.2,
+   "nivel_y": 0.0,
+   "centro": [
+    -17.67,
+    0.0,
+    2.63
+   ]
+  },
+  {
+   "id": "ambiente_43",
+   "rotulo_en_plano": "Dispensación de farmacia",
+   "nota": null,
+   "area_m2": 4.0,
+   "nivel_y": 0.0,
+   "centro": [
+    16.31,
+    0.0,
+    3.38
+   ]
+  },
+  {
+   "id": "ambiente_44",
+   "rotulo_en_plano": "Tópico de enfermería",
+   "nota": null,
+   "area_m2": 12.3,
+   "nivel_y": 0.0,
+   "centro": [
+    -7.32,
+    0.0,
+    3.91
+   ]
+  },
+  {
+   "id": "ambiente_45",
+   "rotulo_en_plano": "Estación de enfermería",
+   "nota": null,
+   "area_m2": 4.4,
+   "nivel_y": 0.0,
+   "centro": [
+    -1.96,
+    0.0,
+    4.94
+   ]
+  },
+  {
+   "id": "ambiente_46",
+   "rotulo_en_plano": "Módulo 2",
+   "nota": null,
+   "area_m2": 27.8,
+   "nivel_y": 0.0,
+   "centro": [
+    -13.36,
+    0.0,
+    5.51
+   ]
+  },
+  {
+   "id": "ambiente_47",
+   "rotulo_en_plano": "Área de sillas de rueda",
+   "nota": null,
+   "area_m2": 4.5,
+   "nivel_y": 0.0,
+   "centro": [
+    13.94,
+    0.0,
+    5.16
+   ]
+  },
+  {
+   "id": "ambiente_48",
+   "rotulo_en_plano": "Escalera N°4",
+   "nota": null,
+   "area_m2": 8.2,
+   "nivel_y": 0.0,
+   "centro": [
+    17.61,
+    0.0,
+    5.17
+   ]
+  },
+  {
+   "id": "ambiente_49",
+   "rotulo_en_plano": "Triaje",
+   "nota": null,
+   "area_m2": 13.9,
+   "nivel_y": 0.0,
+   "centro": [
+    6.79,
+    0.0,
+    7.16
+   ]
+  },
+  {
+   "id": "ambiente_50",
+   "rotulo_en_plano": "Observación 01",
+   "nota": null,
+   "area_m2": 6.0,
+   "nivel_y": 0.0,
+   "centro": [
+    -1.91,
+    0.0,
+    6.06
+   ]
+  },
+  {
+   "id": "ambiente_51",
+   "rotulo_en_plano": "Sala de esperas",
+   "nota": null,
+   "area_m2": 34.9,
+   "nivel_y": 0.0,
+   "centro": [
+    2.45,
+    0.0,
+    6.68
+   ]
+  },
+  {
+   "id": "ambiente_52",
+   "rotulo_en_plano": "Sala de informes de radiología",
+   "nota": null,
+   "area_m2": 6.6,
+   "nivel_y": 0.0,
+   "centro": [
+    -18.82,
+    0.0,
+    7.51
+   ]
+  },
+  {
+   "id": "ambiente_53",
+   "rotulo_en_plano": "Cuarto séptico",
+   "nota": null,
+   "area_m2": 2.6,
+   "nivel_y": 0.0,
+   "centro": [
+    -4.33,
+    0.0,
+    7.89
+   ]
+  },
+  {
+   "id": "ambiente_54",
+   "rotulo_en_plano": "Tópico urgencia",
+   "nota": null,
+   "area_m2": 16.8,
+   "nivel_y": 0.0,
+   "centro": [
+    -7.74,
+    0.0,
+    8.41
+   ]
+  },
+  {
+   "id": "ambiente_55",
+   "rotulo_en_plano": "Módulo 2 – sillón 2",
+   "nota": null,
+   "area_m2": 11.2,
+   "nivel_y": 0.0,
+   "centro": [
+    -12.22,
+    0.0,
+    8.41
+   ]
+  },
+  {
+   "id": "ambiente_56",
+   "rotulo_en_plano": "Módulo 2 – sillón 1",
+   "nota": null,
+   "area_m2": 11.1,
+   "nivel_y": 0.0,
+   "centro": [
+    -16.01,
+    0.0,
+    8.41
+   ]
+  },
+  {
+   "id": "ambiente_57",
+   "rotulo_en_plano": "Observación 02",
+   "nota": null,
+   "area_m2": 7.5,
+   "nivel_y": 0.0,
+   "centro": [
+    -1.97,
+    0.0,
+    8.98
+   ]
+  },
+  {
+   "id": "ambiente_58",
+   "rotulo_en_plano": "SH paciente",
+   "nota": null,
+   "area_m2": 2.3,
+   "nivel_y": 0.0,
+   "centro": [
+    -4.32,
+    0.0,
+    9.05
+   ]
+  },
+  {
+   "id": "ambiente_59",
+   "rotulo_en_plano": "SH-21 personal",
+   "nota": null,
+   "area_m2": 4.1,
+   "nivel_y": 0.0,
+   "centro": [
+    6.77,
+    0.0,
+    9.04
+   ]
+  }
+ ]
+}

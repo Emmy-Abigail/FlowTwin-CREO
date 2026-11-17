@@ -1,36 +1,51 @@
 import {
   ChangeDetectionStrategy, Component, ElementRef, OnDestroy, ViewEncapsulation,
-  afterNextRender, effect, input, output, signal, viewChild,
+  afterNextRender, effect, inject, input, output, signal, viewChild,
 } from '@angular/core';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { CSS2DObject, CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { GeometriaPiso, NivelOcupacion, OcupacionZona, ZonaHover } from '../geometria';
+import { GeometriaPiso, NivelOcupacion, OcupacionZona } from '../geometria';
+import { MaquetasService } from '../../core/datos/maquetas.service';
+import { AmbienteMaqueta, MaquetaPiso, cargarMaqueta, colorear, liberar, objetosPorZona } from '../maqueta';
 
-/** Altura de los "muros bajos", para ver dentro de las zonas (m). */
-const MURO_BAJO = 1.2;
-
-/** Colores del semáforo (los mismos tokens del CSS). */
+/** Colores del semáforo (los mismos tokens del CSS). Una zona sin aforo (ninguno) no se tiñe. */
 const COLOR_NIVEL: Record<NivelOcupacion, string> = {
-  alta: '#E53935', media: '#F2A900', baja: '#2E9E6B', nd: '#B0B0B0',
+  alta: '#D1431F', media: '#E9A400', baja: '#2E9E6B', nd: '#B0B0B0', ninguno: '#FFFFFF',
 };
+/** Cuánto color lleva el piso del ambiente: deja ver el porcelanato; «sin datos» va más suave. */
+const MEZCLA = { normal: 0.62, nd: 0.45 };
+/** Brillo propio del color: lo hace legible sobre la textura; la zona bajo el cursor brilla más. */
+const BRILLO = { normal: 0.06, nd: 0.03, activa: 0.3 };
+
+/**
+ * Luz. La guía usa ACES con exposición 0,68: ACES oscurece y apaga los colores (es para escenas de
+ * cine). Usamos «Neutral» (Khronos PBR Neutral), hecho para que los materiales se vean con el color
+ * con que se diseñaron: blancos limpios y madera cálida, como una maqueta de arquitectura.
+ * Intensidades físicas (desde r155): la guía multiplicada por π y subida para un interior luminoso.
+ */
+const LUZ = { cielo: 0.9, sol: 2.1, exposicion: 0.85 };
 
 const ICONO_PERSONA = '<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><circle cx="12" cy="7" r="4"/><path d="M5 21v-2a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v2z"/></svg>';
 
 interface ZonaEnEscena {
   id: number;
-  placa: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial>;
+  /** Los ambientes de la maqueta donde se pinta la zona (uno o varios). */
+  mallas: THREE.Mesh[];
   etiqueta: HTMLDivElement;
+  nivel: NivelOcupacion;
 }
 
 /**
- * Escena Three.js de un piso: losa, plano de fondo, muros extruidos, zonas con semáforo,
- * etiquetas y nodos. Es solo de presentación: recibe la geometría y la ocupación por
- * input() y avisa por output() qué zona se tocó. No sabe nada de pacientes ni tarjetas.
+ * Escena Three.js de un piso: la maqueta 3D de la clínica, con cada zona pintada sobre sus ambientes
+ * según su ocupación, su etiqueta (nombre y cifra) y los nodos. Los demás ambientes no llevan nombre: solo se rotulan las zonas. Es solo de presentación: recibe la geometría, la maqueta
+ * y la ocupación por input() y avisa por output() qué zona se tocó. No sabe nada de pacientes.
  *
- * Rendimiento: la geometría se construye una sola vez. Cuando cambia la ocupación solo
- * se actualizan los colores de las placas y el texto de las etiquetas.
+ * Coordenadas: el sistema mide desde la esquina del piso (0..anchoM, 0..fondoM) y la maqueta viene
+ * centrada en el origen. Se mueve la maqueta (anchoM/2, fondoM/2) y todo lo demás queda igual.
+ *
+ * Rendimiento: la maqueta se carga una vez. Cuando cambia la ocupación solo cambian colores y textos.
  */
 @Component({
   selector: 'app-render-3d',
@@ -43,26 +58,24 @@ interface ZonaEnEscena {
 })
 export class Render3dComponent implements OnDestroy {
   readonly geometria = input.required<GeometriaPiso>();
+  readonly maqueta = input.required<MaquetaPiso>();
   readonly ocupacion = input<OcupacionZona[]>([]);
-  readonly planoUrl = input<string | null>(null);
   readonly zonaClic = output<number>();
-  readonly zonaHover = output<ZonaHover | null>();
 
-  /** Interruptores de vista: no cambian datos, solo cómo se ve la escena. */
-  protected alturaReal = signal(false);
-  protected mostrarPlano = signal(true);
+  protected estado = signal<'cargando' | 'lista' | 'error'>('cargando');
+  private maquetas = inject(MaquetasService);
 
   private lienzo = viewChild.required<ElementRef<HTMLDivElement>>('lienzo');
 
   private renderer?: THREE.WebGLRenderer;
   private etiquetas?: CSS2DRenderer;
   private escena?: THREE.Scene;
+  private entorno?: THREE.Texture;
+  private modelo?: THREE.Group;
   private camara?: THREE.PerspectiveCamera;
   private controles?: OrbitControls;
-  private muros?: THREE.Mesh;
-  private plano?: THREE.Mesh;
-  private textura?: THREE.Texture;
   private zonas: ZonaEnEscena[] = [];
+  private mallasZona: THREE.Mesh[] = [];
   private observador?: ResizeObserver;
   private raycaster = new THREE.Raycaster();
   private puntero = new THREE.Vector2();
@@ -70,33 +83,26 @@ export class Render3dComponent implements OnDestroy {
   private inicioClic: [number, number] | null = null;
   /** true cuando la cámara se movió y hay que volver a separar las etiquetas. */
   private camaraMovida = true;
+  private destruido = false;
 
   constructor() {
     // Three.js necesita el <div> ya dibujado: se construye después del primer render.
     afterNextRender(() => this.construir());
-
     effect(() => this.pintarOcupacion(this.ocupacion()));
-    effect(() => {
-      const alto = this.alturaReal() ? this.geometria().altoMuroM : MURO_BAJO;
-      if (this.muros) this.muros.scale.y = alto;
-    });
-    effect(() => {
-      const visible = this.mostrarPlano();
-      if (this.plano) this.plano.visible = visible;
-    });
   }
 
   /**
    * Vuelve la cámara a la vista inicial: mira el centro del piso desde 40° sobre la
-   * vertical, a la distancia justa para que entre todo el ancho del piso en el lienzo.
+   * vertical, a la distancia justa para que el piso LLENE el lienzo (con un margen mínimo).
    */
   protected vistaInicial(): void {
     const camara = this.camara, controles = this.controles;
     if (!camara || !controles) return;
     const g = this.geometria();
     const mitadFov = THREE.MathUtils.degToRad(camara.fov / 2);
-    const distanciaAncho = (g.anchoM * 1.08) / 2 / (Math.tan(mitadFov) * camara.aspect);
-    const distanciaFondo = (g.fondoM * 1.6) / 2 / Math.tan(mitadFov);
+    // En perspectiva a 40°, el fondo del piso se ve acortado: con 1.15 entra justo, sin sobrar aire
+    const distanciaAncho = (g.anchoM * 1.22) / 2 / (Math.tan(mitadFov) * camara.aspect);
+    const distanciaFondo = (g.fondoM * 1.15) / 2 / Math.tan(mitadFov);
     const distancia = Math.max(distanciaAncho, distanciaFondo);
     const inclinacion = THREE.MathUtils.degToRad(40);
     controles.target.set(g.anchoM / 2, 0, g.fondoM / 2);
@@ -114,8 +120,15 @@ export class Render3dComponent implements OnDestroy {
     const g = this.geometria();
     const contenedor = this.lienzo().nativeElement;
 
+    // Color sRGB, tono Neutral (ver LUZ) y sombras suaves. La guía pide PCFSoftShadowMap, que r186
+    // ya no tiene: PCFShadowMap con radio (en crearLuces) da el mismo borde suave.
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer.toneMapping = THREE.NeutralToneMapping;
+    this.renderer.toneMappingExposure = LUZ.exposicion;
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
     contenedor.appendChild(this.renderer.domElement);
 
     this.etiquetas = new CSS2DRenderer();
@@ -123,6 +136,12 @@ export class Render3dComponent implements OnDestroy {
     contenedor.appendChild(this.etiquetas.domElement);
 
     this.escena = new THREE.Scene();
+    // Luz de ambiente suave (reflejos y relleno), generada una vez
+    const pmrem = new THREE.PMREMGenerator(this.renderer);
+    this.entorno = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    pmrem.dispose();
+    this.escena.environment = this.entorno;
+
     this.camara = new THREE.PerspectiveCamera(40, 1, 0.5, 500);
     this.controles = new OrbitControls(this.camara, this.renderer.domElement);
     this.controles.enableDamping = true;
@@ -136,17 +155,8 @@ export class Render3dComponent implements OnDestroy {
       this.camaraMovida = true;
     });
 
-    this.escena.add(new THREE.HemisphereLight(0xffffff, 0xb9b0a6, 2.4));
-    const sol = new THREE.DirectionalLight(0xffffff, 1.6);
-    sol.position.set(-20, 40, -10);
-    this.escena.add(sol);
-
-    this.crearLosaYPlano(g);
-    this.crearMuros(g);
-    this.crearZonas(g);
+    this.crearLuces(g);
     this.crearNodos(g);
-
-    this.pintarOcupacion(this.ocupacion());
 
     const lienzo = this.renderer.domElement;
     lienzo.addEventListener('pointermove', this.alMoverPuntero);
@@ -165,62 +175,63 @@ export class Render3dComponent implements OnDestroy {
       this.etiquetas!.render(this.escena!, this.camara!);
       if (this.camaraMovida) this.separarEtiquetas();
     });
+
+    this.cargar(g);
   }
 
-  private crearLosaYPlano(g: GeometriaPiso): void {
-    const losa = new THREE.Mesh(
-      new THREE.BoxGeometry(g.anchoM + 0.6, 0.25, g.fondoM + 0.6),
-      new THREE.MeshStandardMaterial({ color: '#E7E0D7', roughness: 0.95 }),
-    );
-    losa.position.set(g.anchoM / 2, -0.13, g.fondoM / 2);
-    this.escena!.add(losa);
-
-    const url = this.planoUrl();
-    if (!url) return;
-    this.textura = new THREE.TextureLoader().load(url);
-    this.textura.colorSpace = THREE.SRGBColorSpace;
-    this.textura.anisotropy = this.renderer!.capabilities.getMaxAnisotropy();
-    // La imagen cubre exactamente anchoM × fondoM.
-    this.plano = new THREE.Mesh(
-      new THREE.PlaneGeometry(g.anchoM, g.fondoM),
-      new THREE.MeshBasicMaterial({ map: this.textura, transparent: true, opacity: 0.55, depthWrite: false }),
-    );
-    this.plano.rotation.x = -Math.PI / 2;
-    this.plano.position.set(g.anchoM / 2, 0.005, g.fondoM / 2);
-    this.plano.visible = this.mostrarPlano();
-    this.escena!.add(this.plano);
+  /** Cielo + sol de la guía, con sombras que cubren todo el piso. */
+  private crearLuces(g: GeometriaPiso): void {
+    const centro = new THREE.Vector3(g.anchoM / 2, 0, g.fondoM / 2);
+    // Cielo blanco y rebote cálido del piso; sol apenas cálido, como luz de tarde
+    this.escena!.add(new THREE.HemisphereLight(0xffffff, 0xd9cdbd, LUZ.cielo));
+    const sol = new THREE.DirectionalLight(0xfff1de, LUZ.sol);
+    sol.position.copy(centro).add(new THREE.Vector3(-14, 30, 16));
+    sol.target.position.copy(centro);
+    sol.castShadow = true;
+    sol.shadow.mapSize.set(4096, 4096);
+    Object.assign(sol.shadow.camera, { left: -28, right: 28, top: 18, bottom: -18, far: 80 });
+    sol.shadow.bias = -0.0004;
+    sol.shadow.normalBias = 0.03;
+    sol.shadow.radius = 3;
+    this.escena!.add(sol, sol.target);
   }
 
-  /**
-   * Cada muro es un polígono con agujeros. Se dibuja como Shape con la y invertida
-   * (en el plano y crece hacia el fondo), se extruye 1 m y se gira para que quede de pie.
-   * Todos se unen en una sola geometría: un solo objeto que dibujar, en vez de cientos.
-   */
-  private crearMuros(g: GeometriaPiso): void {
-    const piezas = g.muros.map(m => {
-      const forma = new THREE.Shape(m.o.map(([x, y]) => new THREE.Vector2(x, -y)));
-      for (const agujero of m.h) forma.holes.push(new THREE.Path(agujero.map(([x, y]) => new THREE.Vector2(x, -y))));
-      const pieza = new THREE.ExtrudeGeometry(forma, { depth: 1, bevelEnabled: false, curveSegments: 1 });
-      pieza.rotateX(-Math.PI / 2);
-      return pieza;
-    });
-    const unidos = mergeGeometries(piezas);
-    piezas.forEach(p => p.dispose());
-    this.muros = new THREE.Mesh(unidos, new THREE.MeshStandardMaterial({ color: '#FBF8F4', roughness: 0.8 }));
-    // La geometría mide 1 m de alto: la escala en y es la altura real del muro.
-    this.muros.scale.y = this.alturaReal() ? g.altoMuroM : MURO_BAJO;
-    this.escena!.add(this.muros);
+  /** Descarga la maqueta y pinta las zonas sobre sus ambientes. */
+  private async cargar(g: GeometriaPiso): Promise<void> {
+    const maqueta = this.maqueta();
+    try {
+      const { glb, ambientes } = await this.maquetas.archivos(maqueta.pisoId);
+      const escena = await cargarMaqueta(glb);
+      if (this.destruido) { liberar(escena); return; }   // se salió de la pantalla mientras cargaba
+      escena.position.set(g.anchoM / 2, 0, g.fondoM / 2);
+      escena.updateMatrixWorld(true);
+      this.modelo = escena;
+      this.escena!.add(escena);
+
+      const { porZona, faltantes } = objetosPorZona(maqueta, ambientes);
+      if (faltantes.length) console.warn('[gemelo] Rótulos que no están en la maqueta:', faltantes);
+      this.crearZonas(g, porZona);
+      this.pintarOcupacion(this.ocupacion());
+      this.estado.set('lista');
+    } catch (e) {
+      console.error('[gemelo] No se pudo cargar la maqueta 3D', e);
+      if (!this.destruido) this.estado.set('error');
+    }
   }
 
-  private crearZonas(g: GeometriaPiso): void {
+  /** Enlaza cada zona con sus ambientes y le pone su etiqueta en el centro de ellos. */
+  private crearZonas(g: GeometriaPiso, porZona: Map<number, string[]>): void {
     for (const z of g.zonas) {
-      const placa = new THREE.Mesh(
-        new THREE.BoxGeometry(z.ancho, 0.06, z.fondo),
-        new THREE.MeshStandardMaterial({ color: COLOR_NIVEL.nd, transparent: true, opacity: 0.72, roughness: 1, depthWrite: false }),
-      );
-      placa.position.set(z.x + z.ancho / 2, 0.04, z.y + z.fondo / 2);
-      placa.userData['zonaId'] = z.id;
-      this.escena!.add(placa);
+      const mallas = (porZona.get(z.id) ?? [])
+        .map(nombre => this.modelo!.getObjectByName(nombre))
+        .filter((o): o is THREE.Mesh => o instanceof THREE.Mesh);
+      mallas.forEach(m => (m.userData['zonaId'] = z.id));
+      this.mallasZona.push(...mallas);
+
+      // Centro de sus ambientes; si la zona aún no está enlazada, el de su rectángulo
+      const caja = new THREE.Box3();
+      mallas.forEach(m => caja.expandByObject(m));
+      const centro = caja.isEmpty() ? new THREE.Vector3(z.x + z.ancho / 2, 0, z.y + z.fondo / 2) : caja.getCenter(new THREE.Vector3());
 
       // Etiqueta angosta (nombre arriba, ícono y cifra abajo) para que no choque con las vecinas.
       const etiqueta = document.createElement('div');
@@ -228,11 +239,12 @@ export class Render3dComponent implements OnDestroy {
       etiqueta.innerHTML = `<b></b><span class="r3d-cifra"><span class="r3d-icono">${ICONO_PERSONA}</span><small></small></span>`;
       etiqueta.querySelector('b')!.textContent = z.nombre;
       const objeto = new CSS2DObject(etiqueta);
-      objeto.position.set(z.x + z.ancho / 2, 0.4, z.y + z.fondo / 2);
+      objeto.position.set(centro.x, 0.4, centro.z);
       this.escena!.add(objeto);
 
-      this.zonas.push({ id: z.id, placa, etiqueta });
+      this.zonas.push({ id: z.id, mallas, etiqueta, nivel: 'nd' });
     }
+    this.camaraMovida = true;
   }
 
   /** Nodos ESP32 como cilindros pequeños (su código se ve en el tooltip y en el detalle). */
@@ -253,28 +265,39 @@ export class Render3dComponent implements OnDestroy {
     const porZona = new Map(ocupacion.map(o => [o.zonaId, o]));
     for (const z of this.zonas) {
       const o = porZona.get(z.id);
-      const nivel = o?.nivel ?? 'nd';
-      z.placa.material.color.set(COLOR_NIVEL[nivel]);
-      z.etiqueta.style.setProperty('--r3d-c', COLOR_NIVEL[nivel]);
-      z.etiqueta.querySelector('small')!.textContent = o ? (o.etiqueta ?? `${o.personas}/${o.aforo}`) : '—';
+      z.nivel = o?.nivel ?? 'nd';
+      this.pintarZona(z, z.id === this.zonaBajoCursor);
+      z.etiqueta.style.setProperty('--r3d-c', z.nivel === 'ninguno' ? '#8A8183' : COLOR_NIVEL[z.nivel]);
+      z.etiqueta.classList.toggle('r3d-sin-datos', z.nivel === 'nd');
+      z.etiqueta.classList.toggle('r3d-solo-nombre', !!o?.soloNombre);
+      z.etiqueta.querySelector('small')!.textContent = o ? (o.etiqueta ?? (o.aforo === null ? `${o.personas}` : `${o.personas}/${o.aforo}`)) : '—';
+    }
+  }
+
+  /** Tiñe los ambientes de una zona con el color de su nivel; sin aforo, quedan como en la maqueta. */
+  private pintarZona(z: ZonaEnEscena, activa: boolean): void {
+    const nd = z.nivel === 'nd';
+    for (const m of z.mallas) {
+      if (z.nivel === 'ninguno') colorear(m, activa ? COLOR_NIVEL.nd : null, 0.25, activa ? BRILLO.nd : 0);
+      else colorear(m, COLOR_NIVEL[z.nivel], nd ? MEZCLA.nd : MEZCLA.normal, activa ? BRILLO.activa : nd ? BRILLO.nd : BRILLO.normal);
     }
   }
 
   private resaltar(zonaId: number | null): void {
     for (const z of this.zonas) {
-      z.placa.material.opacity = z.id === zonaId ? 0.95 : 0.72;
+      this.pintarZona(z, z.id === zonaId);
       z.etiqueta.classList.toggle('r3d-activa', z.id === zonaId);
     }
   }
 
   // ------------------------------------------------------------------ interacción
 
-  /** Zona bajo el puntero, con un rayo desde la cámara (Raycaster). */
+  /** Zona bajo el puntero, con un rayo desde la cámara (Raycaster) contra los ambientes de las zonas. */
   private zonaEn(e: PointerEvent): number | null {
     const r = this.renderer!.domElement.getBoundingClientRect();
     this.puntero.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     this.raycaster.setFromCamera(this.puntero, this.camara!);
-    const golpe = this.raycaster.intersectObjects(this.zonas.map(z => z.placa), false)[0];
+    const golpe = this.raycaster.intersectObjects(this.mallasZona, false)[0];
     return golpe ? (golpe.object.userData['zonaId'] as number) : null;
   }
 
@@ -287,15 +310,11 @@ export class Render3dComponent implements OnDestroy {
       this.resaltar(id);
       this.renderer!.domElement.style.cursor = id == null ? '' : 'pointer';
     }
-    // Sobre una zona se avisa en cada movimiento (el tooltip sigue al cursor); fuera, solo una vez.
-    if (id != null) this.zonaHover.emit({ zonaId: id, clientX: e.clientX, clientY: e.clientY });
-    else if (cambio) this.zonaHover.emit(null);
   };
 
   private alSalirPuntero = () => {
     this.zonaBajoCursor = null;
     this.resaltar(null);
-    this.zonaHover.emit(null);
   };
 
   private alPresionar = (e: PointerEvent) => {
@@ -354,6 +373,7 @@ export class Render3dComponent implements OnDestroy {
 
   /** Libera la memoria de la GPU y los listeners al salir de la pantalla. */
   ngOnDestroy(): void {
+    this.destruido = true;
     this.observador?.disconnect();
     this.renderer?.setAnimationLoop(null);
     const lienzo = this.renderer?.domElement;
@@ -362,17 +382,15 @@ export class Render3dComponent implements OnDestroy {
     lienzo?.removeEventListener('pointerdown', this.alPresionar);
     lienzo?.removeEventListener('pointerup', this.alSoltar);
     this.controles?.dispose();
-    this.escena?.traverse(obj => {
-      if (obj instanceof THREE.Mesh) {
-        obj.geometry.dispose();
-        (Array.isArray(obj.material) ? obj.material : [obj.material]).forEach(m => m.dispose());
-      }
-      if (obj instanceof CSS2DObject) obj.element.remove();
-    });
-    this.textura?.dispose();
+    if (this.escena) {
+      liberar(this.escena);   // maqueta (con sus texturas) y nodos
+      this.escena.traverse(o => { if (o instanceof CSS2DObject) o.element.remove(); });
+    }
+    this.entorno?.dispose();
     this.renderer?.dispose();
     lienzo?.remove();
     this.etiquetas?.domElement.remove();
     this.zonas = [];
+    this.mallasZona = [];
   }
 }

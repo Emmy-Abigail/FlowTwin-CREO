@@ -33,11 +33,6 @@ export function consulta(a: Atencion, ahora: number): number | null {
 
 export const total = (a: Atencion, ahora: number) => minutos((a.fin ?? ahora) - a.inicio);
 
-/** Zona donde se atendió (o se atiende) al paciente. */
-export function zonaDeConsulta(a: Atencion): number | null {
-  return a.eventos.find(ev => ZONAS_CONSULTA.includes(ev.zonaId))?.zonaId ?? null;
-}
-
 /**
  * Concentración de una zona según sus umbrales (en % del aforo).
  * sinDatos = la zona está pausada o su nodo no envía señal: se ve gris.
@@ -50,6 +45,7 @@ export function nivelOcupacion(personas: number, zona: ZonaGeometria, sinDatos =
 
 export const NOMBRE_NIVEL: Record<NivelOcupacion, string> = {
   alta: 'Alta', media: 'Media', baja: 'Baja', nd: 'Sin datos',
+  ninguno: 'Sin aforo',
 };
 
 /** Texto y color del chip de estado de una atención. */

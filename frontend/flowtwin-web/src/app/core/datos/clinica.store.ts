@@ -34,7 +34,8 @@ export class ClinicaStore {
 
   readonly tarjetas = signal(this.semilla.tarjetas);
   readonly atenciones = signal(this.semilla.atenciones);
-  readonly historial = signal(this.semilla.historial).asReadonly();
+  private readonly historialDias = signal(this.semilla.historial);
+  readonly historial = this.historialDias.asReadonly();
   readonly nodos = signal<Nodo[]>(this.semilla.nodos);
   readonly operaciones = signal(this.semilla.operaciones);
   readonly auditoria = signal(this.semilla.auditoria);
@@ -54,6 +55,21 @@ export class ClinicaStore {
   });
 
   readonly alertasSinLeer = computed(() => this.alertas().filter(a => !a.leida).length);
+
+  /** Vuelve a la clínica recién abierta (07:00, vacía, con los 6 días anteriores): «Reiniciar simulación». */
+  reiniciar(): void {
+    const s = crearDatosSemilla(inicioDelDia(Date.now()));
+    this.siguienteId = s.siguienteId;
+    this.ahora.set(s.ahora);
+    this.tarjetas.set(s.tarjetas);
+    this.atenciones.set(s.atenciones);
+    this.historialDias.set(s.historial);
+    this.nodos.set(s.nodos);
+    this.operaciones.set(s.operaciones);
+    this.auditoria.set(s.auditoria);
+    this.alertas.set(s.alertas);
+    this.pausas.set({});
+  }
 
   enZona(zonaId: number): Atencion[] {
     return this.porZona().get(zonaId) ?? [];
@@ -173,6 +189,17 @@ export class ClinicaStore {
   latidoNodos(): void {
     const t = this.ahora();
     this.nodos.update(lista => lista.map(n => (n.estado === 'En línea' ? { ...n, ultimoLatido: t } : n)));
+  }
+
+  /** RF09 en la simulación: la zona queda fuera de servicio con su motivo (código del catálogo). */
+  ponerFueraDeServicio(zonaId: number, motivo: string, nombreZona: string, quien: Actor): void {
+    this.pausas.update(p => ({ ...p, [zonaId]: { motivo, por: quien.nombre, t: this.ahora() } }));
+    this.auditar('Gemelo', 'Puso fuera de servicio', nombreZona, motivo, quien);
+  }
+
+  ponerEnServicio(zonaId: number, nombreZona: string, quien: Actor): void {
+    this.pausas.update(p => { const resto = { ...p }; delete resto[zonaId]; return resto; });
+    this.auditar('Gemelo', 'Puso en servicio', nombreZona, '', quien);
   }
 
   auditar(tipo: TipoAuditoria, accion: string, elemento: string, detalle: string, quien: Actor): void {

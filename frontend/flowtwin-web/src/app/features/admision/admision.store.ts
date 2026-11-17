@@ -1,179 +1,226 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
-import { AuthService } from '../../core/auth/auth.service';
-import { consulta, espera, total } from '../../core/datos/calculos';
-import { ClinicaStore, EstadoPrevio } from '../../core/datos/clinica.store';
-import { EstadoTarjeta, TipoOperacion, TonoChip } from '../../core/datos/modelos';
-import { ToastService } from '../../core/ui/toast.service';
-import { duracion, hhmm, minutos, pad2 } from '../../core/utils/tiempo';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
+import { API, mensajeDe, problemaDe } from '../../core/api/problema';
+import { duracion, hhmm } from '../../core/utils/tiempo';
+import {
+  AVISO_SIN_TARJETA, Aviso, Confirmacion, EscaneoApi, TarjetaApi, VistaPreviaApi, avisoDeProblema, confirmacionDe, vistaPreviaDe,
+} from './presentacion-admision';
 
-/** Modo de Admisión. En "auto" el sistema deduce si es entrega o devolución. */
-export type ModoAdmision = 'auto' | 'entregar' | 'recibir';
-
-/** Lo que muestra el recuadro de confirmación (M1) después de escanear. */
-export interface ResultadoEscaneo {
-  tipo: 'ok' | 'info' | 'error';
-  /** Línea pequeña en mayúsculas, por ejemplo "Tarjeta T-07 entregada · 10:42". */
-  antetitulo?: string;
-  /** El ID de la atención en letra enorme, para leerlo en voz alta. */
-  grande?: string;
-  titulo?: string;
-  texto: string;
-  tiempos?: { espera: string; consulta: string; total: string };
-  /** Si viene, se muestra el botón "Marcar desinfectada" para esa tarjeta. */
-  desinfectar?: string;
+// ---- Respuestas de la API (sección API → Atenciones e ingesta)
+interface PendienteApi { tarjetaId: number; codigo: string; desde: string | null; atencionCodigo: string | null; }
+interface OperacionApi { fecha: string; tipo: string; tarjeta: string; atencion: string | null; totalMin: number | null; }
+interface ResumenApi {
+  contadores: Record<string, number>;
+  porDesinfectar: PendienteApi[];
+  sinDevolver: PendienteApi[];
+  ultimasOperaciones: OperacionApi[];
 }
 
-const DESHACER_MS = 30_000;
-
-export const TONO_OPERACION: Record<TipoOperacion, TonoChip> = {
-  Entregada: 'baja', Recibida: '', Desinfectada: 'media', Recuperada: 'media',
+/** Nombre y color de la etiqueta de cada operación en «Últimas operaciones». */
+const OPERACIONES: Record<string, { texto: string; tono: string }> = {
+  ENTREGADA: { texto: 'Entrega', tono: 'verde' },
+  RECIBIDA: { texto: 'Devolución', tono: 'celeste' },
+  DESINFECTADA: { texto: 'Desinfectada', tono: 'ambar' },
+  RECUPERADA: { texto: 'Recuperada', tono: 'ambar' },
+  ANULADA: { texto: 'Anulada', tono: 'gris' },
+  SIN_DEVOLVER: { texto: 'Sin devolver', tono: 'rojo' },
+  EXTRAVIADA: { texto: 'Extraviada', tono: 'rojo' },
+  BAJA: { texto: 'De baja', tono: 'gris' },
+  REGISTRADA: { texto: 'Registrada', tono: 'gris' },
 };
+/** Cuántas operaciones caben sin scroll debajo de la confirmación. */
+const OPERACIONES_VISIBLES = 6;
+
+/** Cada cuánto se actualiza el monitoreo: lo cambian también otros operadores y el cierre automático. */
+const REFRESCO_MS = 15_000;
 
 /**
- * Estado de la pantalla Admisión (P3): escaneo de tarjetas BLE, contadores, listas de
- * pendientes y "Deshacer" durante 30 s. Las operaciones se hacen sobre ClinicaStore,
- * por eso una entrega aparece al instante en el gemelo y en el feed.
+ * Estado de Admisión (P3) contra la API real. El flujo del mostrador:
+ * 1. el lector escribe el QR → previsualizar(): qué va a pasar (lo decide el servidor, sin registrar);
+ * 2. el operador pulsa Registrar → registrar(): entrega, devolución o recuperación (F-06, F-08, F-10);
+ * 3. durante 30 s puede deshacer la entrega (RN-04).
+ * Además: desinfectar (F-09), extraviar (F-10) y el resumen para el monitoreo.
  */
 @Injectable()
 export class AdmisionStore {
-  private clinica = inject(ClinicaStore);
-  private auth = inject(AuthService);
-  private toast = inject(ToastService);
+  private http = inject(HttpClient);
 
-  readonly modo = signal<ModoAdmision>('auto');
-  readonly resultado = signal<ResultadoEscaneo | null>(null);
-  /** Operación que aún se puede deshacer (null cuando pasan los 30 s). */
-  readonly deshacible = signal<EstadoPrevio | null>(null);
-  private temporizador: ReturnType<typeof setTimeout> | null = null;
+  /** Qué va a pasar con la tarjeta leída (debajo del campo, antes de registrar). */
+  readonly vistaPrevia = signal<{ texto: string; aviso: Aviso } | null>(null);
+  readonly consultando = signal(false);
+  /** Lo último que quedó registrado (la caja de color, compacta). */
+  readonly confirmacion = signal<Confirmacion | null>(null);
+  readonly registrando = signal(false);
+  /** Entrega que aún se puede deshacer (null cuando pasan los 30 s). */
+  readonly deshacible = signal<{ atencionId: number; desde: number; hasta: number } | null>(null);
+  private resumen = signal<ResumenApi | null>(null);
+  private temporizadorDeshacer: ReturnType<typeof setTimeout> | null = null;
 
-  private conEstado = (estado: EstadoTarjeta) => this.clinica.tarjetas().filter(t => t.estado === estado);
+  constructor() {
+    this.cargar();
+    const intervalo = setInterval(() => this.cargar(), REFRESCO_MS);
+    inject(DestroyRef).onDestroy(() => {
+      clearInterval(intervalo);
+      if (this.temporizadorDeshacer) clearTimeout(this.temporizadorDeshacer);
+    });
+  }
 
-  readonly contadores = computed(() => ({
-    disponibles: this.conEstado('Disponible').length,
-    enUso: this.conEstado('En uso').length,
-    porDesinfectar: this.conEstado('Por desinfectar').length,
-    sinDevolver: this.conEstado('Sin devolver').length,
-  }));
-
-  readonly porDesinfectar = computed(() =>
-    this.conEstado('Por desinfectar').map(t => ({ id: t.id, desde: t.desde ? hhmm(t.desde) : '—' })));
-
-  readonly pendientes = computed(() => {
-    const ahora = this.clinica.ahora();
-    return this.conEstado('Sin devolver').map(t => ({
-      id: t.id, atencionId: t.atencionId ?? '',
-      sinLecturas: duracion(t.desde ? minutos(ahora - t.desde) : null),
-    }));
+  /** Las tarjetas por estado, para la barra «Tarjetas de la sede». */
+  readonly contadores = computed(() => {
+    const c = this.resumen()?.contadores ?? {};
+    const estados = [
+      { clave: 'disponibles', texto: 'disponibles', tono: 'verde', n: c['DISPONIBLE'] ?? 0 },
+      { clave: 'enUso', texto: 'en uso', tono: 'negro', n: c['EN_USO'] ?? 0 },
+      { clave: 'porDesinfectar', texto: 'por desinfectar', tono: 'ambar', n: c['POR_DESINFECTAR'] ?? 0 },
+      { clave: 'sinDevolver', texto: 'sin devolver', tono: 'rojo', n: c['SIN_DEVOLVER'] ?? 0 },
+    ];
+    return { estados, total: estados.reduce((s, e) => s + e.n, 0) };
   });
 
-  readonly operaciones = computed(() => this.clinica.operaciones().slice(0, 7).map(o => ({
-    ...o, hora: hhmm(o.t), tono: TONO_OPERACION[o.tipo],
+  /**
+   * Lo que pide una acción del operador, por grupos (nunca un bloque por tarjeta): las devueltas sin
+   * desinfectar y las que no volvieron. De la más antigua a la más reciente: la que más espera, primero.
+   */
+  readonly porDesinfectar = computed(() => ordenarPorAntiguedad((this.resumen()?.porDesinfectar ?? []).map(t => ({
+    id: t.tarjetaId, codigo: t.codigo, desde: t.desde ? Date.parse(t.desde) : null,
+  }))));
+
+  readonly sinDevolver = computed(() => ordenarPorAntiguedad((this.resumen()?.sinDevolver ?? []).map(t => ({
+    id: t.tarjetaId, codigo: t.codigo, desde: t.desde ? Date.parse(t.desde) : null, atencion: t.atencionCodigo ?? '—',
+  }))));
+
+  readonly operaciones = computed(() => (this.resumen()?.ultimasOperaciones ?? []).slice(0, OPERACIONES_VISIBLES).map(o => ({
+    fecha: Date.parse(o.fecha),
+    hora: hhmm(Date.parse(o.fecha)),
+    tipo: OPERACIONES[o.tipo]?.texto ?? o.tipo,
+    tono: OPERACIONES[o.tipo]?.tono ?? 'gris',
+    tarjeta: o.tarjeta, atencion: o.atencion,
+    total: o.totalMin !== null ? `${duracion(o.totalMin)} en total` : null,
   })));
 
-  /** Tarjetas de ejemplo para la caja "Ayuda de demo". En uso: primero las de pacientes que llevan más tiempo. */
-  readonly ayuda = computed(() => ({
-    disponibles: this.conEstado('Disponible').slice(0, 8).map(t => t.id),
-    enUso: this.conEstado('En uso').sort((a, b) => (a.desde ?? 0) - (b.desde ?? 0)).slice(0, 8).map(t => t.id),
-    porDesinfectar: this.conEstado('Por desinfectar').map(t => t.id),
-  }));
-
-  alternarModo(modo: Exclude<ModoAdmision, 'auto'>): void {
-    this.modo.update(actual => (actual === modo ? 'auto' : modo));
-  }
-
-  /** Acepta "T-07", "t7", "T 7" o solo "7". Devuelve true si la operación salió bien. */
-  escanear(texto: string): boolean {
-    const codigo = normalizarCodigo(texto);
-    if (!codigo) return false;
-    const r = this.procesar(codigo);
-    this.resultado.set(r);
-    return r.tipo !== 'error';
-  }
-
-  private procesar(codigo: string): ResultadoEscaneo {
-    const quien = this.auth.actor();
-    const t = this.clinica.tarjeta(codigo);
-    const modo = this.modo();
-
-    if (!t) {
-      return { tipo: 'error', titulo: `Tarjeta ${codigo} no registrada`, texto: 'Pide al Administrador que la registre en Dispositivos.' };
+  async cargar(): Promise<void> {
+    try {
+      this.resumen.set(await firstValueFrom(this.http.get<ResumenApi>(`${API}/admision/resumen`)));
+    } catch {
+      /* el error de sesión lo maneja el interceptor; el monitoreo conserva lo último que se cargó */
     }
-    if (t.estado === 'Baja') {
-      return { tipo: 'error', titulo: `La tarjeta ${t.id} está dada de baja`, texto: 'Use otra tarjeta disponible.' };
-    }
-    if (t.estado === 'Por desinfectar') {
-      return {
-        tipo: 'error', titulo: 'Esta tarjeta aún no está desinfectada', desinfectar: t.id,
-        texto: `${t.id} se devolvió a las ${t.desde ? hhmm(t.desde) : '—'}. Desinféctela con alcohol al 70% antes de entregarla.`,
-      };
-    }
-    if (t.estado === 'Sin devolver' || t.estado === 'Extraviada') {
-      this.recordar({ tarjeta: t });
-      this.clinica.recuperarTarjeta(t.id, quien);
-      return { tipo: 'info', titulo: `Tarjeta ${t.id} recuperada`, texto: 'Pasa a «Por desinfectar». Desinféctela antes de volver a entregarla.' };
-    }
-    if (t.estado === 'Disponible') {
-      if (modo === 'recibir') {
-        return { tipo: 'error', titulo: `${t.id} no está en uso`, texto: 'Esta tarjeta está disponible: no hay nada que recibir. Para entregarla, vuelva al modo automático.' };
-      }
-      const a = this.clinica.entregarTarjeta(t.id, quien);
-      this.recordar({ tarjeta: t, atencionCreadaId: a.id });
-      return {
-        tipo: 'ok', antetitulo: `Tarjeta ${t.id} entregada · ${hhmm(a.inicio)}`, grande: a.id,
-        texto: 'Lea el código en voz alta al paciente. El recorrido y el tiempo de espera ya empezaron.',
-      };
-    }
-    // En uso
-    if (modo === 'entregar') {
-      return { tipo: 'error', titulo: `${t.id} ya está en uso (${t.atencionId})`, texto: 'Para entregarla primero hay que recibirla. Vuelva al modo automático.' };
-    }
-    const antes = this.clinica.atenciones().find(a => a.id === t.atencionId);
-    const a = this.clinica.recibirTarjeta(t.id, quien);
-    if (!a) return { tipo: 'error', titulo: `No se pudo recibir ${t.id}`, texto: 'La tarjeta no tiene una atención abierta.' };
-    this.recordar({ tarjeta: t, atencion: antes });
-    const ahora = this.clinica.ahora();
-    return {
-      tipo: 'ok', antetitulo: `Tarjeta ${t.id} recibida · recorrido terminado`, grande: a.id,
-      tiempos: { espera: duracion(espera(a)), consulta: duracion(consulta(a, ahora)), total: duracion(total(a, ahora)) },
-      texto: 'La tarjeta pasó a «Por desinfectar».',
-    };
   }
 
-  marcarDesinfectada(tarjetaId: string): void {
-    this.clinica.marcarDesinfectada(tarjetaId, this.auth.actor());
-    this.resultado.set({ tipo: 'ok', titulo: `${tarjetaId} desinfectada`, texto: 'Ya está disponible para entregar.' });
-    this.toast.mostrar(`${tarjetaId} disponible`);
+  /** Paso 1: qué pasaría con esta tarjeta. No registra nada. */
+  async previsualizar(texto: string): Promise<void> {
+    const qr = texto.trim();
+    if (!qr) { this.vistaPrevia.set(null); return; }
+    this.consultando.set(true);
+    try {
+      const v = await firstValueFrom(this.http.get<VistaPreviaApi>(`${API}/admision/vista-previa`, { params: new HttpParams().set('qr', qr) }));
+      this.vistaPrevia.set({ texto: qr, aviso: vistaPreviaDe(v, Date.now()) });
+    } catch (e) {
+      const p = problemaDe(e);
+      this.vistaPrevia.set({ texto: qr, aviso: avisoDeProblema(p.codigo, mensajeDe(p), p.datos) });
+    } finally {
+      this.consultando.set(false);
+    }
   }
 
-  marcarExtraviada(tarjetaId: string): void {
-    this.clinica.marcarExtraviada(tarjetaId, this.auth.actor());
-    this.toast.mostrar(`${tarjetaId} marcada como extraviada`, 'warn');
+  /** R8: se leyó otra tarjeta. Su vista previa y la confirmación anterior ya no valen. */
+  nuevaLectura(): void {
+    this.vistaPrevia.set(null);
+    this.confirmacion.set(null);
+    this.olvidarDeshacer();
   }
 
-  deshacer(): void {
-    const previo = this.deshacible();
-    if (!previo) return;
-    this.clinica.revertir(previo, this.auth.actor());
-    this.olvidar();
-    this.resultado.set({ tipo: 'info', titulo: 'Operación deshecha', texto: 'Todo volvió al estado anterior.' });
+  /** R7 */
+  avisarSinTarjeta(): void {
+    this.vistaPrevia.set({ texto: '', aviso: AVISO_SIN_TARJETA });
   }
 
-  /** Guarda cómo estaba todo para poder deshacer durante 30 s. */
-  private recordar(previo: EstadoPrevio): void {
-    this.olvidar();
-    this.deshacible.set(previo);
-    this.temporizador = setTimeout(() => this.deshacible.set(null), DESHACER_MS);
+  /**
+   * Paso 2: registrar (la página ya revisó la vista previa: R2, R3, R7). Devuelve true si quedó
+   * registrado, para el sonido y para limpiar el campo. R9: si ya se está registrando, no hace nada.
+   */
+  async registrar(texto: string): Promise<boolean> {
+    const qr = texto.trim();
+    if (this.registrando() || !qr) return false;
+    this.registrando.set(true);
+    try {
+      const r = await firstValueFrom(this.http.post<EscaneoApi>(`${API}/admision/escaneos`, { codigoQr: qr, modo: 'AUTO' }));
+      this.confirmacion.set(confirmacionDe(r));
+      this.vistaPrevia.set(null);
+      this.recordarDeshacer(r);
+      return true;
+    } catch (e) {
+      const p = problemaDe(e);
+      this.vistaPrevia.set({ texto: qr, aviso: avisoDeProblema(p.codigo, mensajeDe(p), p.datos) });
+      return false;
+    } finally {
+      this.registrando.set(false);
+      await this.cargar();
+    }
   }
 
-  private olvidar(): void {
-    if (this.temporizador) clearTimeout(this.temporizador);
+  async deshacer(): Promise<void> {
+    const pendiente = this.deshacible();
+    if (!pendiente) return;
+    try {
+      const t = await firstValueFrom(this.http.post<TarjetaApi>(`${API}/admision/atenciones/${pendiente.atencionId}/deshacer`, {}));
+      this.confirmacion.set({ tipo: 'anulada', titulo: `Entrega de ${t.codigo} deshecha`, detalle: 'La atención quedó anulada y la tarjeta está disponible.' });
+    } catch (e) {
+      this.confirmacion.set({ tipo: 'error', titulo: 'No se pudo deshacer', detalle: mensajeDe(problemaDe(e)) });
+    }
+    this.olvidarDeshacer();
+    await this.cargar();
+  }
+
+  /** F-09 por tandas: todas o ninguna (el servidor lo garantiza en una transacción). */
+  async desinfectar(tarjetas: { id: number; codigo: string }[]): Promise<void> {
+    try {
+      await firstValueFrom(this.http.post(`${API}/tarjetas/desinfectar`, { tarjetaIds: tarjetas.map(t => t.id) }));
+      this.confirmacion.set({
+        tipo: 'desinfectada',
+        titulo: tarjetas.length === 1 ? `${tarjetas[0].codigo} desinfectada` : `${tarjetas.length} tarjetas desinfectadas`,
+        detalle: tarjetas.length === 1 ? 'Ya se puede entregar.' : 'Ya se pueden entregar.',
+      });
+      // Si estaba la tarjeta que se iba a registrar, su vista previa ya no vale: se vuelve a consultar
+      const v = this.vistaPrevia();
+      if (v?.aviso.desinfectar && tarjetas.some(t => t.id === v.aviso.desinfectar!.id)) await this.previsualizar(v.texto);
+    } catch (e) {
+      this.confirmacion.set({ tipo: 'error', titulo: 'No se desinfectó ninguna', detalle: mensajeDe(problemaDe(e)) });
+    }
+    await this.cargar();
+  }
+
+  /** F-10 por tandas. */
+  async extraviar(tarjetas: { id: number; codigo: string }[]): Promise<void> {
+    try {
+      await firstValueFrom(this.http.post(`${API}/tarjetas/extraviar`, { tarjetaIds: tarjetas.map(t => t.id) }));
+      this.confirmacion.set({
+        tipo: 'extraviada',
+        titulo: tarjetas.length === 1 ? `${tarjetas[0].codigo} marcada como extraviada` : `${tarjetas.length} tarjetas marcadas como extraviadas`,
+        detalle: 'Si aparece, escanéala y pasará a desinfección.',
+      });
+    } catch (e) {
+      this.confirmacion.set({ tipo: 'error', titulo: 'No se marcó ninguna', detalle: mensajeDe(problemaDe(e)) });
+    }
+    await this.cargar();
+  }
+
+  /** RN-04: el botón Deshacer vive los 30 s que dice la API (deshacerHasta). */
+  private recordarDeshacer(r: EscaneoApi): void {
+    this.olvidarDeshacer();
+    if (r.operacion !== 'ENTREGA' || !r.deshacerHasta || !r.atencion) return;
+    const hasta = Date.parse(r.deshacerHasta);
+    this.deshacible.set({ atencionId: r.atencion.id, desde: Date.now(), hasta });
+    this.temporizadorDeshacer = setTimeout(() => this.deshacible.set(null), Math.max(0, hasta - Date.now()));
+  }
+
+  private olvidarDeshacer(): void {
+    if (this.temporizadorDeshacer) clearTimeout(this.temporizadorDeshacer);
     this.deshacible.set(null);
   }
 }
 
-/** "7", "t7", "T 7" o "T-07" → "T-07". Otros textos se devuelven en mayúsculas tal cual. */
-export function normalizarCodigo(texto: string): string {
-  const limpio = texto.trim().toUpperCase();
-  const m = limpio.match(/^T?\s*-?\s*(\d{1,3})$/);
-  return m ? `T-${pad2(+m[1])}` : limpio;
+/** La que lleva más tiempo esperando, primero; las sin fecha, al final. */
+function ordenarPorAntiguedad<T extends { desde: number | null }>(lista: T[]): T[] {
+  return [...lista].sort((a, b) => (a.desde ?? Infinity) - (b.desde ?? Infinity));
 }
