@@ -7,6 +7,7 @@ Para correrlo en una computadora y programar, ver el [README](../README.md#-inst
 |---|---|---|
 | [A. Demo en la nube](#a-demo-en-la-nube-render--azure-sql) | Que la clínica y el equipo prueben el sistema desde el navegador | Listo |
 | [B. Instalación en la clínica](#b-instalación-en-la-clínica) | Uso real con los nodos ESP32 | Pendiente: ver lo que cambia |
+| [C. Demo temporal con túnel](#c-demo-temporal-desde-una-computadora-túnel) | Mostrar el sistema mientras no hay nube, desde una computadora | Listo |
 
 ---
 
@@ -167,6 +168,32 @@ Estos puntos están en la hoja de ruta del [README](../README.md#️-hoja-de-rut
 
 ---
 
+## C. Demo temporal desde una computadora (túnel)
+
+Para mostrar FlowTwin **mientras no hay nube**. La aplicación corre en una computadora con Linux y Docker, y un túnel de
+Cloudflare le da una dirección pública con HTTPS (`https://….trycloudflare.com`). La base de datos no sale de esa
+computadora.
+
+```bash
+cd backend && docker compose up -d && cd ..     # SQL Server encendido
+./tools/demo/demo-local.sh iniciar               # compila, arranca y muestra la dirección pública
+./tools/demo/demo-local.sh estado                # vuelve a mostrar la dirección
+./tools/demo/demo-local.sh detener               # al terminar: la dirección deja de funcionar
+./tools/demo/demo-local.sh clave                 # cambia la contraseña temporal si la API la rechazó
+```
+
+- **La primera vez** pide el correo y la contraseña temporal del Administrador de la demo, y crea
+  `tools/demo/demo.env` con claves nuevas (está en `.gitignore`: no se sube).
+- Corre en **modo producción** (sin usuarios de demostración) sobre una base aparte, `FlowTwin_Demo`: no toca la base
+  de trabajo.
+- **La computadora debe estar encendida** durante la demo, y **la dirección cambia** cada vez que se inicia el túnel.
+- **Mientras está iniciado, cualquiera con la dirección llega a la pantalla de inicio de sesión.** Detenlo al terminar.
+
+Se probó de punta a punta por la dirección pública: primer ingreso, maqueta 3D, conexión en vivo (WebSocket), cabeceras
+de seguridad con HTTPS y la IP real de cada visitante en la bitácora.
+
+---
+
 ## Solución de problemas
 
 | Síntoma | Causa probable | Qué hacer |
@@ -176,3 +203,6 @@ Estos puntos están en la hoja de ruta del [README](../README.md#️-hoja-de-rut
 | «La base de datos no respondió» | Firewall de Azure, cadena incorrecta o base pausada por el tope mensual | Revisar las reglas de red y la cadena; en el portal, ver el estado de la base |
 | No aparece el botón Simulación | `Demo__SimulacionDisponible` no es `true` | Agregarla y redesplegar |
 | El gemelo dice que la maqueta está «en producción» | La imagen se compiló sin `maquetas/piso-1` | Revisar que la carpeta esté en la rama desplegada |
+| El túnel no da una dirección | Sin internet o Cloudflare no respondió | `docker logs flowtwin-tunel`; volver a `iniciar` |
+| «SQL Server no está encendido» al iniciar el túnel | La base local está apagada | `cd backend && docker compose up -d` |
+| «La contraseña temporal no cumple la política» al iniciar el túnel | La contraseña de `demo.env` es corta, filtrada o contiene el correo | `./tools/demo/demo-local.sh clave` y volver a `iniciar` |
