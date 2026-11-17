@@ -21,6 +21,7 @@ describe('ShellComponent', () => {
   const usuario = signal({ id: 1, nombre: 'Ana Torres', correo: 'admin@creo.pe', rol: 'Administrador' as Rol, pisos: [1], debeCambiarContrasena: false });
   const cargarPisos = vi.fn();
   const cargarModo = vi.fn();
+  const reiniciar = vi.fn();
   const pagina = () => fixture.nativeElement as HTMLElement;
   const textoMenu = () => [...pagina().querySelectorAll('.nav .item')].map(a => a.textContent?.trim());
 
@@ -39,6 +40,7 @@ describe('ShellComponent', () => {
     usuario.update(u => ({ ...u, debeCambiarContrasena: false }));
     cargarPisos.mockClear();
     cargarModo.mockClear();
+    reiniciar.mockClear();
     await TestBed.configureTestingModule({
       imports: [ShellComponent],
       providers: [
@@ -49,7 +51,7 @@ describe('ShellComponent', () => {
             registrarActividad: vi.fn(), cerrarSesion: vi.fn(),
           },
         },
-        { provide: ModoDatosService, useValue: { cargar: cargarModo, puedeSimular, simulacion, activar: vi.fn(), salir: vi.fn() } },
+        { provide: ModoDatosService, useValue: { cargar: cargarModo, puedeSimular, simulacion, activar: vi.fn(), salir: vi.fn(), reiniciar } },
         { provide: PisoActualService, useValue: { cargar: cargarPisos } },
         { provide: AlertasService, useValue: { disponible: alertasDisponibles, lista: alertas, pendientes: alertas, pulso, silencio: signal(false), ahora: signal(0) } },
       ],
@@ -141,5 +143,15 @@ describe('ShellComponent', () => {
 
     expect(pagina().querySelector('.item.alertas .contador')?.textContent?.trim()).toBe('1');
     expect(pagina().querySelector('.item.alertas')?.getAttribute('aria-label')).toBe('Alertas: 1');
+  });
+
+  it('la franja de simulación ofrece reiniciar (salir ya está en el menú)', async () => {
+    simulacion.set(true);
+    await crear();
+    const boton = pagina().querySelector<HTMLButtonElement>('.franja-simulacion button')!;
+
+    expect(boton.textContent?.trim()).toBe('Reiniciar simulación');
+    boton.click();
+    expect(reiniciar).toHaveBeenCalledTimes(1);
   });
 });

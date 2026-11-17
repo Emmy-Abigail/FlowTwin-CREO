@@ -1,7 +1,8 @@
 /**
- * Estado inicial de la demo: 6 días de historial, la mañana de hoy hasta las 10:30,
- * las tarjetas, los nodos, la auditoría y las alertas. Usa una semilla fija, así la
- * demo arranca siempre igual. Cuando exista el backend, este archivo desaparece.
+ * Estado inicial de la Simulación: 6 días de historial y la clínica de hoy a la hora de apertura,
+ * vacía, para que los pacientes vayan llegando de a poco como en un día real (el simulador los trae
+ * según la hora). Incluye las tarjetas, los nodos, la auditoría y las alertas. Usa una semilla fija,
+ * así la simulación arranca siempre igual.
  */
 import { Aleatorio } from '../utils/aleatorio';
 import { DIA, MIN, pad2 } from '../utils/tiempo';
@@ -31,11 +32,12 @@ export const idTarjeta = (n: number) => 'T-' + pad2(n);
 export function crearDatosSemilla(hoy0: number): EstadoInicial {
   const rnd = new Aleatorio(20261012);
   const at = (h: number, m: number, dia = 0) => hoy0 + dia * DIA + (h * 60 + m) * MIN;
-  const ahora = at(10, 30);
+  // Hoy recién abre: nadie llegó todavía; el simulador trae a los pacientes según la hora
+  const ahora = at(HORA_APERTURA, 0);
 
-  // ---- Horas de llegada de los 7 días (6 anteriores + hoy hasta ahora)
+  // ---- Horas de llegada de los 6 días anteriores
   const llegadas: number[] = [];
-  for (let dia = -6; dia <= 0; dia++) {
+  for (let dia = -6; dia <= -1; dia++) {
     const factor = dia === DIA_ALTA_DEMANDA ? 1.6 : 0.85 + rnd.siguiente() * 0.3;
     LLEGADAS_POR_HORA.forEach((peso, i) => {
       const n = Math.max(0, Math.round(rnd.gauss(peso * PACIENTES_POR_PESO * factor, 1.5)));
@@ -44,43 +46,31 @@ export function crearDatosSemilla(hoy0: number): EstadoInicial {
   }
   llegadas.sort((a, b) => a - b);
 
-  // ---- Tarjetas: 3 apartadas para los casos de demo de Admisión
+  // ---- Tarjetas: todas disponibles al abrir, salvo la que quedó sin devolver ayer
   const tarjetas: Tarjeta[] = Array.from({ length: TOTAL_TARJETAS }, (_, i) => ({
     id: idTarjeta(i + 1), estado: 'Disponible', atencionId: null,
-    ble: '0x' + (0xC0A100 + i * 37).toString(16).toUpperCase(), desde: at(7, 0),
+    ble: '0x' + (0xC0A100 + i * 37).toString(16).toUpperCase(), desde: at(HORA_APERTURA, 0, -1),
   }));
   const tarjeta = (id: string) => tarjetas.find(t => t.id === id)!;
-  const apartadas = ['T-11', 'T-14', 'T-23'];
-  const libres = tarjetas.filter(t => !apartadas.includes(t.id)).map(t => t.id);
 
-  // ---- Atenciones: cada llegada recorre su ruta hasta ahora
+  // ---- Atenciones de los días anteriores: todas terminadas (hoy nadie llegó aún)
   const historial: Atencion[] = [];
   const hoy: Atencion[] = [];
   let n = 1;
   for (const inicio of llegadas) {
-    if (inicio >= ahora) continue;
     const ruta = crearRuta(rnd);
-    const av = recorrer(inicio, ruta, ahora);
-    const base = { id: idAtencion(n++), pisoId: PISO_PILOTO, inicio, eventos: av.eventos };
-    if (av.terminado) {
-      const a: Atencion = { ...base, tarjetaId: idTarjeta(rnd.entero(1, TOTAL_TARJETAS)), fin: av.fin, estado: 'cerrada', motivo: 'Devuelta' };
-      (inicio < hoy0 ? historial : hoy).push(a);
-    } else {
-      const tid = libres.splice(rnd.entero(0, libres.length - 1), 1)[0];
-      hoy.push({ ...base, tarjetaId: tid, fin: null, estado: 'activa', motivo: null, ruta, paso: av.paso });
-      Object.assign(tarjeta(tid), { estado: 'En uso', atencionId: base.id, desde: inicio });
-    }
+    const av = recorrer(inicio, ruta);
+    historial.push({ id: idAtencion(n++), pisoId: PISO_PILOTO, inicio, eventos: av.eventos,
+      tarjetaId: idTarjeta(rnd.entero(1, TOTAL_TARJETAS)), fin: av.fin, estado: 'cerrada', motivo: 'Devuelta' });
   }
 
-  // ---- Caso de demo: una tarjeta que no se devolvió (atención cerrada por inactividad)
-  const perdida = hoy.find(a => a.estado === 'cerrada' && a.inicio >= at(8, 15))!;
+  // ---- Caso de Admisión: ayer un paciente se fue con la tarjeta (el sistema cerró su atención por inactividad)
+  const perdida = historial.find(a => a.inicio >= at(15, 0, -1))!;
   perdida.tarjetaId = 'T-14';
   perdida.motivo = 'Sin lecturas';
   perdida.eventos = perdida.eventos.slice(0, 3);
   perdida.fin = perdida.eventos[2].salida = perdida.eventos[2].entrada + 18 * MIN;
   Object.assign(tarjeta('T-14'), { estado: 'Sin devolver', atencionId: perdida.id, desde: perdida.fin });
-  Object.assign(tarjeta('T-11'), { estado: 'Por desinfectar', desde: at(10, 18) });
-  Object.assign(tarjeta('T-23'), { estado: 'Por desinfectar', desde: at(10, 24) });
 
   // ---- Nodos ESP32 instalados (coinciden con los nodos de la geometría)
   const nodos: Nodo[] = [
@@ -89,11 +79,8 @@ export function crearDatosSemilla(hoy0: number): EstadoInicial {
     { codigo: 'N-03', mac: '24:6F:28:AA:01:03', pisoId: PISO_PILOTO, zonaId: ZONAS.modulo2, estado: 'En línea', ultimoLatido: ahora },
   ];
 
-  // ---- Últimas operaciones de Admisión
-  const operaciones: Operacion[] = [
-    ...hoy.filter(a => a.estado === 'activa').map(a => ({ t: a.inicio, tipo: 'Entregada' as const, tarjetaId: a.tarjetaId, atencionId: a.id })),
-    ...hoy.filter(a => a.motivo === 'Devuelta').map(a => ({ t: a.fin!, tipo: 'Recibida' as const, tarjetaId: a.tarjetaId, atencionId: a.id, totalMin: Math.round((a.fin! - a.inicio) / MIN) })),
-  ].sort((a, b) => b.t - a.t).slice(0, 12);
+  // ---- Últimas operaciones de Admisión: vacía al abrir; se llena con las entregas del día
+  const operaciones: Operacion[] = [];
 
   // ---- Auditoría inicial
   const auditoria: EntradaAuditoria[] = [];
@@ -109,17 +96,13 @@ export function crearDatosSemilla(hoy0: number): EstadoInicial {
   A(at(12, 40, -2), 'Luis Rojas', 'Operador', 'Seguimiento', 'Reactivó zona', 'Módulo 2 (consultorio)', 'Pausado → Activo');
   A(at(9, 15, -1), 'Juan Morales', 'Gerencia', 'Sesión', 'Inició sesión', '—', 'Navegador web');
   A(at(16, 22, -1), 'Juan Morales', 'Gerencia', 'Reportes', 'Exportó reporte', 'Historial · 7 días', 'CSV');
-  A(at(7, 30), 'Luis Rojas', 'Operador', 'Sesión', 'Inició sesión', '—', 'Navegador web');
-  A(at(8, 2), 'Ana Torres', 'Administrador', 'Sesión', 'Inició sesión', '—', 'Navegador web');
-  A(at(8, 5), 'Ana Torres', 'Administrador', 'Usuarios', 'Creó usuario', 'Carla Díaz', 'Rol Operador · Piso 1');
+  A(at(17, 5, -1), 'Ana Torres', 'Administrador', 'Usuarios', 'Creó usuario', 'Carla Díaz', 'Rol Operador · Piso 1');
   A(perdida.fin, 'Sistema', '—', 'Admisión', 'Cerró atención por inactividad', perdida.id, 'T-14 · sin lecturas');
-  operaciones.slice(0, 8).forEach(o =>
-    A(o.t, 'Luis Rojas', 'Operador', 'Admisión', o.tipo === 'Entregada' ? 'Entregó tarjeta' : 'Recibió tarjeta', o.tarjetaId, o.atencionId ?? ''));
   auditoria.sort((a, b) => b.t - a.t);
 
   const alertas: Alerta[] = [{
     id: 1, nivel: 'alta', texto: 'Tarjeta T-14 sin devolver',
-    detalle: `${perdida.id} · sin lecturas desde las ${pad2(new Date(perdida.fin).getHours())}:${pad2(new Date(perdida.fin).getMinutes())}`,
+    detalle: `${perdida.id} · sin lecturas desde ayer, ${pad2(new Date(perdida.fin).getHours())}:${pad2(new Date(perdida.fin).getMinutes())}`,
     t: perdida.fin, ruta: '/admision', leida: false,
   }];
 
