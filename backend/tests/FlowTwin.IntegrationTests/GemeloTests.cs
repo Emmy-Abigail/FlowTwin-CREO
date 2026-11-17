@@ -36,17 +36,18 @@ public class GemeloTests(ApiFixture api)
     }
 
     [Fact]
-    public async Task La_geometria_trae_los_20_muros_importados_de_AutoCAD()
+    public async Task La_geometria_trae_las_medidas_y_las_zonas_sin_el_plano_2D_antiguo()
     {
         var gerencia = await api.ClienteDeAsync("gerencia@creo.pe");
 
         var piso = await Json(await gerencia.GetAsync("/api/v1/pisos/1/geometria"));
 
-        var muros = piso.GetProperty("elementos").EnumerateArray().Where(e => e.GetProperty("tipo").GetString() == "MURO").ToList();
-        Assert.Equal(20, muros.Count);
-        Assert.All(muros, m => Assert.True(m.GetProperty("poligono").GetArrayLength() >= 3));
-        // Los vanos de puertas y las columnas viajan como huecos de los polígonos
-        Assert.Equal(59, muros.Sum(m => m.GetProperty("huecos").GetArrayLength()));
+        Assert.Equal(40.12m, piso.GetProperty("anchoM").GetDecimal());
+        Assert.Equal(20.99m, piso.GetProperty("fondoM").GetDecimal());
+        Assert.True(piso.GetProperty("zonas").GetArrayLength() > 0);
+        // Los muros y la imagen del plano los reemplazó la maqueta 3D (ADR-28): ya no viajan
+        Assert.False(piso.TryGetProperty("elementos", out _));
+        Assert.False(piso.TryGetProperty("planoUrl", out _));
     }
 
     [Fact]

@@ -39,7 +39,6 @@ public abstract class CatalogoConfig<TEnum>(string tabla) : IEntityTypeConfigura
 
 public sealed class RolConfig() : CatalogoConfig<Rol>("Rol");
 public sealed class TipoZonaConfig() : CatalogoConfig<TipoZona>("TipoZona");
-public sealed class TipoElementoPlanoConfig() : CatalogoConfig<TipoElementoPlano>("TipoElementoPlano");
 public sealed class EstadoTarjetaConfig() : CatalogoConfig<EstadoTarjeta>("EstadoTarjeta");
 public sealed class EstadoNodoConfig() : CatalogoConfig<EstadoNodo>("EstadoNodo");
 public sealed class MotivoCierreAtencionConfig() : CatalogoConfig<MotivoCierreAtencion>("MotivoCierreAtencion");

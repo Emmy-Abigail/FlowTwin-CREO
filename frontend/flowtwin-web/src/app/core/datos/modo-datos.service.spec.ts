@@ -10,7 +10,7 @@ import { SimuladorService } from './simulador.service';
 /** ADR-22: la simulación es temporal, solo si el servidor la permite y solo para Administrador y Gerencia. */
 describe('ModoDatosService', () => {
   const rol = signal<Rol | null>('Gerencia');
-  const simulador = { iniciar: vi.fn(), detener: vi.fn() };
+  const simulador = { iniciar: vi.fn(), detener: vi.fn(), reiniciar: vi.fn() };
   let modo: ModoDatosService;
   let http: HttpTestingController;
 
@@ -26,6 +26,7 @@ describe('ModoDatosService', () => {
     rol.set('Gerencia');
     simulador.iniciar.mockClear();
     simulador.detener.mockClear();
+    simulador.reiniciar.mockClear();
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(), provideHttpClientTesting(),
@@ -86,5 +87,18 @@ describe('ModoDatosService', () => {
     modo.salir();
     expect(modo.simulacion()).toBe(false);
     expect(simulador.detener).toHaveBeenCalled();
+  });
+
+  it('reiniciar vuelve a empezar el día sin salir de la simulación; fuera de ella no hace nada', async () => {
+    await cargarCon({ simulacionDisponible: true });
+    modo.reiniciar();
+    expect(simulador.reiniciar).not.toHaveBeenCalled();
+
+    modo.activar();
+    modo.reiniciar();
+
+    expect(simulador.reiniciar).toHaveBeenCalledTimes(1);
+    expect(modo.simulacion()).toBe(true);
+    expect(simulador.iniciar).toHaveBeenCalledTimes(2);
   });
 });
